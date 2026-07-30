@@ -1,0 +1,153 @@
+<div id="opt_dispatch" class="form-section glass-card">
+  <div class="card-header-premium d-flex justify-content-between align-items-center mb-4" style="background: linear-gradient(135deg, #2b9348, #55a630);">
+    <h5 class="mb-0">Dispatch Entry</h5>
+  </div>
+  
+  <form id="formDispatch" onsubmit="submitDispatch(event)">
+    <div id="dispatchEntriesContainer">
+      <div class="dispatch-entry p-4 mb-4 bg-white shadow-sm" id="dispatch_row_0" style="border-radius: 12px; border: 1px solid #e9ecef;">
+        <div class="row g-3 mb-3">
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">S.No (Invoice)</label>
+            <input type="text" class="form-control d_sno" required>
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Date</label>
+            <input type="date" class="form-control d_date" required>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-bold text-muted small mb-1">Customer</label>
+            <input type="text" class="form-control d_cust" list="customerList" required>
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Consignee</label>
+            <input type="text" class="form-control d_consignee">
+          </div>
+          <div class="col-md-3">
+            <label class="fw-bold text-muted small mb-1">Item Name</label>
+            <input type="text" class="form-control d_item" list="itemList" required onchange="filterPOs(this)">
+          </div>
+        </div>
+        
+        <div class="row g-3 mb-3">
+          <div class="col-md-3">
+            <label class="fw-bold text-muted small mb-1">PO Number</label>
+            <select class="form-select d_po">
+              <option value="">Select PO</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-bold text-danger small mb-1">Dispatch Qty</label>
+            <input type="number" class="form-control d_qty border-danger" required>
+          </div>
+          <div class="col-md-3">
+            <label class="fw-bold text-muted small mb-1">Transporter</label>
+            <input type="text" class="form-control d_transporter">
+          </div>
+          <div class="col-md-3">
+            <label class="fw-bold text-muted small mb-1">Place</label>
+            <input type="text" class="form-control d_place">
+          </div>
+        </div>
+        
+        <div class="row g-3">
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Vehicle No</label>
+            <input type="text" class="form-control d_veh">
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Gaadi Size</label>
+            <input type="text" class="form-control d_size">
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Freight</label>
+            <input type="number" class="form-control d_freight">
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Point</label>
+            <input type="text" class="form-control d_point">
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Holding</label>
+            <input type="text" class="form-control d_holding">
+          </div>
+          <div class="col-md-2">
+            <label class="fw-bold text-muted small mb-1">Overload</label>
+            <input type="text" class="form-control d_overload">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <button type="button" class="btn btn-outline-secondary px-4" style="border-radius:8px;" onclick="addDispatchRow()">
+        <i class="fas fa-plus"></i> Add Another Entry
+      </button>
+      <button type="submit" class="btn btn-premium px-5" style="background: linear-gradient(135deg, #2b9348, #55a630);">Submit Dispatch(s)</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function filterPOs(element) {
+    if(!dropdownData) return;
+    let itemName = element.value;
+    let poSelect = element.closest('.dispatch-entry').querySelector('.d_po');
+    poSelect.innerHTML = '<option value="">Select PO</option>';
+    let matches = dropdownData.openPOs.filter(p => p.itemName === itemName);
+    let uniquePOs = [...new Set(matches.map(x => x.poNumber))];
+    uniquePOs.forEach(p => poSelect.innerHTML += `<option value="${p}">${p}</option>`);
+  }
+
+  function addDispatchRow() {
+    let container = document.getElementById('dispatchEntriesContainer');
+    let clone = document.getElementById('dispatch_row_0').cloneNode(true);
+    clone.id = 'dispatch_row_' + dispatchRowCount;
+    clone.querySelectorAll('input').forEach(i => i.value = '');
+    clone.querySelector('.d_po').innerHTML = '<option value="">Select PO</option>';
+    container.appendChild(clone);
+    dispatchRowCount++;
+  }
+
+  function submitDispatch(e) {
+    e.preventDefault();
+    showLoader();
+    let payload = [];
+    document.querySelectorAll('.dispatch-entry').forEach(row => {
+      let item = row.querySelector('.d_item').value;
+      let qty = row.querySelector('.d_qty').value;
+      let po = row.querySelector('.d_po').value;
+      if (item && qty && po) {
+        payload.push({
+          sNo: row.querySelector('.d_sno').value,
+          date: row.querySelector('.d_date').value,
+          customer: row.querySelector('.d_cust').value,
+          consignee: row.querySelector('.d_consignee').value,
+          itemName: item,
+          poNumber: po,
+          dispatchQty: qty,
+          transporter: row.querySelector('.d_transporter').value,
+          place: row.querySelector('.d_place').value,
+          vehicleNo: row.querySelector('.d_veh').value,
+          gaadiSize: row.querySelector('.d_size').value,
+          freight: row.querySelector('.d_freight').value,
+          point: row.querySelector('.d_point').value,
+          holding: row.querySelector('.d_holding').value,
+          overload: row.querySelector('.d_overload').value
+        });
+      }
+    });
+    
+    if (payload.length === 0) {
+      hideLoader();
+      alert("Please fill in item, qty and select PO for at least one dispatch entry.");
+      return;
+    }
+    
+    google.script.run.withSuccessHandler(function(res) {
+      hideLoader(); 
+      alert(res); 
+      document.getElementById('formDispatch').reset();
+    }).submitDispatch(payload);
+  }
+</script>

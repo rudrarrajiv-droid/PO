@@ -1,0 +1,131 @@
+<div id="opt_open_po" class="form-section glass-card">
+  <div class="card-header-premium d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Open PO Entry</h5>
+  </div>
+  
+  <form id="formOpenPO" onsubmit="submitOpenPO(event)">
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">Customer Name</label>
+        <input type="text" class="form-control" id="op_customer" required list="customerList" placeholder="Select or type...">
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">Consignee Name</label>
+        <input type="text" class="form-control" id="op_consignee" required placeholder="Enter Consignee">
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">PO Date</label>
+        <input type="date" class="form-control" id="op_poDate" required>
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">PO Number</label>
+        <input type="text" class="form-control" id="op_poNumber" required placeholder="e.g. PO-2023-001">
+      </div>
+    </div>
+    
+    <div class="d-flex align-items-center mb-3 mt-4">
+      <h5 class="m-0 me-3 text-primary fw-bold">Items & Dispatch Plan</h5>
+      <input type="date" id="op_addDate" class="form-control me-2" style="width: auto;">
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDateCol('op_table')">
+        <i class="fas fa-plus"></i> Add Dispatch Date
+      </button>
+    </div>
+    
+    <div class="table-responsive shadow-sm" style="border-radius: 10px;">
+      <table class="table table-bordered align-middle text-center table-premium mb-0" id="op_table">
+        <thead>
+          <tr id="op_thead_tr">
+            <th>S.No</th>
+            <th>Item Code</th>
+            <th>Item Name</th>
+            <th>Rate</th>
+            <th>Total PO Qty</th>
+            <th>Delivery Date</th>
+            <th class="bg-warning text-dark">Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="op_row_1">
+            <td><input type="text" class="form-control" style="width:60px;" id="op_sno" value="1" readonly></td>
+            <td><input type="text" class="form-control" id="op_itemCode" placeholder="Code"></td>
+            <td><input type="text" class="form-control" id="op_itemName" list="itemList" required placeholder="Item"></td>
+            <td><input type="number" class="form-control" id="op_rate" placeholder="₹"></td>
+            <td><input type="number" class="form-control qty-total fw-bold" id="op_totalQty" oninput="calcOpBalance()" required></td>
+            <td><input type="date" class="form-control" id="op_delDate"></td>
+            <td><input type="number" class="form-control bg-warning text-dark fw-bold" id="op_balance" readonly></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 text-end">
+      <button type="submit" class="btn btn-premium px-5">Submit Open PO</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function submitOpenPO(e) {
+    e.preventDefault();
+    showLoader();
+    let dynDates = [];
+    document.querySelectorAll('.qty-dyn-op').forEach(inp => {
+      if (inp.value) dynDates.push({ date: inp.getAttribute('data-date'), qty: inp.value });
+    });
+    let data = {
+      customer: document.getElementById('op_customer').value,
+      consignee: document.getElementById('op_consignee').value,
+      poDate: document.getElementById('op_poDate').value,
+      poNumber: document.getElementById('op_poNumber').value,
+      sNo: document.getElementById('op_sno').value,
+      itemCode: document.getElementById('op_itemCode').value,
+      itemName: document.getElementById('op_itemName').value,
+      rate: document.getElementById('op_rate').value,
+      totalPoQty: document.getElementById('op_totalQty').value,
+      deliveryDate: document.getElementById('op_delDate').value,
+      dispatchDates: dynDates
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      hideLoader(); 
+      alert(res); 
+      document.getElementById('formOpenPO').reset();
+      document.getElementById('op_balance').value = '';
+    }).submitOpenPO(data);
+  }
+
+  function addDateCol(tableId) {
+    let prefix = tableId === 'op_table' ? 'op' : 'pp';
+    let dateInput = document.getElementById(`${prefix}_addDate`);
+    let dateVal = dateInput.value;
+    if (!dateVal) { alert("Please select a date first!"); return; }
+    
+    let colsArray = tableId === 'op_table' ? dynamicDateCols_OP : dynamicDateCols_PP;
+    if (colsArray.includes(dateVal)) { alert("Date already added!"); return; }
+    colsArray.push(dateVal);
+    
+    let theadTr = document.getElementById(`${prefix}_thead_tr`);
+    let balanceTh = theadTr.lastElementChild;
+    let newTh = document.createElement('th');
+    newTh.className = "dynamic-col text-white bg-secondary";
+    newTh.innerText = dateVal;
+    theadTr.insertBefore(newTh, balanceTh);
+    
+    let tbodyTr = document.getElementById(`${prefix}_row_1`);
+    let balanceTd = tbodyTr.lastElementChild;
+    let newTd = document.createElement('td');
+    newTd.innerHTML = `<input type="number" class="form-control qty-dyn-${prefix}" data-date="${dateVal}" oninput="calcOpBalance()">`;
+    tbodyTr.insertBefore(newTd, balanceTd);
+    dateInput.value = "";
+  }
+
+  function calcOpBalance() {
+    let totalQty = parseFloat(document.getElementById('op_totalQty').value) || 0;
+    let sum = 0;
+    document.querySelectorAll('.qty-dyn-op').forEach(inp => sum += (parseFloat(inp.value) || 0));
+    document.getElementById('op_balance').value = totalQty - sum;
+    
+    let pp_sum = 0;
+    document.querySelectorAll('.qty-dyn-pp').forEach(inp => pp_sum += (parseFloat(inp.value) || 0));
+    let ppBalanceEl = document.getElementById('pp_balance');
+    if (ppBalanceEl) ppBalanceEl.value = -pp_sum; 
+  }
+</script>

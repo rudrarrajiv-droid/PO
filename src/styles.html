@@ -1,0 +1,169 @@
+<style>
+  :root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --success-color: #4cc9f0;
+    --danger-color: #f72585;
+    --dark-color: #2b2d42;
+    --light-bg: #f8f9fa;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  }
+  
+  body { 
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    font-family: 'Inter', 'Segoe UI', sans-serif; 
+    color: var(--dark-color);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  
+  /* Sidebar Layout */
+  #wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+  }
+  
+  #sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: var(--dark-color);
+    color: white;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+  }
+  
+  #sidebar .sidebar-header {
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  
+  #sidebar ul.components {
+    padding: 20px 0;
+  }
+  
+  #sidebar ul li a {
+    padding: 15px 25px;
+    font-size: 1.1em;
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: 0.3s;
+    border-left: 4px solid transparent;
+    cursor: pointer;
+  }
+  
+  #sidebar ul li a:hover, #sidebar ul li.active > a {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+  }
+  
+  #content {
+    width: 100%;
+    padding: 30px;
+    min-height: 100vh;
+    overflow-y: auto;
+    background: var(--light-bg);
+  }
+  
+  /* Glassmorphism Cards */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    padding: 24px;
+    margin-bottom: 24px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
+  }
+  
+  .card-header-premium {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 12px 12px 0 0;
+    padding: 15px 20px;
+    font-weight: 600;
+    margin: -24px -24px 24px -24px;
+  }
+  
+  /* Sections toggling */
+  .form-section { display: none; animation: fadeIn 0.4s; }
+  .form-section.active { display: block; }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Custom Inputs */
+  .form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 10px 15px;
+    transition: all 0.3s;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+  }
+  
+  .btn-premium {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  
+  .btn-premium:hover {
+    box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
+    transform: translateY(-1px);
+    color: white;
+  }
+  
+  /* Tables */
+  .table-premium {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-premium thead th {
+    background-color: #e9ecef;
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--dark-color);
+    padding: 12px 15px;
+  }
+  .table-premium tbody td {
+    padding: 12px 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+  }
+  
+  .dynamic-col { min-width: 120px; }
+  .track-plan { background-color: #f8f9fa; font-weight: bold; }
+  .track-disp-green { background-color: #d1e7dd; color: #0f5132; font-weight: bold; }
+  .track-disp-red { background-color: #f8d7da; color: #842029; font-weight: bold; }
+  .chart-container { position: relative; height: 320px; width: 100%; }
+</style>

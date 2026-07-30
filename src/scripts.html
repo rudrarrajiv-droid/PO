@@ -1,0 +1,66 @@
+<script>
+  let dropdownData = null;
+  let dynamicDateCols_OP = [];
+  let dynamicDateCols_PP = [];
+  let dispatchRowCount = 1;
+  let barChartInstance = null;
+  let pieChartInstance = null;
+
+  window.onload = function() {
+    google.script.run.withSuccessHandler(populateDropdowns).getDropdownData();
+    // Default load dashboard
+    switchModule('opt_dashboard');
+  };
+
+  function populateDropdowns(data) {
+    dropdownData = data;
+    
+    // Check if these elements exist on the current view before populating
+    let cList = document.getElementById('customerList');
+    let iList = document.getElementById('itemList');
+    if (cList) {
+      data.customers.forEach(c => { cList.innerHTML += `<option value="${c}">`; });
+    }
+    if (iList) {
+      data.items.forEach(i => { iList.innerHTML += `<option value="${i}">`; });
+    }
+    
+    let ss_po = document.getElementById('ss_poList');
+    let ss_item = document.getElementById('ss_itemList');
+    let ss_cust = document.getElementById('ss_custList');
+    
+    if (ss_po && ss_item && ss_cust) {
+      let uniquePOs = [...new Set(data.openPOs.map(x => x.poNumber))];
+      uniquePOs.forEach(p => ss_po.innerHTML += `<option value="${p}">`);
+      data.items.forEach(i => ss_item.innerHTML += `<option value="${i}">`);
+      data.customers.forEach(c => ss_cust.innerHTML += `<option value="${c}">`);
+    }
+  }
+
+  function switchModule(moduleId) {
+    // Update sidebar active class
+    document.querySelectorAll('#sidebar ul li').forEach(el => el.classList.remove('active'));
+    let activeLink = document.querySelector(`a[onclick="switchModule('${moduleId}')"]`);
+    if (activeLink) activeLink.parentElement.classList.add('active');
+
+    // Hide all sections
+    document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+    
+    // Show selected section
+    let selected = document.getElementById(moduleId);
+    if (selected) {
+      selected.classList.add('active');
+      if (moduleId === 'opt_dashboard' && typeof loadDashboard === 'function') {
+        loadDashboard();
+      }
+    }
+  }
+
+  function showLoader() { 
+    document.getElementById('loader').style.display = 'flex'; 
+  }
+  
+  function hideLoader() { 
+    document.getElementById('loader').style.display = 'none'; 
+  }
+</script>

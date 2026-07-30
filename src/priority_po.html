@@ -1,0 +1,132 @@
+<div id="opt_priority_po" class="form-section glass-card">
+  <div class="card-header-premium d-flex justify-content-between align-items-center mb-4" style="background: linear-gradient(135deg, #4cc9f0, #4361ee);">
+    <h5 class="mb-0">Priority PO Plan</h5>
+  </div>
+  
+  <div class="card mb-4" style="border:1px solid rgba(67, 97, 238, 0.2); border-radius: 12px; background: rgba(67, 97, 238, 0.05);">
+    <div class="card-body">
+      <label class="fw-bold mb-3 text-primary"><i class="fas fa-search"></i> Smart Search / Load existing PO</label>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <input type="text" class="form-control bg-white" id="ss_poNo" placeholder="PO Number" list="ss_poList" oninput="smartSearch('poNo')">
+        </div>
+        <div class="col-md-3">
+          <input type="date" class="form-control bg-white" id="ss_poDate" oninput="smartSearch('poDate')">
+        </div>
+        <div class="col-md-3">
+          <input type="text" class="form-control bg-white" id="ss_item" placeholder="Item Name" list="ss_itemList" oninput="smartSearch('itemName')">
+        </div>
+        <div class="col-md-3">
+          <input type="text" class="form-control bg-white" id="ss_cust" placeholder="Customer Name" list="ss_custList" oninput="smartSearch('customer')">
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary mt-3 px-4" style="border-radius:6px;" onclick="loadSmartSearch()">Load Data</button>
+    </div>
+  </div>
+
+  <form id="formPriorityPO" onsubmit="submitPriorityPO(event)">
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">Customer Name</label>
+        <input type="text" class="form-control" id="pp_customer" required list="customerList">
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">Consignee Name</label>
+        <input type="text" class="form-control" id="pp_consignee" required>
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">PO Number</label>
+        <input type="text" class="form-control" id="pp_poNumber" required>
+      </div>
+      <div class="col-md-3">
+        <label class="fw-bold text-muted small mb-1">Priority Date</label>
+        <input type="date" class="form-control" id="pp_priorityDate" required>
+      </div>
+    </div>
+    
+    <div class="d-flex align-items-center mb-3 mt-4">
+      <h5 class="m-0 me-3 text-info fw-bold">Items & Plan</h5>
+      <input type="date" id="pp_addDate" class="form-control me-2" style="width: auto;">
+      <button type="button" class="btn btn-sm btn-outline-info" onclick="addDateCol('pp_table')">
+        <i class="fas fa-plus"></i> Add Dispatch Date
+      </button>
+    </div>
+    
+    <div class="table-responsive shadow-sm" style="border-radius: 10px;">
+      <table class="table table-bordered align-middle text-center table-premium mb-0" id="pp_table">
+        <thead>
+          <tr id="pp_thead_tr">
+            <th>S.No</th>
+            <th>Item Code</th>
+            <th>Item Name</th>
+            <th class="bg-warning d-none">Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="pp_row_1">
+            <td><input type="text" class="form-control" style="width:60px;" id="pp_sno" value="1" readonly></td>
+            <td><input type="text" class="form-control" id="pp_itemCode"></td>
+            <td><input type="text" class="form-control" id="pp_itemName" list="itemList" required></td>
+            <td class="d-none"><input type="number" class="form-control bg-warning" id="pp_balance" readonly></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 text-end">
+      <button type="submit" class="btn btn-premium px-5" style="background: linear-gradient(135deg, #4cc9f0, #4361ee);">Submit Priority Plan</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function smartSearch(fieldTrigger) {
+    if(!dropdownData) return;
+    let poNo = document.getElementById('ss_poNo').value;
+    let poDate = document.getElementById('ss_poDate').value;
+    let item = document.getElementById('ss_item').value;
+    let cust = document.getElementById('ss_cust').value;
+    
+    let matches = dropdownData.openPOs.filter(p => {
+      if(poNo && p.poNumber !== poNo) return false;
+      if(poDate && p.poDate !== poDate) return false;
+      if(item && p.itemName !== item) return false;
+      if(cust && p.customer !== cust) return false;
+      return true;
+    });
+    window.currentSmartMatches = matches;
+  }
+  
+  function loadSmartSearch() {
+    if (window.currentSmartMatches && window.currentSmartMatches.length > 0) {
+      let rec = window.currentSmartMatches[0];
+      document.getElementById('pp_poNumber').value = rec.poNumber;
+      document.getElementById('pp_customer').value = rec.customer;
+      document.getElementById('pp_itemName').value = rec.itemName;
+      alert("Data loaded into form!");
+    } else { alert("No matching Open PO found."); }
+  }
+
+  function submitPriorityPO(e) {
+    e.preventDefault();
+    showLoader();
+    let dynDates = [];
+    document.querySelectorAll('.qty-dyn-pp').forEach(inp => {
+      if (inp.value) dynDates.push({ date: inp.getAttribute('data-date'), qty: inp.value });
+    });
+    let data = {
+      customer: document.getElementById('pp_customer').value,
+      consignee: document.getElementById('pp_consignee').value,
+      poNumber: document.getElementById('pp_poNumber').value,
+      priorityDate: document.getElementById('pp_priorityDate').value,
+      sNo: document.getElementById('pp_sno').value,
+      itemCode: document.getElementById('pp_itemCode').value,
+      itemName: document.getElementById('pp_itemName').value,
+      dispatchDates: dynDates
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      hideLoader(); 
+      alert(res); 
+      document.getElementById('formPriorityPO').reset();
+    }).submitPriorityPO(data);
+  }
+</script>

@@ -1,0 +1,319 @@
+<div id="opt_dashboard" class="form-section glass-card">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 text-primary fw-bold">Dashboard & Reports 📊</h4>
+    <button class="btn btn-outline-primary btn-sm" onclick="loadDashboard()">Refresh Data</button>
+  </div>
+  
+  <!-- KPI Cards -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card text-white bg-primary mb-3 shadow-sm h-100" style="border:none; border-radius:12px; background: linear-gradient(135deg, #4361ee, #3a0ca3) !important;">
+        <div class="card-body">
+          <h6 class="card-title opacity-75">Total Open PO Value</h6>
+          <h3 class="card-text fw-bold" id="kpi_val">₹ 0</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-white bg-success mb-3 shadow-sm h-100" style="border:none; border-radius:12px; background: linear-gradient(135deg, #4cc9f0, #4895ef) !important;">
+        <div class="card-body">
+          <h6 class="card-title opacity-75">On-Time Dispatch Ratio</h6>
+          <h3 class="card-text fw-bold" id="kpi_ratio">0%</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-white bg-info mb-3 shadow-sm h-100" style="border:none; border-radius:12px; background: linear-gradient(135deg, #f72585, #b5179e) !important;">
+        <div class="card-body">
+          <h6 class="card-title opacity-75">Active Customers</h6>
+          <h3 class="card-text fw-bold" id="kpi_cust">0</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Charts Section -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100" style="border-radius:12px; border:none;">
+        <div class="card-header bg-white fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px;">📈 Top Customers by Open PO Value</div>
+        <div class="card-body chart-container">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100" style="border-radius:12px; border:none;">
+        <div class="card-header bg-white fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px;">⏱️ Dispatch Status Overview</div>
+        <div class="card-body chart-container">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3: Priority Tracking Report -->
+  <div class="card border-primary mb-4 shadow-sm" id="tracking_report_section" style="border-radius:12px; border:none; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;">
+    <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center" style="border-radius:12px 12px 0 0; padding:15px 20px; background: linear-gradient(135deg, #4361ee, #3f37c9) !important;">
+      <span>📅 Priority Dispatch Tracker (Plan vs Actual)</span>
+      <div>
+        <button class="btn btn-sm btn-light me-2" style="border-radius:6px;" onclick="exportTrackerToExcel()">Export Excel</button>
+        <button class="btn btn-sm btn-light" style="border-radius:6px;" onclick="window.print()">Print</button>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <label class="fw-bold small text-muted">PO Number</label>
+          <input type="text" class="form-control" id="track_po_input" placeholder="Enter PO Number" list="ss_poList" onchange="loadPriorityDates(this.value)">
+        </div>
+        <div class="col-md-4">
+          <label class="fw-bold small text-muted">Select Priority Date</label>
+          <select class="form-select" id="track_date_select">
+            <option value="">-- First Enter PO --</option>
+          </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button class="btn btn-primary w-100 btn-premium" onclick="generateTrackingReport()">Generate Report</button>
+        </div>
+      </div>
+      
+      <div class="table-responsive mt-4">
+        <table class="table table-bordered table-sm text-center align-middle table-premium" id="tracking_table">
+          <thead class="table-dark" id="tracking_thead">
+            <tr>
+              <th rowspan="2">Item Name</th>
+              <th colspan="2" class="bg-secondary text-white">Select a PO & Date</th>
+            </tr>
+          </thead>
+          <tbody id="tracking_tbody">
+            <tr><td colspan="3" class="text-muted py-4">No data generated yet. Select PO and Date to view report.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Section -->
+  <div class="card border-danger mb-4 shadow-sm" style="border-radius:12px; border:none; box-shadow: 0 4px 15px rgba(247,37,133,0.1) !important;">
+    <div class="card-header bg-danger text-white fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px; background: linear-gradient(135deg, #f72585, #b5179e) !important;">🚨 Tomorrow's Dispatch Alerts</div>
+    <div class="card-body p-0">
+      <ul class="list-group list-group-flush" id="alerts_list" style="border-radius: 0 0 12px 12px;">
+        <li class="list-group-item text-muted py-3">Loading alerts...</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Master Search -->
+  <div class="card mb-4 shadow-sm" style="border-radius:12px; border:none;">
+    <div class="card-header bg-secondary text-white fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px; background: linear-gradient(135deg, #2b2d42, #8d99ae) !important;">🔍 Master Search / Freight Viewer</div>
+    <div class="card-body p-4">
+      <div class="input-group mb-4 shadow-sm" style="border-radius:8px; overflow:hidden;">
+        <input type="text" class="form-control" style="border:none;" id="master_search_input" placeholder="Search PO No, Invoice, Customer, or Item...">
+        <button class="btn btn-dark px-4" type="button" onclick="runMasterSearch()">Search</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped table-premium">
+          <thead class="table-dark">
+            <tr>
+              <th>Date</th>
+              <th>Invoice No</th>
+              <th>Customer</th>
+              <th>Item</th>
+              <th>PO No</th>
+              <th>Qty</th>
+              <th>Vehicle</th>
+              <th>Freight</th>
+            </tr>
+          </thead>
+          <tbody id="master_search_results">
+            <tr><td colspan="8" class="text-center text-muted py-4">Enter search query above</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ================= DASHBOARD & CHARTS =================
+  function loadDashboard() {
+    showLoader();
+    google.script.run.withSuccessHandler(function(res) {
+      hideLoader();
+      document.getElementById('kpi_val').innerText = '₹ ' + res.kpis.totalValue.toLocaleString('en-IN');
+      document.getElementById('kpi_ratio').innerText = res.kpis.dispatchRatio + '%';
+      document.getElementById('kpi_cust').innerText = res.kpis.totalCustomers;
+      
+      let alertsHtml = '';
+      if (res.alerts.length === 0) {
+        alertsHtml = '<li class="list-group-item text-success fw-bold py-3">No pending dispatches for tomorrow. Relax! 🏖️</li>';
+      } else {
+        res.alerts.forEach(a => {
+          alertsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <span><b>${a.customer}</b> - ${a.item} (PO: ${a.po})</span>
+            <span class="badge rounded-pill" style="background-color: var(--danger-color); padding: 8px 12px;">${a.qty} Units Due</span>
+          </li>`;
+        });
+      }
+      document.getElementById('alerts_list').innerHTML = alertsHtml;
+      
+      renderCharts(res.chartData);
+      
+    }).getWebAppDashboardData();
+  }
+  
+  function renderCharts(data) {
+    if(barChartInstance) barChartInstance.destroy();
+    if(pieChartInstance) pieChartInstance.destroy();
+    
+    let ctxBar = document.getElementById('barChart').getContext('2d');
+    barChartInstance = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: data.labels.length > 0 ? data.labels : ['No Data'],
+            datasets: [{
+                label: 'Open PO Value (₹)',
+                data: data.openPoValues.length > 0 ? data.openPoValues : [0],
+                backgroundColor: 'rgba(67, 97, 238, 0.8)',
+                borderColor: 'rgba(67, 97, 238, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
+        }
+    });
+    
+    let ctxPie = document.getElementById('pieChart').getContext('2d');
+    pieChartInstance = new Chart(ctxPie, {
+        type: 'doughnut',
+        data: {
+            labels: ['Dispatched', 'Pending'],
+            datasets: [{
+                data: data.dispatchRatioData,
+                backgroundColor: ['#4cc9f0', '#f72585'],
+                borderWidth: 0
+            }]
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          cutout: '70%'
+        }
+    });
+  }
+
+  function runMasterSearch() {
+    let q = document.getElementById('master_search_input').value;
+    if (!q) { alert("Please enter something to search!"); return; }
+    
+    let tbody = document.getElementById('master_search_results');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-primary py-4">Searching...</td></tr>';
+    
+    google.script.run.withSuccessHandler(function(results) {
+      if (results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">No results found</td></tr>';
+        return;
+      }
+      let html = '';
+      results.forEach(r => {
+        html += `<tr>
+          <td>${r.date}</td>
+          <td>${r.invoiceNo}</td>
+          <td>${r.customer}</td>
+          <td>${r.item}</td>
+          <td>${r.po}</td>
+          <td><span class="badge bg-secondary">${r.qty}</span></td>
+          <td>${r.vehicle}</td>
+          <td class="fw-bold">₹${r.freight}</td>
+        </tr>`;
+      });
+      tbody.innerHTML = html;
+    }).masterSearch(q);
+  }
+
+  // ================= PRIORITY TRACKING REPORT =================
+  function loadPriorityDates(poNumber) {
+    if(!poNumber) return;
+    let select = document.getElementById('track_date_select');
+    select.innerHTML = '<option>Loading dates...</option>';
+    google.script.run.withSuccessHandler(function(dates) {
+      select.innerHTML = '';
+      if(dates.length === 0) {
+        select.innerHTML = '<option value="">No priority plans found</option>';
+        return;
+      }
+      dates.forEach(d => {
+        select.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+    }).getPriorityDatesForPO(poNumber);
+  }
+  
+  function generateTrackingReport() {
+    let poNo = document.getElementById('track_po_input').value;
+    let pDate = document.getElementById('track_date_select').value;
+    if(!poNo || !pDate) { alert("Enter PO and select a Date"); return; }
+    
+    let thead = document.getElementById('tracking_thead');
+    let tbody = document.getElementById('tracking_tbody');
+    tbody.innerHTML = '<tr><td colspan="10" class="text-primary text-center py-4">Generating Report...</td></tr>';
+    
+    google.script.run.withSuccessHandler(function(res) {
+      if(res.error || res.items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="text-danger text-center py-4">No data found for this selection.</td></tr>`;
+        return;
+      }
+      
+      // Build Headers dynamically
+      let firstItemDates = res.items[0].details.map(d => d.date);
+      let tr1 = `<tr><th rowspan="2" class="align-middle bg-dark text-white">Item Name</th>`;
+      let tr2 = `<tr>`;
+      
+      firstItemDates.forEach(d => {
+        tr1 += `<th colspan="2" class="bg-secondary text-white">${d}</th>`;
+        tr2 += `<th class="track-plan">Plan</th><th>Dispatch</th>`;
+      });
+      
+      tr1 += `<th colspan="3" class="bg-primary text-white">Current Date (Total)</th></tr>`;
+      tr2 += `<th class="track-plan">Tot Plan</th><th>Tot Disp</th><th>Balance</th></tr>`;
+      
+      thead.innerHTML = tr1 + tr2;
+      
+      // Build Body
+      let html = '';
+      res.items.forEach(item => {
+        html += `<tr><td class="fw-bold">${item.itemName}</td>`;
+        
+        item.details.forEach(d => {
+          let dClass = '';
+          if (d.disp > 0) {
+            dClass = (d.disp >= d.plan) ? 'track-disp-green' : 'track-disp-red';
+          }
+          html += `<td class="track-plan">${d.plan}</td><td class="${dClass}">${d.disp}</td>`;
+        });
+        
+        let balClass = (item.balance >= 0) ? 'track-disp-green' : 'track-disp-red';
+        html += `<td class="track-plan">${item.totalPlan}</td>
+                 <td>${item.totalDisp}</td>
+                 <td class="${balClass}">${(item.balance > 0 ? '+' : '')}${item.balance}</td></tr>`;
+      });
+      
+      tbody.innerHTML = html;
+    }).getPriorityTrackingReport(poNo, pDate);
+  }
+  
+  function exportTrackerToExcel() {
+    let poNo = document.getElementById('track_po_input').value;
+    let htmlTable = document.getElementById('tracking_table').outerHTML;
+    let blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'Priority_Tracking_' + (poNo || 'Report') + '.xls';
+    a.click();
+  }
+</script>
