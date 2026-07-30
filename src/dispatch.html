@@ -1,11 +1,13 @@
 <div id="opt_dispatch" class="form-section glass-card">
-  <div class="card-header-premium d-flex justify-content-between align-items-center mb-4" style="background: linear-gradient(135deg, #2b9348, #55a630);">
+  <div class="card-header-premium d-flex justify-content-between align-items-center mb-4"
+    style="background: linear-gradient(135deg, #2b9348, #55a630);">
     <h5 class="mb-0">Dispatch Entry</h5>
   </div>
-  
+  <h1>hi</h1>
   <form id="formDispatch" onsubmit="submitDispatch(event)">
     <div id="dispatchEntriesContainer">
-      <div class="dispatch-entry p-4 mb-4 bg-white shadow-sm" id="dispatch_row_0" style="border-radius: 12px; border: 1px solid #e9ecef;">
+      <div class="dispatch-entry p-4 mb-4 bg-white shadow-sm" id="dispatch_row_0"
+        style="border-radius: 12px; border: 1px solid #e9ecef;">
         <div class="row g-3 mb-3">
           <div class="col-md-2">
             <label class="fw-bold text-muted small mb-1">S.No (Invoice)</label>
@@ -28,7 +30,7 @@
             <input type="text" class="form-control d_item" list="itemList" required onchange="filterPOs(this)">
           </div>
         </div>
-        
+
         <div class="row g-3 mb-3">
           <div class="col-md-3">
             <label class="fw-bold text-muted small mb-1">PO Number</label>
@@ -49,7 +51,7 @@
             <input type="text" class="form-control d_place">
           </div>
         </div>
-        
+
         <div class="row g-3">
           <div class="col-md-2">
             <label class="fw-bold text-muted small mb-1">Vehicle No</label>
@@ -78,19 +80,21 @@
         </div>
       </div>
     </div>
-    
+
     <div class="d-flex justify-content-between align-items-center mt-4">
-      <button type="button" class="btn btn-outline-secondary px-4" style="border-radius:8px;" onclick="addDispatchRow()">
+      <button type="button" class="btn btn-outline-secondary px-4" style="border-radius:8px;"
+        onclick="addDispatchRow()">
         <i class="fas fa-plus"></i> Add Another Entry
       </button>
-      <button type="submit" class="btn btn-premium px-5" style="background: linear-gradient(135deg, #2b9348, #55a630);">Submit Dispatch(s)</button>
+      <button type="submit" class="btn btn-premium px-5"
+        style="background: linear-gradient(135deg, #2b9348, #55a630);">Submit Dispatch(s)</button>
     </div>
   </form>
 </div>
 
 <script>
   function filterPOs(element) {
-    if(!dropdownData) return;
+    if (!dropdownData) return;
     let itemName = element.value;
     let poSelect = element.closest('.dispatch-entry').querySelector('.d_po');
     poSelect.innerHTML = '<option value="">Select PO</option>';
@@ -137,16 +141,16 @@
         });
       }
     });
-    
+
     if (payload.length === 0) {
       hideLoader();
       alert("Please fill in item, qty and select PO for at least one dispatch entry.");
       return;
     }
-    
-    google.script.run.withSuccessHandler(function(res) {
-      hideLoader(); 
-      alert(res); 
+
+    google.script.run.withSuccessHandler(function (res) {
+      hideLoader();
+      alert(res);
       document.getElementById('formDispatch').reset();
     }).submitDispatch(payload);
   }
