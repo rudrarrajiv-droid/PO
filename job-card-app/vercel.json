@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "backend/src/index.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/src/**"]
+      }
     },
     {
       "src": "frontend/package.json",
@@ -19,8 +22,15 @@
       "dest": "/backend/src/index.ts"
     },
     {
+      "src": "/health",
+      "dest": "/backend/src/index.ts"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/frontend/dist/$1"
+      "dest": "/frontend/index.html"
     }
   ]
 }
