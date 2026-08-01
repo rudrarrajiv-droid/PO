@@ -1,7 +1,6 @@
 /**
  * 3_Dispatch.gs
- * Handles Dispatch submissions (single/bulk) and updates 3 sheets:
- * Dispatch_DB, Open_PO_DB, Priority_PO_DB, and Freight_Sheet.
+ * Handles Dispatch submissions with strict validation.
  */
 
 function submitDispatch(dispatchArray) {
@@ -15,74 +14,102 @@ function submitDispatch(dispatchArray) {
     return "Error: One or more databases are missing. Please run Setup.";
   }
   
-  var timestamp = new Date();
+  var openData = openPoDb.getDataRange().getValues();
+  var openHeaders = openData[0];
+  var openPoCol = openHeaders.indexOf("PO Number");
+  var openItemCol = openHeaders.indexOf("Item Name");
+  var openQtyCol = openHeaders.indexOf("Total PO Qty");
   
-  for (var i = 0; i < dispatchArray.length; i++) {
-    var d = dispatchArray[i];
-    
-    // 1. Add to Dispatch_DB
-    // Headers: Timestamp, S.No, Date, Customer, Consignee, Item Name, PO Number, Dispatch Qty, Transporter, Place, Vehicle No, Gaadi Size, Freight, Point, Holding, Overload
-    dispatchDb.appendRow([
-      timestamp, d.sNo, d.date, d.customer, d.consignee, d.itemName, d.poNumber, d.dispatchQty, d.transporter, d.place, d.vehicleNo, d.gaadiSize, d.freight, d.point, d.holding, d.overload
-    ]);
-    
-    // 2. Add to Freight_Sheet
-    // Headers: Timestamp, S.No, Receiving, Date, Invoice No, Transporter, Vehicle No, Gaadi Size, Place, Customer, Consignee, Inward, Outward, Holding, Point, Remarks
-    freightDb.appendRow([
-      timestamp, d.sNo, "", d.date, d.invoiceNo, d.transporter, d.vehicleNo, d.gaadiSize, d.place, d.customer, d.consignee, "", "", d.holding, d.point, ""
-    ]);
-    
-    // 3. Update Open_PO_DB (Match Item + PO, insert/update date column)
-    updatePOWithDispatch(openPoDb, d, 11); // dynamic dates start at col index 11 (0-based 10, wait, array index 11 means 12th col)
-    
-    // 4. Update Priority_PO_DB
-    updatePOWithDispatch(priorityPoDb, d, 8); // dynamic dates start at col index 8
-    
-    // 5. Update Dashboard (Record the dispatch amount)
-    Dashboard.addDispatch(d.customer, d.itemName, d.poNumber, parseFloat(d.dispatchQty) || 0);
+  var priData = priorityPoDb.getDataRange().getValues();
+  var priHeaders = priData[0];
+  var priPoCol = priHeaders.indexOf("PO Number");
+  var priItemCol = priHeaders.indexOf("Item Name");
+  var priStatusCol = priHeaders.indexOf("Status");
+  
+  var dispData = dispatchDb.getDataRange().getValues();
+  var dPoCol = 6; // Fixed based on setup: PO Number is at index 6
+  var dItemCol = 5; // Item Name is at index 5
+  var dQtyCol = 7; // Dispatch Qty is at index 7
+  
+  var timestamp = new Date();
+  var errors = [];
+  var rowsToAppendDisp = [];
+  var rowsToAppendFreight = [];
+  
+  // Create quick lookup for existing dispatches to calculate balances
+  var dispatchedMap = {};
+  for (var i = 1; i < dispData.length; i++) {
+    var key = dispData[i][dPoCol] + "|" + dispData[i][dItemCol];
+    dispatchedMap[key] = (dispatchedMap[key] || 0) + (parseFloat(dispData[i][dQtyCol]) || 0);
   }
   
-  // Trigger dashboard rollover calculation
-  Dashboard.calculateRollover();
-  
-  return "Success";
-}
-
-function updatePOWithDispatch(db, d, dynamicStartColIndex) {
-  var data = db.getDataRange().getValues();
-  var headers = data[0];
-  
-  // Find the exact PO and Item row
-  var rowIndex = -1;
-  // Look backwards to find the most recent matching PO
-  for (var i = data.length - 1; i > 0; i--) {
-    // Assuming Item Name is always at index 7 (for both Open & Priority)
-    // Assuming PO Number is at index 4 (Open) or 3 (Priority)
-    // Wait, let's dynamically find PO Number and Item Name column index
-    var poCol = headers.indexOf("PO Number");
-    var itemCol = headers.indexOf("Item Name");
+  // Validate all entries before committing
+  for (var i = 0; i < dispatchArray.length; i++) {
+    var d = dispatchArray[i];
+    var reqQty = parseFloat(d.dispatchQty) || 0;
+    var lookupKey = d.poNumber + "|" + d.itemName;
+    var alreadyDispatched = dispatchedMap[lookupKey] || 0;
     
-    if (poCol > -1 && itemCol > -1) {
-      if (data[i][poCol] == d.poNumber && data[i][itemCol] == d.itemName) {
-        rowIndex = i;
+    // 1. Check Open PO Balance
+    var openTotal = 0;
+    for (var r = 1; r < openData.length; r++) {
+      if (openData[r][openPoCol] == d.poNumber && openData[r][openItemCol] == d.itemName) {
+        openTotal = parseFloat(openData[r][openQtyCol]) || 0;
         break;
       }
     }
-  }
-  
-  if (rowIndex > -1) {
-    var dateStr = d.date; // E.g., "2023-08-05"
-    var colIndex = headers.indexOf(dateStr);
     
-    if (colIndex === -1) {
-      // Create new column for this date
-      db.insertColumnAfter(headers.length);
-      headers.push(dateStr);
-      db.getRange(1, headers.length).setValue(dateStr).setFontWeight("bold").setBackground("#d9ead3");
-      colIndex = headers.length - 1;
+    var openBalance = openTotal - alreadyDispatched;
+    if (reqQty > openBalance) {
+      errors.push("Row " + (i+1) + ": Dispatch Qty (" + reqQty + ") exceeds Open PO Balance (" + openBalance + ") for " + d.itemName);
+      continue;
     }
     
-    var currentVal = parseFloat(db.getRange(rowIndex + 1, colIndex + 1).getValue()) || 0;
-    db.getRange(rowIndex + 1, colIndex + 1).setValue(currentVal + (parseFloat(d.dispatchQty) || 0));
+    // 2. Check Active Priority Balance
+    var priTotal = 0;
+    for (var r = 1; r < priData.length; r++) {
+      if (priData[r][priPoCol] == d.poNumber && priData[r][priItemCol] == d.itemName && priData[r][priStatusCol] == "Active") {
+        for (var c = 9; c < priHeaders.length; c++) { // Dates start at index 9 now
+          priTotal += parseFloat(priData[r][c]) || 0;
+        }
+        break;
+      }
+    }
+    
+    var priBalance = priTotal - alreadyDispatched;
+    // Note: If priTotal is 0, they might not have a plan, should we block? Yes.
+    if (reqQty > priBalance) {
+      errors.push("Row " + (i+1) + ": Dispatch Qty (" + reqQty + ") exceeds Active Priority Balance (" + priBalance + ") for " + d.itemName);
+      continue;
+    }
+    
+    // If passed, prepare data
+    rowsToAppendDisp.push([
+      timestamp, d.sNo, d.date, d.customer, d.consignee, d.itemName, d.poNumber, d.dispatchQty, d.transporter, d.place, d.vehicleNo, d.gaadiSize, d.freight, d.point, d.holding, d.overload
+    ]);
+    
+    rowsToAppendFreight.push([
+      timestamp, d.sNo, "", d.date, d.invoiceNo, d.transporter, d.vehicleNo, d.gaadiSize, d.place, d.customer, d.consignee, "", "", d.holding, d.point, ""
+    ]);
+    
+    // Update local map so subsequent rows in same batch validate correctly
+    dispatchedMap[lookupKey] += reqQty;
   }
+  
+  if (errors.length > 0) {
+    return "Validation Failed:\n" + errors.join("\n");
+  }
+  
+  if (rowsToAppendDisp.length === 0) return "No valid dispatch data.";
+  
+  // Append to DBs
+  for (var i = 0; i < rowsToAppendDisp.length; i++) {
+    dispatchDb.appendRow(rowsToAppendDisp[i]);
+    freightDb.appendRow(rowsToAppendFreight[i]);
+    
+    // Update Dashboard (Record the dispatch amount)
+    Dashboard.addDispatch(rowsToAppendDisp[i][3], rowsToAppendDisp[i][5], rowsToAppendDisp[i][6], rowsToAppendDisp[i][7]);
+  }
+  
+  return "Successfully processed " + rowsToAppendDisp.length + " dispatch(es).";
 }

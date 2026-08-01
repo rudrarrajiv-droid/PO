@@ -47,62 +47,10 @@ var Dashboard = {
     }
   },
   
-  // Implements the user's rollover logic
+  // calculateRollover has been deprecated to prevent destructive edits to Priority_PO_DB.
+  // Smart quantity adjustments are now calculated dynamically in getPriorityTrackingReport.
   calculateRollover: function() {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var priSheet = ss.getSheetByName("Priority_PO_DB");
-    if (!priSheet) return;
-    var data = priSheet.getDataRange().getValues();
-    var headers = data[0];
-    
-    var dateCols = [];
-    for (var i = 8; i < headers.length; i++) {
-      dateCols.push({ index: i, dateStr: headers[i], dateVal: new Date(headers[i]) });
-    }
-    dateCols.sort(function(a, b) { return a.dateVal - b.dateVal; });
-    
-    var updated = false;
-    for (var r = 1; r < data.length; r++) {
-      var customer = data[r][1];
-      var poNumber = data[r][3];
-      var dashData = ss.getSheetByName("Dashboard").getDataRange().getValues();
-      var totalPlan = 0;
-      var totalDisp = 0;
-      for (var d = 1; d < dashData.length; d++) {
-        if (dashData[d][0] == customer && dashData[d][2] == poNumber) {
-          totalPlan = parseFloat(dashData[d][3]) || 0;
-          totalDisp = parseFloat(dashData[d][5]) || 0;
-          break;
-        }
-      }
-      
-      // Zero-out logic
-      if (totalDisp >= totalPlan && totalPlan > 0) {
-        for (var c = 0; c < dateCols.length; c++) {
-          var cIdx = dateCols[c].index;
-          if (data[r][cIdx] !== "" && parseFloat(data[r][cIdx]) > 0) {
-            data[r][cIdx] = 0;
-            updated = true;
-          }
-        }
-      } else if (totalDisp > 0) {
-        var remainingDisp = totalDisp;
-        for (var c = 0; c < dateCols.length; c++) {
-          var cIdx = dateCols[c].index;
-          var cellVal = parseFloat(data[r][cIdx]) || 0;
-          if (remainingDisp >= cellVal && cellVal > 0) {
-            remainingDisp -= cellVal;
-            data[r][cIdx] = 0;
-            updated = true;
-          } else if (remainingDisp > 0 && cellVal > 0) {
-            data[r][cIdx] = cellVal - remainingDisp;
-            remainingDisp = 0;
-            updated = true;
-          }
-        }
-      }
-    }
-    if (updated) priSheet.getDataRange().setValues(data);
+    return true; 
   }
 };
 
@@ -182,26 +130,30 @@ function getWebAppDashboardData() {
       }
     }
     
-    // Alerts (Tomorrow)
+    // Alerts (Tomorrow) - Dynamically read from Active priorities
     var priDb = ss.getSheetByName("Priority_PO_DB");
     if (priDb) {
       var priData = priDb.getDataRange().getValues();
       var headers = priData[0];
+      var statusCol = headers.indexOf("Status");
+      
       var tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       var tomorrowStr = Utilities.formatDate(tomorrow, Session.getScriptTimeZone(), "yyyy-MM-dd");
       var tomColIndex = headers.indexOf(tomorrowStr);
       
-      if (tomColIndex > -1) {
+      if (tomColIndex > -1 && statusCol > -1) {
         for (var i = 1; i < priData.length; i++) {
-          var qty = parseFloat(priData[i][tomColIndex]) || 0;
-          if (qty > 0) {
-            response.alerts.push({
-              customer: priData[i][1],
-              po: priData[i][3],
-              item: priData[i][7],
-              qty: qty
-            });
+          if (priData[i][statusCol] === "Active") {
+            var qty = parseFloat(priData[i][tomColIndex]) || 0;
+            if (qty > 0) {
+              response.alerts.push({
+                customer: priData[i][1],
+                po: priData[i][3],
+                item: priData[i][7],
+                qty: qty
+              });
+            }
           }
         }
       }
@@ -270,7 +222,7 @@ function getPriorityDatesForPO(poNumber) {
 }
 
 /**
- * Generates the Priority Tracking Report (Phase 3)
+ * Generates the Priority Tracking Report with Smart Rollover (Phase 4)
  */
 function getPriorityTrackingReport(poNumber, priorityDateStr) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -283,33 +235,34 @@ function getPriorityTrackingReport(poNumber, priorityDateStr) {
   var priHeaders = priData[0];
   var dispData = dispDb.getDataRange().getValues();
   
-  // Find all items in this PO on this priority date
+  // itemsMap[itemName] = { dates: { '2023-10-01': planQty }, dispatchObj: { '2023-10-01': dispQty } }
   var itemsMap = {}; 
-  // itemsMap[itemName] = { dates: { '2023-10-01': planQty }, totalPlan: 0, totalDisp: 0, dispatchObj: { '2023-10-01': dispQty } }
   
   for (var i = 1; i < priData.length; i++) {
     var rowPo = priData[i][3];
     var rowDate = priData[i][4] instanceof Date ? Utilities.formatDate(priData[i][4], Session.getScriptTimeZone(), "yyyy-MM-dd") : priData[i][4].toString();
+    var status = priData[i][priHeaders.indexOf("Status")];
     
+    // Match PO and Date. We can report on inactive history too if requested!
     if (rowPo == poNumber && rowDate == priorityDateStr) {
       var item = priData[i][7];
       if (!itemsMap[item]) {
-        itemsMap[item] = { dates: {}, totalPlan: 0, totalDisp: 0, dispatchObj: {} };
+        itemsMap[item] = { dates: {}, dispatchObj: {} };
       }
       
-      // Get all plan dates from column 8 onwards
-      for (var c = 8; c < priHeaders.length; c++) {
+      // Get all plan dates from column 9 onwards (since Status is 8)
+      var startCol = priHeaders.indexOf("Status") > -1 ? priHeaders.indexOf("Status") + 1 : 8;
+      for (var c = startCol; c < priHeaders.length; c++) {
         var qty = parseFloat(priData[i][c]) || 0;
         if (qty > 0) {
-          var planDate = priHeaders[c]; // String like "2023-10-01"
+          var planDate = priHeaders[c];
           itemsMap[item].dates[planDate] = qty;
-          itemsMap[item].totalPlan += qty;
         }
       }
     }
   }
   
-  // Now aggregate dispatches for these items from the DispDb from priorityDateStr onwards
+  // Aggregate dispatches from the DispDb from priorityDateStr onwards
   var targetDateObj = new Date(priorityDateStr);
   
   for (var i = 1; i < dispData.length; i++) {
@@ -319,39 +272,58 @@ function getPriorityTrackingReport(poNumber, priorityDateStr) {
       var dDate = new Date(dRawDate);
       var dDateStr = dRawDate instanceof Date ? Utilities.formatDate(dRawDate, Session.getScriptTimeZone(), "yyyy-MM-dd") : dRawDate.toString();
       
+      // Only count dispatches that occurred on or after the priority plan was made
       if (itemsMap[item] && dDate >= targetDateObj) {
         var qty = parseFloat(dispData[i][7]) || 0;
         itemsMap[item].dispatchObj[dDateStr] = (itemsMap[item].dispatchObj[dDateStr] || 0) + qty;
-        itemsMap[item].totalDisp += qty;
       }
     }
   }
   
-  // Format the response for the frontend UI
+  // Calculate Smart Adjustments (Carry forwards and Adjustments)
   var reportArray = [];
-  var allPlanDates = new Set();
   
   for (var item in itemsMap) {
-    Object.keys(itemsMap[item].dates).forEach(d => allPlanDates.add(d));
-    
     var row = {
       itemName: item,
-      totalPlan: itemsMap[item].totalPlan,
-      totalDisp: itemsMap[item].totalDisp,
-      balance: itemsMap[item].totalDisp - itemsMap[item].totalPlan,
-      details: [] // [{ date: '2023-10-01', plan: 100, disp: 50 }, ...]
+      totalPlan: 0,
+      totalDisp: 0,
+      balance: 0,
+      details: []
     };
     
-    // Sort dates
-    var sortedDates = Object.keys(itemsMap[item].dates).sort(function(a,b){return new Date(a)-new Date(b)});
+    // Sort all dates chronologically
+    var allDatesSet = new Set([...Object.keys(itemsMap[item].dates), ...Object.keys(itemsMap[item].dispatchObj)]);
+    var sortedDates = Array.from(allDatesSet).sort(function(a,b){return new Date(a)-new Date(b)});
+    
+    var carryForward = 0;
+    
     sortedDates.forEach(d => {
+      var origPlan = itemsMap[item].dates[d] || 0;
+      var disp = itemsMap[item].dispatchObj[d] || 0;
+      
+      row.totalPlan += origPlan;
+      row.totalDisp += disp;
+      
+      // Smart Quantity Adjustment Logic:
+      // Adjusted Plan = Original Plan + Carry Forward from previous days
+      var adjustedPlan = Math.max(0, origPlan + carryForward);
+      
+      // New Carry Forward = (Adjusted Plan - Dispatch)
+      // If Dispatch > Adjusted Plan, carryForward becomes negative, 
+      // which automatically reduces the next day's adjusted plan!
+      carryForward = adjustedPlan - disp;
+      
       row.details.push({
         date: d,
-        plan: itemsMap[item].dates[d] || 0,
-        disp: itemsMap[item].dispatchObj[d] || 0
+        originalPlan: origPlan,
+        adjustedPlan: adjustedPlan, // What they actually needed to dispatch today
+        disp: disp,
+        variance: disp - adjustedPlan // Over or under dispatch for the day
       });
     });
     
+    row.balance = row.totalPlan - row.totalDisp;
     reportArray.push(row);
   }
   
