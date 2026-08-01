@@ -95,12 +95,41 @@
   </div>
 
   <!-- Alerts Section -->
-  <div class="card border-danger mb-4 shadow-sm" style="border-radius:12px; border:none; box-shadow: 0 4px 15px rgba(247,37,133,0.1) !important;">
-    <div class="card-header bg-danger text-white fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px; background: linear-gradient(135deg, #f72585, #b5179e) !important;">🚨 Tomorrow's Dispatch Alerts</div>
-    <div class="card-body p-0">
-      <ul class="list-group list-group-flush" id="alerts_list" style="border-radius: 0 0 12px 12px;">
-        <li class="list-group-item text-muted py-3">Loading alerts...</li>
-      </ul>
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card border-danger shadow-sm h-100" style="border-radius:12px; border:none; box-shadow: 0 4px 15px rgba(247,37,133,0.1) !important;">
+        <div class="card-header bg-danger text-white fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px; background: linear-gradient(135deg, #f72585, #b5179e) !important;">🚨 Tomorrow's Dispatch Alerts</div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" id="alerts_list" style="border-radius: 0 0 12px 12px; max-height: 350px; overflow-y: auto;">
+            <li class="list-group-item text-muted py-3">Loading alerts...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pending / Delayed Dispatches -->
+    <div class="col-md-8">
+      <div class="card border-warning shadow-sm h-100" style="border-radius:12px; border:none; box-shadow: 0 4px 15px rgba(248,150,30,0.1) !important;">
+        <div class="card-header bg-warning text-dark fw-bold" style="border-radius:12px 12px 0 0; padding:15px 20px; background: linear-gradient(135deg, #f8961e, #f9c74f) !important;">⏳ Pending & Delayed Dispatches Overview</div>
+        <div class="card-body p-0">
+          <div class="table-responsive" style="max-height: 350px; overflow-y: auto; border-radius: 0 0 12px 12px;">
+            <table class="table table-hover table-sm align-middle text-center mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th>Customer</th>
+                  <th>PO Number</th>
+                  <th>Item Name</th>
+                  <th>Pending Qty</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="delays_tbody">
+                <tr><td colspan="5" class="text-muted py-3">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -157,6 +186,26 @@
         });
       }
       document.getElementById('alerts_list').innerHTML = alertsHtml;
+      
+      // Populate Pending/Delays table
+      let delaysHtml = '';
+      let pendingDelays = res.delays.filter(d => d.status !== "Completed" && d.status !== "No Plan");
+      if (pendingDelays.length === 0) {
+        delaysHtml = '<tr><td colspan="5" class="text-success fw-bold py-4">No pending or delayed items! 🎉</td></tr>';
+      } else {
+        pendingDelays.sort((a, b) => b.plan - a.plan); // Sort by highest plan
+        pendingDelays.forEach(d => {
+          let pendingQty = d.plan - d.disp;
+          delaysHtml += `<tr>
+            <td class="fw-bold">${d.customer}</td>
+            <td>${d.po}</td>
+            <td>${d.item}</td>
+            <td class="text-danger fw-bold">${pendingQty}</td>
+            <td><span class="badge bg-warning text-dark">Pending</span></td>
+          </tr>`;
+        });
+      }
+      document.getElementById('delays_tbody').innerHTML = delaysHtml;
       
       renderCharts(res.chartData);
       
@@ -274,12 +323,12 @@
       let tr2 = `<tr>`;
       
       firstItemDates.forEach(d => {
-        tr1 += `<th colspan="2" class="bg-secondary text-white">${d}</th>`;
-        tr2 += `<th class="track-plan">Plan</th><th>Dispatch</th>`;
+        tr1 += `<th colspan="3" class="bg-secondary text-white">${d}</th>`;
+        tr2 += `<th class="track-plan" title="Smart Adjusted Plan">Adj Plan</th><th>Disp</th><th title="Variance">Var</th>`;
       });
       
-      tr1 += `<th colspan="3" class="bg-primary text-white">Current Date (Total)</th></tr>`;
-      tr2 += `<th class="track-plan">Tot Plan</th><th>Tot Disp</th><th>Balance</th></tr>`;
+      tr1 += `<th colspan="3" class="bg-primary text-white">Overall Status</th></tr>`;
+      tr2 += `<th class="track-plan">Orig Plan Total</th><th>Total Disp</th><th>Balance</th></tr>`;
       
       thead.innerHTML = tr1 + tr2;
       
@@ -289,17 +338,27 @@
         html += `<tr><td class="fw-bold">${item.itemName}</td>`;
         
         item.details.forEach(d => {
-          let dClass = '';
+          let dispClass = '';
           if (d.disp > 0) {
-            dClass = (d.disp >= d.plan) ? 'track-disp-green' : 'track-disp-red';
+            dispClass = (d.disp >= d.adjustedPlan) ? 'track-disp-green' : 'track-disp-red';
           }
-          html += `<td class="track-plan">${d.plan}</td><td class="${dClass}">${d.disp}</td>`;
+          let varClass = (d.variance >= 0) ? (d.variance > 0 ? 'text-success fw-bold' : 'text-muted') : 'text-danger fw-bold';
+          let varianceText = (d.variance > 0 ? '+' : '') + d.variance;
+          
+          html += `<td class="track-plan" title="Original: ${d.originalPlan}">${d.adjustedPlan}</td>
+                   <td class="${dispClass}">${d.disp}</td>
+                   <td class="${varClass}">${varianceText}</td>`;
         });
         
-        let balClass = (item.balance >= 0) ? 'track-disp-green' : 'track-disp-red';
+        // Wait, the backend returns balance = totalPlan - totalDisp.
+        // Usually, balance implies remaining plan: totalPlan - totalDisp. 
+        // If balance > 0, it means we are under-dispatched.
+        let balClass = (item.balance >= 0) ? 'track-disp-red' : 'track-disp-green'; 
+        let balText = item.balance > 0 ? item.balance + ' Pending' : (item.balance < 0 ? Math.abs(item.balance) + ' Over' : '0');
+        
         html += `<td class="track-plan">${item.totalPlan}</td>
-                 <td>${item.totalDisp}</td>
-                 <td class="${balClass}">${(item.balance > 0 ? '+' : '')}${item.balance}</td></tr>`;
+                 <td class="fw-bold">${item.totalDisp}</td>
+                 <td class="${balClass}">${balText}</td></tr>`;
       });
       
       tbody.innerHTML = html;
