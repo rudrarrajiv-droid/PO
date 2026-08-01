@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.PROD ? '/api' : 'http://localhost:5000/api',
 });
 
 // Since we don't have login fully implemented in UI yet, we can mock a dummy token if the backend requires it,
