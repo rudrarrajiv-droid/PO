@@ -11,12 +11,12 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
       {/* HEADER */}
       <div className="flex justify-between items-start border-b-2 border-black pb-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gray-200 border border-gray-400 flex items-center justify-center font-bold text-gray-500">
-             LOGO
+          <div className="w-12 h-12 flex items-center justify-center">
+             <img src="/logo.gif" alt="Packwell India Logo" className="w-full h-full object-contain grayscale" />
           </div>
           <div>
             <h1 className="text-xl font-bold uppercase tracking-wider mb-0.5">Production Job Card</h1>
-            <p className="font-semibold text-gray-700">PACKWELL INDUSTRIES</p>
+            <p className="font-semibold text-gray-700">PACKWELL INDIA</p>
           </div>
         </div>
         <div className="text-right">

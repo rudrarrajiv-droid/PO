@@ -1,0 +1,244 @@
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Truck, Search, CircleDollarSign } from 'lucide-react';
+import { queryDocuments } from '../lib/firebase/services';
+import type { FinishGoodTransaction } from '../lib/types/models';
+import ExportButtons from '../components/ExportButtons';
+import { format } from 'date-fns';
+
+export default function FreightCharge() {
+  const [search, setSearch] = useState('');
+  const [transporterFilter, setTransporterFilter] = useState('ALL');
+  const [sizeFilter, setSizeFilter] = useState('ALL');
+
+  const { data: transactions = [], isLoading: txLoading } = useQuery({
+    queryKey: ['finishGoodTransactions'],
+    queryFn: () => queryDocuments('finishGoodTransactions', []) as Promise<FinishGoodTransaction[]>
+  });
+
+  const { data: finishGoods = [], isLoading: fgLoading } = useQuery({
+    queryKey: ['finishGoods'],
+    queryFn: () => queryDocuments('finishGoods', []) as Promise<any[]>
+  });
+
+  const isLoading = txLoading || fgLoading;
+
+  // Process data to unique invoices
+  const { uniqueInvoices, transporterOptions, sizeOptions } = useMemo(() => {
+    const outwards = transactions.filter(t => t.type === 'OUT' && t.invoiceNo);
+    
+    const invoiceMap = new Map<string, any>();
+    const transporters = new Set<string>();
+    const sizes = new Set<string>();
+
+    outwards.forEach(tx => {
+      if (tx.transporterName) transporters.add(tx.transporterName);
+      if (tx.vehicleSize) sizes.add(tx.vehicleSize);
+
+      if (!invoiceMap.has(tx.invoiceNo!)) {
+        // Find customer name from finishGoods
+        const fg = finishGoods.find(item => item.productId === tx.finishGoodId);
+        
+        invoiceMap.set(tx.invoiceNo!, {
+          id: tx.id, // Just using the first transaction's id as a key
+          date: tx.date || tx.createdAt,
+          invoiceNo: tx.invoiceNo,
+          transporterName: tx.transporterName || '',
+          customerName: fg ? fg.customerName : 'Unknown',
+          place: tx.place || '',
+          vehicleNo: tx.vehicleNo || '',
+          vehicleSize: tx.vehicleSize || '',
+          freight: Number(tx.freight) || 0,
+          holding: Number(tx.holding) || 0,
+          point: Number(tx.point) || 0,
+          others: Number(tx.others) || 0,
+          totalFreight: (Number(tx.freight) || 0) + (Number(tx.holding) || 0) + (Number(tx.point) || 0)
+        });
+      }
+    });
+
+    return {
+      uniqueInvoices: Array.from(invoiceMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      transporterOptions: Array.from(transporters).sort(),
+      sizeOptions: Array.from(sizes).sort()
+    };
+  }, [transactions, finishGoods]);
+
+  // Apply filters
+  const filteredData = useMemo(() => {
+    return uniqueInvoices.filter(item => {
+      const searchStr = `${item.invoiceNo} ${item.transporterName} ${item.customerName} ${item.vehicleNo} ${item.place}`.toLowerCase();
+      if (!searchStr.includes(search.toLowerCase())) return false;
+      if (transporterFilter !== 'ALL' && item.transporterName !== transporterFilter) return false;
+      if (sizeFilter !== 'ALL' && item.vehicleSize !== sizeFilter) return false;
+      return true;
+    });
+  }, [uniqueInvoices, search, transporterFilter, sizeFilter]);
+
+  // Calculate overall total
+  const overallTotalFreight = useMemo(() => {
+    return filteredData.reduce((acc, curr) => acc + curr.totalFreight, 0);
+  }, [filteredData]);
+
+  const inputCls = "w-full text-sm rounded-md border border-input px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring";
+
+  return (
+    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-4 md:p-6 max-w-7xl mx-auto w-full">
+      
+      {/* Header & Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center">
+            <Truck className="w-8 h-8 mr-3 text-primary" />
+            Freight Charges
+          </h1>
+          <p className="text-muted-foreground mt-1">Manage and track outward logistics expenses</p>
+        </div>
+        
+        <div className="flex justify-end items-center">
+          <div className="bg-primary/10 border border-primary/20 px-6 py-4 rounded-xl flex items-center shadow-sm">
+            <div className="bg-primary/20 p-3 rounded-full mr-4">
+              <CircleDollarSign className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-primary uppercase tracking-wider mb-1">Total Freight (Filtered)</div>
+              <div className="text-2xl font-black text-primary">₹{overallTotalFreight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Bar */}
+      <div className="bg-card border border-border shadow-sm rounded-lg p-4 flex flex-col lg:flex-row items-center justify-between gap-4 shrink-0">
+        <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input 
+              type="text" 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search Invoice, Transporter, Customer..." 
+              className={`${inputCls} pl-9`}
+            />
+          </div>
+          
+          <select 
+            value={transporterFilter}
+            onChange={(e) => setTransporterFilter(e.target.value)}
+            className={`${inputCls} w-full sm:w-48`}
+          >
+            <option value="ALL">All Transporters</option>
+            {transporterOptions.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+
+          <select 
+            value={sizeFilter}
+            onChange={(e) => setSizeFilter(e.target.value)}
+            className={`${inputCls} w-full sm:w-40`}
+          >
+            <option value="ALL">All Vehicle Sizes</option>
+            {sizeOptions.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+          <ExportButtons 
+            data={filteredData} 
+            filenamePrefix="FreightCharges"
+            title="Freight Charges Report"
+            columnMap={{
+              'date': 'Date',
+              'invoiceNo': 'Invoice No',
+              'transporterName': 'Transporter',
+              'customerName': 'Customer',
+              'place': 'Place',
+              'vehicleNo': 'Vehicle No',
+              'vehicleSize': 'Vehicle Size',
+              'freight': 'Freight (₹)',
+              'holding': 'Holding (₹)',
+              'point': 'Point (₹)',
+              'others': 'Others (₹)',
+              'totalFreight': 'Total Freight (₹)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Main Table */}
+      <div className="flex-1 bg-card border border-border shadow-sm rounded-lg overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-auto">
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground">Loading freight records...</div>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Invoice No</th>
+                  <th className="px-4 py-3 font-medium">Customer</th>
+                  <th className="px-4 py-3 font-medium">Transporter</th>
+                  <th className="px-4 py-3 font-medium">Place</th>
+                  <th className="px-4 py-3 font-medium">Vehicle Info</th>
+                  <th className="px-4 py-3 font-medium text-right">Freight</th>
+                  <th className="px-4 py-3 font-medium text-right">Holding</th>
+                  <th className="px-4 py-3 font-medium text-right">Point</th>
+                  <th className="px-4 py-3 font-medium text-right text-primary">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredData.map((item) => (
+                  <tr key={item.id} className="hover:bg-muted/50 transition-colors bg-card">
+                    <td className="px-4 py-3 font-medium whitespace-nowrap">
+                      {item.date ? format(new Date(item.date), 'dd MMM yyyy') : '-'}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-foreground">
+                      {item.invoiceNo}
+                    </td>
+                    <td className="px-4 py-3 text-foreground">
+                      {item.customerName}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {item.transporterName || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {item.place || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-bold">{item.vehicleNo || '-'}</div>
+                      <div className="text-xs text-muted-foreground">{item.vehicleSize || '-'}</div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {item.freight ? `₹${item.freight}` : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {item.holding ? `₹${item.holding}` : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {item.point ? `₹${item.point}` : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right font-black text-primary text-base">
+                      ₹{item.totalFreight.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+
+                {filteredData.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-8 text-center text-muted-foreground">
+                      No freight records found for the current filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+    </div>
+  );
+}

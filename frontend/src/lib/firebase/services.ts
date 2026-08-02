@@ -362,3 +362,240 @@ export const executeReelAllocation = async (
     throw error;
   }
 };
+
+export interface FinishGoodInwardPayload {
+  productId: string;
+  productName: string;
+  customerId: string;
+  customerName: string;
+  quantity: number;
+  category: 'REGULAR' | 'REJECTED';
+  date: string;
+  rate: number;
+}
+
+export const executeFinishGoodInwardTransaction = async (
+  payloads: FinishGoodInwardPayload[],
+  user: string
+) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const timestamp = serverTimestamp();
+      const txCol = collection(db, 'finishGoodTransactions');
+      
+      const fgRefs = payloads.map(p => ({
+        payload: p,
+        ref: doc(db, 'finishGoods', p.productId) // Use productId as document ID for FinishGood
+      }));
+
+      // 1. Read all required docs
+      const readDocs = [];
+      for (const item of fgRefs) {
+        const snap = await transaction.get(item.ref);
+        readDocs.push({
+          ...item,
+          snap,
+          data: snap.exists() ? snap.data() : null
+        });
+      }
+
+      // 2. Perform all writes
+      for (const item of readDocs) {
+        const p = item.payload;
+        let newClosingBalance = 0;
+        let newNonMovingBalance = 0;
+        let newInQty = p.quantity;
+        let newOpeningQty = 0;
+        let newOutQty = 0;
+
+        if (item.snap.exists() && item.data) {
+          const existing = item.data;
+          newOpeningQty = existing.openingQty || 0;
+          newInQty = (existing.inQty || 0) + p.quantity;
+          newOutQty = existing.outQty || 0;
+          newClosingBalance = existing.closingBalance || 0;
+          newNonMovingBalance = existing.nonMovingBalance || 0;
+        } else {
+          // Creating a new finish goods record
+          newOpeningQty = 0; // Or we could say it's 0
+        }
+
+        if (p.category === 'REGULAR') {
+          newClosingBalance += p.quantity;
+        } else if (p.category === 'REJECTED') {
+          newNonMovingBalance += p.quantity;
+        }
+
+        const fgData = {
+          productId: p.productId,
+          productName: p.productName,
+          customerId: p.customerId,
+          customerName: p.customerName,
+          openingQty: newOpeningQty,
+          inQty: newInQty,
+          outQty: newOutQty,
+          closingBalance: newClosingBalance,
+          nonMovingBalance: newNonMovingBalance,
+          rate: p.rate,
+          updatedAt: timestamp,
+          updatedBy: user,
+          isArchived: false,
+        };
+
+        if (!item.snap.exists()) {
+          transaction.set(item.ref, {
+            ...fgData,
+            createdAt: timestamp,
+            createdBy: user,
+          });
+        } else {
+          transaction.update(item.ref, fgData);
+        }
+
+        // Insert Transaction Log
+        const newTxRef = doc(txCol);
+        transaction.set(newTxRef, {
+          finishGoodId: p.productId, // Since finishGood ID === productId
+          type: 'IN',
+          category: p.category,
+          quantity: p.quantity,
+          remainingBalance: p.category === 'REGULAR' ? newClosingBalance : newNonMovingBalance,
+          date: p.date,
+          performedBy: user,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          createdBy: user,
+          updatedBy: user,
+          isArchived: false,
+        });
+      }
+    });
+
+    await logActivity({
+      user,
+      action: 'Finish Goods Bulk Inward',
+      entity: 'finishGoods',
+      referenceId: 'BULK',
+      timestamp: serverTimestamp()
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error executing Finish Goods Inward:`, error);
+    throw error;
+  }
+};
+
+export interface FinishGoodOutwardPayload {
+  productId: string;
+  quantity: number;
+  category: 'DISPATCH' | 'NON-MOVING';
+}
+
+export interface LogisticsPayload {
+  date: string;
+  invoiceNo: string;
+  place: string;
+  transporterName: string;
+  vehicleNo: string;
+  vehicleSize: string;
+  freight: number;
+  holding: number;
+  point: string;
+  others: string;
+}
+
+export const executeFinishGoodOutwardTransaction = async (
+  logistics: LogisticsPayload,
+  payloads: FinishGoodOutwardPayload[],
+  user: string
+) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const timestamp = serverTimestamp();
+      const txCol = collection(db, 'finishGoodTransactions');
+      
+      const fgRefs = payloads.map(p => ({
+        payload: p,
+        ref: doc(db, 'finishGoods', p.productId)
+      }));
+
+      // 1. Read all required docs
+      const readDocs = [];
+      for (const item of fgRefs) {
+        const snap = await transaction.get(item.ref);
+        if (!snap.exists()) {
+          throw new Error(`Finish Good record not found for product ${item.payload.productId}`);
+        }
+        readDocs.push({
+          ...item,
+          snap,
+          data: snap.data()
+        });
+      }
+
+      // 2. Perform all writes
+      for (const item of readDocs) {
+        const p = item.payload;
+        const existing = item.data!;
+        
+        let newClosingBalance = existing.closingBalance || 0;
+        let newNonMovingBalance = existing.nonMovingBalance || 0;
+        const newOutQty = (existing.outQty || 0) + p.quantity;
+
+        if (p.category === 'DISPATCH') {
+          if (newClosingBalance < p.quantity) {
+            throw new Error(`Insufficient Regular Balance for product ${existing.productName}`);
+          }
+          newClosingBalance -= p.quantity;
+        } else if (p.category === 'NON-MOVING') {
+          if (newNonMovingBalance < p.quantity) {
+            throw new Error(`Insufficient Non-Moving Balance for product ${existing.productName}`);
+          }
+          newNonMovingBalance -= p.quantity;
+        }
+
+        const fgData = {
+          outQty: newOutQty,
+          closingBalance: newClosingBalance,
+          nonMovingBalance: newNonMovingBalance,
+          updatedAt: timestamp,
+          updatedBy: user,
+        };
+
+        transaction.update(item.ref, fgData);
+
+        // Insert Transaction Log
+        const newTxRef = doc(txCol);
+        transaction.set(newTxRef, {
+          finishGoodId: p.productId,
+          type: 'OUT',
+          category: p.category,
+          quantity: p.quantity,
+          remainingBalance: p.category === 'DISPATCH' ? newClosingBalance : newNonMovingBalance,
+          performedBy: user,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          createdBy: user,
+          updatedBy: user,
+          isArchived: false,
+          ...logistics,
+          referenceNo: logistics.invoiceNo,
+        });
+      }
+    });
+
+    await logActivity({
+      user,
+      action: 'Finish Goods Bulk Outward',
+      entity: 'finishGoods',
+      referenceId: logistics.invoiceNo || 'BULK_OUT',
+      timestamp: serverTimestamp()
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error executing Finish Goods Outward:`, error);
+    throw error;
+  }
+};

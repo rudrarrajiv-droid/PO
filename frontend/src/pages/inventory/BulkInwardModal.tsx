@@ -340,7 +340,7 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
             </div>
             <div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Weight</div>
-              <div className="text-xl font-bold text-indigo-600">{totalWeight.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">Kg</span></div>
+              <div className="text-xl font-bold text-primary">{totalWeight.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">Kg</span></div>
             </div>
             <div className="pl-8 border-l border-border/50">
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Value</div>

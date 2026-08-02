@@ -7,6 +7,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
 
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase/config';
+
 export default function Dashboard() {
   const [modalState, setModalState] = useState<{ isOpen: boolean; title: string; filterKey: string }>({
     isOpen: false,
@@ -24,7 +27,8 @@ export default function Dashboard() {
   const { data: activityLogs = [], isLoading: loadingLogs } = useQuery({
     queryKey: ['dashboard-logs'],
     queryFn: async () => {
-      const logs = await queryDocuments('activityLogs', []) as any[];
+      const snapshot = await getDocs(collection(db, 'activityLogs'));
+      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       return logs.sort((a, b) => {
         const timeA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp || a.createdAt?.toDate?.() || 0).getTime();
         const timeB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp || b.createdAt?.toDate?.() || 0).getTime();

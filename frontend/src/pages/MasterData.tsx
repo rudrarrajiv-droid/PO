@@ -105,12 +105,12 @@ export default function MasterData() {
             className={cn(
               "px-4 py-3 rounded-lg flex flex-col items-center min-w-[140px] shadow-sm cursor-pointer transition-all hover:scale-105",
               tab === 'products' 
-                ? "bg-indigo-500/20 border-2 border-indigo-500 ring-2 ring-indigo-500/20" 
-                : "bg-indigo-500/5 border border-indigo-500/20 opacity-70 hover:opacity-100"
+                ? "bg-primary/20 border-2 border-primary ring-2 ring-primary/20" 
+                : "bg-primary/5 border border-primary/20 opacity-70 hover:opacity-100"
             )}
           >
-            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Products</span>
-            <span className="text-2xl font-extrabold text-indigo-700 leading-none">{products.length}</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Total Products</span>
+            <span className="text-2xl font-extrabold text-primary leading-none">{products.length}</span>
           </div>
         </div>
       </div>
@@ -197,10 +197,9 @@ export default function MasterData() {
                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-0.5">Selected Customer</span>
                  <span className="font-extrabold text-foreground text-sm">{search}</span>
                </div>
-               <div className="h-8 w-px bg-border"></div>
-               <div>
-                 <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-0.5">Total Products</span>
-                 <span className="font-extrabold text-indigo-600 text-lg leading-none">{filteredProducts.length}</span>
+               <div className="bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-md flex flex-col items-center justify-center">
+                 <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-0.5">Found</span>
+                 <span className="font-extrabold text-primary text-lg leading-none">{filteredProducts.length}</span>
                </div>
             </div>
           )}
@@ -383,7 +382,7 @@ function ProductsTable({ data, isLoading, onEdit }: { data: Product[]; isLoading
                             <span className="font-semibold text-foreground">{l.layerName}</span>
                             {l.paperType && <span className="ml-2 text-muted-foreground">{l.paperType}</span>}
                             {l.bf && <span className="ml-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">BF: {l.bf}</span>}
-                            {l.gsm && <span className="ml-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">GSM: {l.gsm}</span>}
+                            {l.gsm && <span className="ml-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">GSM: {l.gsm}</span>}
                           </div>
                         ))}
                       </div>

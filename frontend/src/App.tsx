@@ -9,6 +9,8 @@ import Production from './pages/Production';
 import ProductionTracker from './pages/ProductionTracker';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
+import FinishGoods from './pages/FinishGoods';
+import FreightCharge from './pages/FreightCharge';
 import AppLayout from './layouts/AppLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -31,6 +33,8 @@ function App() {
                 <Route path="master-data" element={<MasterData />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="production" element={<ProductionTracker />} />
+                <Route path="finish-goods" element={<FinishGoods />} />
+                <Route path="freight" element={<FreightCharge />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
             </Route>

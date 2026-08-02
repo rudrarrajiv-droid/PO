@@ -140,7 +140,7 @@ export default function JobCards() {
             <div className="flex gap-3">
               <button 
                 onClick={handleDownloadPDF} 
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md text-sm font-bold flex items-center shadow transition-colors text-white"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 rounded-md text-sm font-bold flex items-center shadow transition-colors text-primary-foreground"
               >
                 Download as PDF
               </button>

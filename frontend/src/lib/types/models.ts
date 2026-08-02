@@ -105,6 +105,41 @@ export interface ReelTransaction extends BaseModel {
   date: string;
 }
 
+export interface FinishGood extends BaseModel {
+  productId: string;
+  productName: string;
+  customerId: string;
+  customerName: string;
+  openingQty: number;
+  inQty: number;
+  outQty: number;
+  closingBalance: number;
+  nonMovingBalance: number;
+  rate: number;
+}
+
+export interface FinishGoodTransaction extends BaseModel {
+  finishGoodId: string;
+  type: 'IN' | 'OUT';
+  category: 'REGULAR' | 'REJECTED' | 'DISPATCH' | 'NON-MOVING'; // REGULAR/REJECTED for IN, DISPATCH/NON-MOVING for OUT
+  quantity: number;
+  remainingBalance: number;
+  date: string;
+  referenceNo?: string; // Job Card No for IN, Invoice No for OUT
+  performedBy: string;
+  
+  // Logistics Fields for OUT
+  invoiceNo?: string;
+  place?: string;
+  transporterName?: string;
+  vehicleNo?: string;
+  vehicleSize?: string;
+  freight?: number;
+  holding?: number;
+  point?: string;
+  others?: string;
+}
+
 export interface ActivityLog {
   id?: string;
   user: string;

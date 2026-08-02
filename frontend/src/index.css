@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 20%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 16% 93%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 16% 93%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 16% 93%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 47% 20%;
     --radius: 0.5rem;
   }
  
@@ -33,7 +33,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 222 47% 20%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 222 47% 20%;
   }
 }
 
@@ -80,4 +80,93 @@
   .no-print, .no-print * {
     display: none !important;
   }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================
+   PART 3 - GLOBAL POPUP / MODAL TRANSPARENCY FIX
+   ========================================================== */
+
+/* 1. Modal Overlay - Properly dim the background, remove blur */
+.fixed.inset-0 {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: none !important;
+}
+
+/* 2. Modal Container - Solid white, fully opaque */
+.fixed.inset-0 > .bg-card,
+.fixed.inset-0 .bg-card {
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* 3. Text Contrast - Dark text on the light modal background */
+.fixed.inset-0 .text-foreground,
+.fixed.inset-0 h2,
+.fixed.inset-0 h3,
+.fixed.inset-0 label {
+  color: #0f172a !important;
+}
+
+.fixed.inset-0 .text-muted-foreground,
+.fixed.inset-0 p {
+  color: #475569 !important;
+}
+
+/* Preserve text color on buttons and colored badges */
+.fixed.inset-0 button,
+.fixed.inset-0 button *,
+.fixed.inset-0 .bg-primary *,
+.fixed.inset-0 .bg-destructive *,
+.fixed.inset-0 .bg-green-600 *,
+.fixed.inset-0 .bg-blue-600 *,
+.fixed.inset-0 .bg-red-600 * {
+  color: inherit !important;
+}
+
+.fixed.inset-0 button.bg-primary {
+  color: #ffffff !important;
+}
+
+/* 4. Inputs - Solid background, visible border, dark text */
+.fixed.inset-0 input:not([type='checkbox']):not([type='radio']),
+.fixed.inset-0 textarea,
+.fixed.inset-0 select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+.fixed.inset-0 input:not([type='checkbox']):not([type='radio']):focus,
+.fixed.inset-0 textarea:focus,
+.fixed.inset-0 select:focus {
+  border-color: #2563eb !important;
+  outline: 2px solid transparent !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+
+.fixed.inset-0 input::placeholder,
+.fixed.inset-0 textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 5. Fix secondary/muted backgrounds inside modals so they don't look transparent */
+.fixed.inset-0 .bg-secondary\/20,
+.fixed.inset-0 .bg-secondary\/30,
+.fixed.inset-0 .bg-secondary\/50 {
+  background-color: #f1f5f9 !important;
 }
