@@ -1,17 +1,25 @@
 import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, Database, PackageSearch, Activity, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Job Cards', path: '/job-cards', icon: FileText },
     { name: 'Master Data', path: '/master-data', icon: Database },
     { name: 'Reel Inventory', path: '/inventory', icon: PackageSearch },
-    { name: 'Production', path: '/production', icon: Activity },
+    { name: 'Tracker', path: '/production', icon: Activity },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -48,7 +56,10 @@ export default function AppLayout() {
         </nav>
 
         <div className="p-4 border-t border-border">
-          <button className="flex items-center px-4 py-3 w-full rounded-md transition-colors text-sm font-medium text-destructive hover:bg-destructive/10">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center px-4 py-3 w-full rounded-md transition-colors text-sm font-medium text-destructive hover:bg-destructive/10"
+          >
             <LogOut className="w-5 h-5 mr-3" />
             Logout
           </button>
@@ -63,9 +74,12 @@ export default function AppLayout() {
             {navItems.find(i => location.pathname.startsWith(i.path))?.name || 'Packwell India'}
           </h2>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-muted-foreground font-medium">Welcome, User</span>
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
-              U
+            <div className="text-right flex flex-col justify-center">
+              <span className="text-sm text-foreground font-medium">{user?.name || 'User'}</span>
+              <span className="text-xs text-muted-foreground">{user?.role || 'Guest'}</span>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
           </div>
         </header>

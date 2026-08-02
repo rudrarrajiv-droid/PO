@@ -1,0 +1,1115 @@
+# PACKWELL INDIA - JOB CARD MANAGEMENT WEB APPLICATION
+
+You are working on an existing React-based Job Card Web Application.
+
+IMPORTANT CONTEXT:
+
+This is NOT an ERP.
+
+Our company already has an ERP.
+
+This application is ONLY a professional Job Card Management, Reel Inventory, Master Data, Production Tracking and Job Card Printing Web Application.
+
+The purpose is to replace our existing Google Sheets + Apps Script based Job Card workflow with a proper professional web application.
+
+Do not add Purchase, Sales, Accounting, HR, CRM or other ERP modules.
+
+============================================================
+CORE TECHNOLOGY
+============================================================
+
+Frontend:
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Professional responsive UI
+
+Backend / Database:
+- Firebase Cloud Firestore
+
+Do NOT use:
+- PostgreSQL
+- Prisma
+- MySQL
+- Firebase Authentication
+
+The application must use real Firestore data.
+
+NO mock/static business data should remain after the corresponding module is connected to Firestore.
+
+============================================================
+VERY IMPORTANT DEVELOPMENT INSTRUCTION
+============================================================
+
+DO NOT attempt to implement this entire project at once.
+
+Work PHASE BY PHASE.
+
+Before starting each phase:
+
+1. Inspect the existing project.
+2. Understand what already exists.
+3. Reuse working code where appropriate.
+4. Do not unnecessarily rewrite working functionality.
+5. Explain briefly what files you are going to modify.
+
+After completing each phase:
+
+1. Run/build the application.
+2. Fix TypeScript/build/runtime errors.
+3. Test the implemented workflow.
+4. Verify existing functionality has not broken.
+5. Give me a short completion report.
+6. STOP.
+
+DO NOT automatically continue to the next phase.
+
+Wait until I explicitly tell you:
+
+"Continue to next phase"
+
+Never hallucinate missing business rules.
+
+If something cannot be determined from:
+- existing source code
+- existing spreadsheet
+- Apps Script
+- sample Job Card
+- this requirement
+
+then clearly tell me what is unclear instead of inventing logic.
+
+============================================================
+DATA SAFETY - EXTREMELY IMPORTANT
+============================================================
+
+This application contains real production/business data.
+
+Accidental deletion must be prevented.
+
+Never permanently delete:
+- Job Cards
+- Products
+- Customer master records
+- Reel records
+- Reel transactions
+- Production history
+
+Use archive / soft-delete where appropriate.
+
+Important actions must have confirmation dialogs.
+
+For important records maintain:
+
+createdAt
+updatedAt
+createdBy
+updatedBy
+isArchived
+
+Important activities must also create audit log records.
+
+Use Firestore server timestamps.
+
+Use Firestore transactions/batches whenever multiple related documents must update together.
+
+Never trust calculations coming only from the UI when they affect inventory or important business data.
+
+============================================================
+LOGIN / USERS
+============================================================
+
+DO NOT implement Firebase Authentication.
+
+There are currently only TWO application users.
+
+Use a local/custom configuration file for these users.
+
+The login screen will compare entered credentials with configured values and then create application session state.
+
+Example roles:
+
+USER 1:
+Admin / Full Authority
+
+USER 2:
+Limited Authority
+
+Do not create a Firestore "users" collection.
+
+Do not create:
+- Firebase Auth
+- Signup
+- Forgot Password
+- Email Verification
+- User registration
+
+Permissions must be controlled inside the application according to the two configured roles.
+
+Keep credentials/configuration separated from normal UI components.
+
+The limited user must only see/use functionality allowed to that role.
+
+============================================================
+PROPOSED FIRESTORE STRUCTURE
+============================================================
+
+Do not blindly create collections.
+
+First inspect the existing data and confirm the structure.
+
+Expected main collections are approximately:
+
+customers
+products
+jobCards
+reelInventory
+reelTransactions
+reelAllocations
+productionTracker
+activityLogs
+
+Use subcollections only when they genuinely improve the design.
+
+Avoid unnecessary duplication.
+
+============================================================
+PHASE 1 - FIREBASE / FIRESTORE FOUNDATION
+============================================================
+
+Goal:
+
+Connect the existing application properly to Firebase Cloud Firestore.
+
+Tasks:
+
+- Install Firebase SDK.
+- Create Firebase configuration layer.
+- Use environment variables where appropriate.
+- Initialize Firestore.
+- Create reusable Firestore service functions.
+- Add centralized error handling.
+- Establish data models/interfaces.
+- Establish timestamp handling.
+- Establish archive strategy.
+- Establish audit/activity logging structure.
+
+Do NOT build all application modules in this phase.
+
+At the end, verify that the application can successfully:
+
+CREATE a test document
+READ it
+UPDATE it
+
+Then remove test data if appropriate.
+
+STOP after Phase 1.
+
+============================================================
+PHASE 2 - CUSTOM LOGIN & PERMISSION SYSTEM
+============================================================
+
+Build the simple two-user login system.
+
+No Firebase Authentication.
+
+Login should:
+
+Credentials
+     ↓
+Compare against configured users
+     ↓
+Determine role
+     ↓
+Create session
+     ↓
+Open application
+
+Protect application routes.
+
+Admin has full authority.
+
+Limited user gets restricted controls/actions according to configuration.
+
+Do not expose unauthorized buttons merely to disable them afterward.
+Hide actions the user is not allowed to perform.
+
+Maintain current logged-in username/role so activity logs can record who performed an action.
+
+STOP after testing login, logout, refresh/session behaviour and permissions.
+
+============================================================
+PHASE 3 - MASTER DATA
+============================================================
+
+Customer and Product must NOT be treated as unrelated independent masters.
+
+A Product/Item belongs to a Customer.
+
+Master Data UI should clearly show this relationship.
+
+Create an "Add New Item" workflow.
+
+The Add New Item form should contain ALL master information required later by the Job Card.
+
+Examples include:
+
+Customer
+Product / Item Name
+Item Code
+Length
+Width
+Height
+Ply
+Flute
+UPS
+Creasing
+Color
+Packing
+Special Requirement
+Reel Size
+Cut Size
+Paper specifications
+BF
+GSM
+Paper Type
+and other existing Job Card master fields found in the current system.
+
+Do not rely only on this list.
+
+Inspect the existing spreadsheet and Apps Script and preserve all actual required fields.
+
+When a new item is saved:
+
+Customer + Product relationship must be preserved.
+
+All fields should be stored in proper structured Firestore fields.
+
+The item should immediately appear in Master Data.
+
+============================================================
+MASTER DATA SEARCH
+============================================================
+
+Provide smart filtering using these optional filters:
+
+1. Reel Size
+2. BF
+3. GSM
+4. Flute
+5. Cut Size
+
+These filters must work independently AND together.
+
+Example:
+
+Only Reel Size selected
+→ show matching items.
+
+Reel Size + BF selected
+→ narrow results.
+
+Reel Size + BF + GSM
+→ narrow further.
+
+The user must NOT be required to fill all five filters.
+
+Provide Edit / Update functionality.
+
+Important:
+Updating Master Data must not silently rewrite historical Job Cards that were already created.
+
+STOP after Master Data is completely tested.
+
+============================================================
+PHASE 4 - REEL INVENTORY : INWARD
+============================================================
+
+Redesign Reel Inventory IN workflow for bulk reel entry.
+
+In real operation, one supplier can send approximately 10, 20, 50, 60 or more reels in one delivery.
+
+Do NOT make the user submit each reel separately.
+
+Create a bulk entry interface.
+
+Header/common information:
+
+Supplier Name
+Manufacturer Name
+
+Each reel row includes:
+
+Reel Number
+Weight
+Paper Type
+Reel Size
+BF
+GSM
+
+Reel Number must be automatically generated according to the existing reel numbering logic if such logic exists.
+
+Do NOT invent numbering logic if it cannot be determined.
+
+============================================================
+FAST BULK ENTRY BEHAVIOUR
+============================================================
+
+First row:
+
+User enters:
+Weight
+Paper Type
+Size
+BF
+GSM
+
+After the required row information is completed and Enter is pressed:
+
+Automatically create the next row.
+
+In the next row:
+
+- Reel Number → new auto-generated number
+- Weight → EMPTY
+- Paper Type → copy previous row
+- Size → copy previous row
+- BF → copy previous row
+- GSM → copy previous row
+
+The user mainly needs to enter the next reel's Weight.
+
+If the user manually changes:
+
+Paper Type
+Size
+BF
+GSM
+
+then the NEXT generated row must inherit the newly changed values.
+
+Example:
+
+Row 1:
+SK | 30 | 16 BF | 100 GSM
+
+Row 2 automatically:
+SK | 30 | 16 | 100
+
+If user changes Row 2 to:
+VK | 32 | 18 | 140
+
+then Row 3 should automatically inherit:
+VK | 32 | 18 | 140
+
+============================================================
+LIVE INWARD SUMMARY
+============================================================
+
+While entering reels continuously show:
+
+Total Reels Entered
+Total Weight
+
+Rows without Weight must NOT be submitted as reel records.
+
+When the user submits 10/20/50/100 reels:
+
+Save all valid reels in one controlled operation.
+
+Use Firestore batch writes where appropriate.
+
+After saving, inventory display should be organized/sortable by:
+
+Paper Type
+→ Reel Size
+→ BF
+→ GSM
+
+Also store:
+
+Supplier
+Manufacturer
+
+for every reel.
+
+STOP after thoroughly testing bulk inward.
+
+============================================================
+PHASE 5 - REEL INVENTORY : OUTWARD
+============================================================
+
+The OUT workflow should be selection based.
+
+The user should be able to progressively narrow available reels.
+
+Filters:
+
+Reel Size
+Paper Type
+BF
+GSM
+
+Example:
+
+Select Reel Size
+→ show all available reels of that size.
+
+Then select Paper Type
+→ narrow the same result.
+
+Then BF
+→ narrow further.
+
+Then GSM
+→ narrow further.
+
+Filters should be optional.
+
+Do not force all filters.
+
+Allow selecting MULTIPLE reels before submission.
+
+Example:
+
+User selects:
+10 reels
+20 reels
+30 reels
+50 reels
+
+Then presses ONE final OUT / Submit button.
+
+============================================================
+PARTIAL REEL CONSUMPTION - CRITICAL
+============================================================
+
+A reel must support partial consumption.
+
+Example:
+
+Original/available reel weight = 500 KG
+
+Physical remaining weight entered by user = 400 KG
+
+System should understand:
+
+Consumed / OUT = 100 KG
+Remaining = 400 KG
+
+Do NOT mark the whole reel as consumed.
+
+Update the reel balance correctly.
+
+Every OUT transaction must create history.
+
+Never destroy the previous transaction history.
+
+Use transaction-safe logic so reel balance cannot become negative because of concurrent or duplicate operations.
+
+============================================================
+REEL HISTORY
+============================================================
+
+Provide Reel History Search.
+
+User enters Reel Number.
+
+Immediately show complete history:
+
+Original Weight
+Current Balance
+Supplier
+Manufacturer
+Paper Type
+Size
+BF
+GSM
+Inward Date
+
+and every OUT transaction:
+
+Date
+Quantity Consumed
+Remaining Balance
+Related Job Card if applicable
+Performed By
+
+This history must be immutable/auditable.
+
+STOP after testing all OUT and history scenarios.
+
+============================================================
+PHASE 6 - JOB CARD CREATION
+============================================================
+
+Build/complete the Job Card creation workflow based on the existing spreadsheet and Apps Script.
+
+Customer selection should narrow available Products belonging to that Customer.
+
+Product selection should automatically populate available Master Data.
+
+Do not force the user to manually re-enter master information already stored.
+
+Preserve all existing calculations from Apps Script.
+
+Examples:
+
+Dimensions
+Ply
+Flute
+UPS
+Paper Specification
+Reel Size
+Cut Size
+BF
+GSM
+Paper Type
+Weight requirements
+and other existing fields.
+
+Do NOT invent formulas.
+
+Use the existing spreadsheet/Apps Script as the source of truth.
+
+When Job Card is submitted:
+
+Save a SNAPSHOT of required product/master specifications inside the Job Card.
+
+This is important because future Master Data edits must NOT alter historical Job Cards.
+
+New Job Card initial workflow status:
+
+PENDING
+
+Record:
+
+createdAt
+createdBy
+updatedAt
+status
+
+STOP after Job Card creation is completely tested.
+
+============================================================
+PHASE 7 - JOB CARD SEARCH / VIEW / EDIT / UPDATE
+============================================================
+
+The Job Card page currently shows created Job Cards.
+
+Improve Search Job Card.
+
+There must be THREE smart search inputs:
+
+1. Product Name
+2. Customer Name
+3. Job Card Number
+
+ALL THREE ARE OPTIONAL.
+
+The user must NOT need to fill all three.
+
+============================================================
+SMART MATCHING
+============================================================
+
+As the user starts typing, suggestions/results should narrow immediately.
+
+Example:
+
+Customer typed partially
+→ show matching customers/job cards.
+
+Once Customer is selected:
+→ Product search should only suggest products related to that customer.
+→ Job Card Number search should only suggest related Job Cards.
+
+If Product + Customer are selected:
+→ Job Card Number should only show Job Cards matching both.
+
+The same relational filtering should work regardless of which field the user starts with.
+
+Do not require an exact full string.
+
+Support case-insensitive partial matching.
+
+Do not create extremely expensive Firestore read patterns for every keystroke.
+Use sensible debounce/local narrowing of already fetched candidate data where appropriate.
+
+============================================================
+SEARCH RESULT ACTIONS
+============================================================
+
+After finding a Job Card provide:
+
+View
+Edit
+Update
+Print/PDF
+
+No accidental permanent Delete.
+
+If archive is allowed, require confirmation and permission.
+
+============================================================
+PHASE 8 - JOB CARD REEL MATCHING / ALLOCATION
+============================================================
+
+When opening/editing a Job Card:
+
+Use its Paper Specifications to search Reel Inventory.
+
+Match reels using:
+
+Required Reel Size
+Paper Type
+BF
+GSM
+
+For every paper layer/specification determine:
+
+Required Weight
+Matching available reels
+Total matching available weight
+Shortage if any
+
+Show whether sufficient material exists.
+
+Allow the user to select suggested reels.
+
+Also provide an "Other Reel" / manual selection option when operationally required.
+
+Do not silently change master data because an alternate reel was selected.
+
+Selected Reel Numbers and allocated weights must become part of the Job Card allocation record.
+
+They must also appear in the printed Job Card PDF.
+
+Prevent allocating more available weight than exists.
+
+Use Firestore transaction/batch logic for allocation changes.
+
+STOP after Reel Allocation is completely tested.
+
+============================================================
+PHASE 9 - JOB CARD PDF / PRINT
+============================================================
+
+The existing Print/PDF action currently opens something similar to:
+
+http://localhost:5000/api/jobcards/1/pdf
+
+and results in a blank/new window.
+
+Fix this properly.
+
+Use the provided sample Job Card PDF as the visual and functional reference.
+
+The generated Job Card must include:
+
+Company/Header information
+Job Card Number
+Date
+Customer
+Product
+Order Details
+Dimensions
+Ply
+Flute
+UPS
+Paper Specifications
+Production Summary
+Department Production & Signatures
+Reel Allocation Summary
+and all required existing fields.
+
+Allocated Reel Numbers must print on the Job Card.
+
+PDF must be:
+
+A4
+Print-ready
+Properly aligned
+No blank window
+No broken localhost-only dependency
+
+Provide:
+
+Preview
+Print
+Download PDF
+
+The production deployment must not depend on localhost URLs.
+
+STOP after PDF generation and printing are verified.
+
+============================================================
+PHASE 10 - JOB CARD ISSUE WORKFLOW
+============================================================
+
+Important real workflow:
+
+Example users/persons:
+Rajiv → checks physical Raw Material.
+Shubham → handles production.
+
+A newly created Job Card is:
+
+PENDING
+
+It remains in the Job Card Database / Pending state.
+
+After physical RM is checked, authorized user opens that Job Card and selects:
+
+ISSUE TO PRODUCTION
+
+Before issuing, the application MUST ask for:
+
+Expected Delivery / Dispatch Date AND Time
+
+This is mandatory.
+
+If Delivery/Dispatch Date-Time is not entered:
+
+DO NOT allow Job Card Issue.
+
+Once issued:
+
+Status changes:
+
+PENDING
+→ IN_PROCESS
+
+The Job Card should then appear in Production Tracker.
+
+Record:
+
+issuedAt
+issuedBy
+expectedDeliveryAt
+
+Create Activity Log.
+
+Do not duplicate the Job Card.
+
+It is the same Job Card changing workflow state.
+
+STOP after Issue workflow is tested.
+
+============================================================
+PHASE 11 - PRODUCTION TRACKER
+============================================================
+
+Production Tracker shows all IN_PROCESS Job Cards.
+
+Priority/order should be based primarily on expected Delivery/Dispatch Date-Time.
+
+Nearest due Job Cards should appear first.
+
+Active In-Process Job Cards should be visually prominent at the top.
+
+Show useful fields such as:
+
+Job Card Number
+Customer
+Product
+Order Qty
+Expected Delivery
+Current Status
+FG Qty
+Delay information
+
+============================================================
+FINISH GOODS COMPLETION LOGIC
+============================================================
+
+When Finish Goods Quantity is entered:
+
+Compare completion with required quantity and existing business logic.
+
+Do not assume partial FG means complete unless existing requirements confirm that.
+
+When Job Card is actually complete:
+
+Record completion time.
+
+Compare:
+
+completedAt
+vs
+expectedDeliveryAt
+
+If completed on/before expected time:
+
+Status:
+COMPLETED / ON TIME
+
+Visual:
+GREEN
+
+Move it into completed/history depth of Tracker rather than keeping it among active top records.
+
+If expected Delivery Date-Time passes while Job Card is still incomplete:
+
+Status remains active but becomes DELAYED.
+
+Calculate delay dynamically.
+
+Show:
+
+Delay Days / Time
+
+Visual:
+RED
+
+Keep delayed incomplete Job Cards prominently visible.
+
+Create Dashboard alert.
+
+STOP after Tracker workflow is tested.
+
+============================================================
+PHASE 12 - DASHBOARD
+============================================================
+
+Create a professional operational Dashboard.
+
+Keep the four useful summary cards, but make them CLICKABLE.
+
+Examples:
+
+Pending
+In Process
+Completed
+Delayed
+
+Click:
+
+Pending
+→ open modal/popup
+→ show ONLY Pending Job Cards.
+
+Click:
+
+In Process
+→ show only In-Process.
+
+Click:
+
+Completed
+→ show completed.
+
+Click:
+
+Delayed
+→ show delayed.
+
+The modal should allow opening the relevant Job Card.
+
+============================================================
+DASHBOARD CHARTS
+============================================================
+
+Add useful graphical charts based on real Firestore data.
+
+Examples:
+
+Job Cards by Status
+On-Time vs Delayed
+Job Cards Created Over Time
+Production Completion trend
+
+Do not add decorative meaningless charts.
+
+Charts must be derived from actual application data.
+
+============================================================
+ACTIVITY LOGS
+============================================================
+
+Dashboard must show user activities.
+
+Examples:
+
+Job Card Created
+Job Card Updated
+Job Card Issued
+Job Card Completed
+Reel Inward
+Reel Outward
+Reel Allocated
+Master Data Updated
+Job Card Archived
+
+Show:
+
+User
+Action
+Entity
+Reference Number
+Date/Time
+
+Newest activity first.
+
+Activity logs should be generated automatically from important business actions.
+
+============================================================
+DASHBOARD DELAY ALERT
+============================================================
+
+If an IN_PROCESS Job Card crosses expected delivery time without completion:
+
+Show clear Dashboard warning.
+
+Example:
+
+JC-1103
+DHARAM STEEL
+Delivery delayed by 2 days
+
+The alert should remain until the Job Card is completed/resolved.
+
+STOP after Dashboard is completely tested.
+
+============================================================
+PHASE 13 - FINAL DATA SAFETY / UX / PERMISSION AUDIT
+============================================================
+
+Perform a complete application audit.
+
+Check:
+
+No permanent accidental deletion.
+
+No mock data remains.
+
+No localhost-only API remains.
+
+No broken routes.
+
+No unauthorized actions for limited user.
+
+No duplicate Job Cards.
+
+No negative reel balances.
+
+No duplicate reel transaction caused by double click.
+
+Disable Submit buttons while write operation is processing.
+
+Important operations use confirmation dialogs.
+
+Forms validate required fields.
+
+Firestore errors are shown properly.
+
+Loading states exist.
+
+Empty states exist.
+
+Responsive layout works.
+
+Activity logging works.
+
+Archived data does not pollute normal views.
+
+Historical Job Cards retain original specifications even if Master Data changes.
+
+Reel history remains traceable.
+
+Build succeeds without TypeScript errors.
+
+STOP and provide final audit report.
+
+============================================================
+GLOBAL UI REQUIREMENTS
+============================================================
+
+The application must look like professional business software.
+
+NOT like:
+- Google Sheet
+- Student project
+- Simple CRUD demo
+
+Use:
+
+Professional sidebar
+Top navigation
+Breadcrumbs where useful
+Consistent tables
+Searchable fields
+Professional modals
+Confirmation dialogs
+Toast notifications
+Loading indicators
+Empty states
+Status badges
+Responsive layout
+Clean typography
+Proper spacing
+
+Do not overuse animations.
+
+Functionality and clarity are more important than decorative effects.
+
+============================================================
+GLOBAL BUSINESS RULES
+============================================================
+
+1. Existing spreadsheet + Apps Script business calculations are the source of truth.
+
+2. Existing sample Job Card is the reference for printed output.
+
+3. Never invent a formula because it "sounds correct".
+
+4. Customer and Product relationship must be maintained.
+
+5. Job Cards store specification snapshots.
+
+6. Master Data changes should affect future Job Cards, not silently alter historical ones.
+
+7. Reel Inventory must maintain transaction history.
+
+8. Partial reel consumption must preserve remaining weight.
+
+9. Job Card Issue requires Delivery/Dispatch Date-Time.
+
+10. Issuing a Job Card moves its workflow from PENDING to IN_PROCESS.
+
+11. In-Process records are prioritized by nearest expected delivery.
+
+12. Overdue incomplete Job Cards become visibly delayed.
+
+13. Completion must record whether it was On-Time or Delayed.
+
+14. Dashboard must reflect real application state.
+
+15. Important actions must create Activity Logs.
+
+16. Permanent deletion of critical business data is prohibited.
+
+============================================================
+FIRST ACTION
+============================================================
+
+DO NOT START IMPLEMENTING ALL PHASES.
+
+First:
+
+1. Inspect the complete existing codebase.
+2. Inspect available spreadsheet / Apps Script / Job Card references.
+3. Compare the current implementation against this requirement.
+4. Produce a short implementation plan for PHASE 1 only.
+5. List any Firebase configuration values that I must manually provide.
+6. Do not ask me to manually perform work that you can perform yourself in the codebase.
+7. Do not proceed beyond Phase 1 without my explicit approval.
+
+Once Phase 1 is implemented and tested:
+
+STOP.
+
+Wait for:
+"Continue to next phase"

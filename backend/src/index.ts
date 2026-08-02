@@ -7,6 +7,7 @@ import productsRoutes from './routes/products';
 import reelsRoutes from './routes/reels';
 import jobcardsRoutes from './routes/jobcards';
 import dashboardRoutes from './routes/dashboard';
+import productionRoutes from './routes/production';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/reels', reelsRoutes);
 app.use('/api/jobcards', jobcardsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/production', productionRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Packwell ERP API is running.' });

@@ -1,7 +1,7 @@
 import xlsx from 'xlsx';
 import prisma from '../utils/prisma';
 
-const filePath = 'D:/po/JOB CARD/Job Card July 2026.xlsx';
+const filePath = 'C:/Users/91999/Downloads/Job Card July 2026.xlsx';
 
 async function importMasterData(workbook: xlsx.WorkBook) {
   console.log('Importing Master Data...');

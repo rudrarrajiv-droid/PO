@@ -57,3 +57,27 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+@media print {
+  /* Hide everything by default in body */
+  body * {
+    visibility: hidden;
+  }
+  /* Show only the print view container and its children */
+  .print-view-container, .print-view-container * {
+    visibility: visible;
+  }
+  .print-view-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+  /* Hide elements marked as no-print (like the close button) */
+  .no-print, .no-print * {
+    display: none !important;
+  }
+}

@@ -1,0 +1,107 @@
+// Firebase Data Models
+
+// Base model for audit trailing and soft delete
+export interface BaseModel {
+  id?: string; // Firestore document ID
+  createdAt: any; // Firestore Timestamp
+  updatedAt: any; // Firestore Timestamp
+  createdBy: string;
+  updatedBy: string;
+  isArchived: boolean;
+}
+
+export interface Customer extends BaseModel {
+  name: string;
+  // Other fields based on actual data
+}
+
+export interface ProductLayer {
+  layerName: string;
+  paperType?: string;
+  bf?: string;
+  gsm?: number;
+}
+
+export interface Product extends BaseModel {
+  customerId: string;
+  customerName: string; // Denormalized for rendering/searching
+  artworkNo: string;
+  itemName: string;
+  length: number;
+  width: number;
+  height: number;
+  ply: number;
+  flute?: string;
+  reelSize: number;
+  cutSize: number;
+  pinQty?: number;
+  pinPasting?: string;
+  ups?: number;
+  creasing?: string;
+  color?: string;
+  packing?: string;
+  specialRequirement?: string;
+  layers: ProductLayer[];
+}
+
+export interface JobCard extends BaseModel {
+  poNumber: string;
+  customerName: string; // denormalized for search
+  customerId: string;
+  productName: string; // denormalized for search
+  productId: string;
+  
+  consignee?: string;
+  poDate?: string;
+  sNo?: string;
+  itemCode?: string;
+  rate?: number;
+  totalPoQty: number;
+  deliveryDate?: string;
+  
+  // A SNAPSHOT of product/master specifications
+  productSnapshot?: any;
+  
+  // Status and Dispatch details
+  status: 'PENDING' | 'IN_PROCESS' | 'COMPLETED' | 'DELAYED';
+  dispatchDates?: { date: string; qty: number }[];
+  
+  // Tracking
+  issuedAt?: any;
+  issuedBy?: string;
+  expectedDeliveryAt?: any;
+  completedAt?: any;
+}
+
+export interface Reel extends BaseModel {
+  reelNumber: string;
+  supplierName: string;
+  manufacturerName: string;
+  weight: number;
+  currentBalance: number;
+  paperType: string;
+  reelSize: string;
+  bf: string;
+  gsm: string;
+  inwardDate: string;
+}
+
+export interface ReelTransaction extends BaseModel {
+  reelId: string;
+  reelNumber: string;
+  type: 'INWARD' | 'OUTWARD' | 'ALLOCATION';
+  quantity: number;
+  remainingBalance: number;
+  jobCardId?: string;
+  performedBy: string;
+  date: string;
+}
+
+export interface ActivityLog {
+  id?: string;
+  user: string;
+  action: string;
+  entity: string;
+  referenceId: string;
+  timestamp: any;
+}
