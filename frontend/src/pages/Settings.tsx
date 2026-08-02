@@ -45,15 +45,53 @@ export default function Settings() {
   const handleExport = async (collectionName: string, filenamePrefix: string) => {
     try {
       setIsExporting(collectionName);
-      const data = await queryDocuments(collectionName, []);
+      let data = await queryDocuments(collectionName, []);
       
       if (!data || data.length === 0) {
         alert(`No data found in ${collectionName}.`);
         return;
       }
 
-      // Convert to CSV
-      const keys = Array.from(new Set(data.flatMap(Object.keys)));
+      // Helper to flatten objects and arrays
+      const flattenObject = (ob: any, prefix = ''): any => {
+        let toReturn: any = {};
+        for (let i in ob) {
+          if (!ob.hasOwnProperty(i)) continue;
+
+          if (ob[i] === null || ob[i] === undefined) {
+            toReturn[prefix + i] = '';
+          } else if (ob[i].toDate && typeof ob[i].toDate === 'function') {
+            toReturn[prefix + i] = ob[i].toDate().toISOString();
+          } else if (typeof ob[i] === 'object' && !Array.isArray(ob[i]) && Object.keys(ob[i]).length > 0) {
+            let flatObject = flattenObject(ob[i], prefix + i + '_');
+            for (let x in flatObject) {
+              if (!flatObject.hasOwnProperty(x)) continue;
+              toReturn[x] = flatObject[x];
+            }
+          } else if (Array.isArray(ob[i])) {
+            ob[i].forEach((item: any, index: number) => {
+              if (typeof item === 'object' && item !== null) {
+                let flatObject = flattenObject(item, prefix + i + '_' + (index + 1) + '_');
+                for (let x in flatObject) {
+                  toReturn[x] = flatObject[x];
+                }
+              } else {
+                toReturn[prefix + i + '_' + (index + 1)] = item;
+              }
+            });
+          } else {
+            toReturn[prefix + i] = ob[i];
+          }
+        }
+        return toReturn;
+      };
+
+      if (collectionName === 'products' || collectionName === 'reels') {
+        data = data.map((d: any) => flattenObject(d));
+      }
+
+      let keys = Array.from(new Set(data.flatMap(Object.keys)));
+      
       const csvRows = [
         keys.join(','), // Header row
         ...data.map(row => keys.map(k => {

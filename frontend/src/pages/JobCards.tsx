@@ -427,6 +427,13 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
   });
 
   const [loadingNextNo, setLoadingNextNo] = useState(!isEditMode);
+  const [productSearchText, setProductSearchText] = useState(() => {
+    if (isEditMode && initialData) {
+      return initialData.productName || '';
+    }
+    return '';
+  });
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
   useEffect(() => {
     if (isEditMode) return;
@@ -605,21 +612,75 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
 
             {/* Row 2: Manual Inputs (Product & Quantity) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <label className="text-sm font-semibold text-foreground">Select Product <span className="text-destructive">*</span></label>
-                <select 
-                  {...register('productId', { required: true })} 
-                  className={inputCls + " font-medium text-base h-11"}
-                  disabled={loadingProducts}
-                >
-                  <option value="">-- Choose Product --</option>
-                  {isEditMode && !products.find((p:any) => p.id === initialData.productId) && (
-                    <option value={initialData.productId}>{initialData.productName} (Historical)</option>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search Product / Artwork..."
+                    className={inputCls + " font-medium text-base h-11 w-full"}
+                    disabled={loadingProducts}
+                    value={productSearchText}
+                    onChange={(e) => {
+                      setProductSearchText(e.target.value);
+                      setShowProductDropdown(true);
+                      setValue('productId', ''); // Clear underlying form value
+                    }}
+                    onFocus={() => setShowProductDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
+                  />
+                  {/* Hidden input for react-hook-form */}
+                  <input type="hidden" {...register('productId', { required: true })} />
+                  
+                  {showProductDropdown && (
+                    <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-300 rounded-md shadow-xl max-h-64 overflow-y-auto">
+                      {isEditMode && !products.find((p:any) => p.id === initialData.productId) && (
+                        <div 
+                          className="px-4 py-3 cursor-pointer hover:bg-gray-100 border-b border-gray-100"
+                          onMouseDown={() => {
+                            setValue('productId', initialData.productId);
+                            setProductSearchText(`${initialData.productName} (Historical)`);
+                            setShowProductDropdown(false);
+                          }}
+                        >
+                          <div className="font-bold text-sm text-black">{initialData.productName}</div>
+                          <div className="text-xs text-gray-500">Historical Record</div>
+                        </div>
+                      )}
+                      
+                      {products.filter((p: any) => {
+                        const searchLower = productSearchText.toLowerCase();
+                        return !productSearchText || 
+                               (p.itemName && p.itemName.toLowerCase().includes(searchLower)) || 
+                               (p.artworkNo && p.artworkNo.toLowerCase().includes(searchLower));
+                      }).map((p: any) => (
+                        <div 
+                          key={p.id}
+                          className="px-4 py-3 cursor-pointer hover:bg-gray-100 border-b border-gray-100 last:border-0"
+                          onMouseDown={() => {
+                            setValue('productId', p.id);
+                            setProductSearchText(`${p.itemName} / ${p.artworkNo}`);
+                            setShowProductDropdown(false);
+                          }}
+                        >
+                          <div className="font-bold text-sm text-black">{p.itemName}</div>
+                          <div className="text-xs text-gray-600">Artwork: {p.artworkNo}</div>
+                        </div>
+                      ))}
+                      
+                      {products.filter((p: any) => {
+                        const searchLower = productSearchText.toLowerCase();
+                        return !productSearchText || 
+                               (p.itemName && p.itemName.toLowerCase().includes(searchLower)) || 
+                               (p.artworkNo && p.artworkNo.toLowerCase().includes(searchLower));
+                      }).length === 0 && (
+                        <div className="px-4 py-4 text-sm text-gray-500 italic text-center">
+                          No matching products found.
+                        </div>
+                      )}
+                    </div>
                   )}
-                  {products.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.itemName} / {p.artworkNo}</option>
-                  ))}
-                </select>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">Quantity <span className="text-destructive">*</span></label>

@@ -153,19 +153,22 @@ export default function MasterData() {
 
             <div className="flex items-center gap-3 shrink-0">
               <ExportButtons 
-                data={tab === 'customers' ? filteredCustomers : filteredProducts} 
+                data={tab === 'customers' ? filteredCustomers : filteredProducts.map(p => ({
+                  ...p,
+                  paper: (p as any).paper || (p.layers ? p.layers.length : '')
+                }))} 
                 filenamePrefix={tab === 'customers' ? 'Customers' : 'Products'}
                 title={tab === 'customers' ? 'Customer Directory' : 'Product Master'}
                 columnMap={tab === 'customers' ? {
                   'name': 'Customer Name',
                   'createdAt': 'Added On'
                 } : {
-                  'artworkNo': 'Artwork No',
+                  'customerName': 'Customer Name',
                   'itemName': 'Item Name',
-                  'customerName': 'Customer',
-                  'length': 'Length',
-                  'width': 'Width',
-                  'height': 'Height',
+                  'artworkNo': 'Artwork No',
+                  'reelSize': 'Reel Size',
+                  'cutSize': 'Cut Size',
+                  'paper': 'Paper',
                   'ply': 'Ply',
                   'flute': 'Flute'
                 }}

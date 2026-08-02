@@ -28,6 +28,7 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
 
       {/* PRODUCT + DIMENSIONS */}
       <div className="mb-4 bg-gray-100 border border-black p-3 text-center">
+        <div className="text-sm font-bold text-gray-700 mb-1 uppercase">Customer Name: {jobCard.customerName || '-'}</div>
         <div className="text-xl font-extrabold uppercase">{jobCard.productName}</div>
         <div className="text-sm font-bold text-gray-700 mt-1">
           {product?.length}" (L) x {product?.width}" (W) x {product?.height}" (H)
@@ -46,11 +47,40 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
           <span className="font-bold text-gray-600">3. Paper Quantity:</span>
-          <span className="font-bold">{jobCard.paperQuantity || '-'} Sheets</span>
+          <span className="font-bold">{jobCard.paperQuantity ? `${jobCard.paperQuantity} Paper` : '-'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
           <span className="font-bold text-gray-600">4. Ply Quantity:</span>
-          <span className="font-bold">{jobCard.plyQuantity || '-'}</span>
+          <span className="font-bold text-right">
+            {(() => {
+              const totalPly = jobCard.plyQuantity;
+              if (!totalPly) return '-';
+              const fluteStr = product?.flute || '';
+              if (!fluteStr) return `${totalPly} Ply`;
+              
+              const normalized = fluteStr.toUpperCase().replace(/\s+/g, '');
+              let flutes = [];
+              if (normalized.includes('+')) {
+                flutes = normalized.split('+').filter(Boolean);
+              } else if (normalized.length === 2 && /^[A-Z]{2}$/.test(normalized)) {
+                flutes = [normalized[0], normalized[1]];
+              } else {
+                flutes = [normalized];
+              }
+
+              if (flutes.length === 2) {
+                const half1 = Math.round(totalPly / 2);
+                const half2 = totalPly - half1;
+                return (
+                  <>
+                    <div className="leading-tight">{flutes[0]} Flute = {half1} Ply</div>
+                    <div className="leading-tight">{flutes[1]} Flute = {half2} Ply</div>
+                  </>
+                );
+              }
+              return `${flutes[0]} Flute = ${totalPly} Ply`;
+            })()}
+          </span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
           <span className="font-bold text-gray-600">5. Ply & Flute:</span>

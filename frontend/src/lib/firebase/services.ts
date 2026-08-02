@@ -599,3 +599,44 @@ export const executeFinishGoodOutwardTransaction = async (
     throw error;
   }
 };
+
+export const markFreightReceived = async (invoiceNo: string, user: string) => {
+  try {
+    const q = query(
+      collection(db, 'finishGoodTransactions'),
+      where('invoiceNo', '==', invoiceNo),
+      where('type', '==', 'OUT')
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+    
+    const batch = writeBatch(db);
+    const timestamp = serverTimestamp();
+    
+    snap.docs.forEach(docSnap => {
+      batch.update(docSnap.ref, {
+        receivingStatus: 'RECEIVED',
+        receivingConfirmedAt: timestamp,
+        receivingConfirmedBy: user,
+        updatedAt: timestamp,
+        updatedBy: user
+      });
+    });
+
+    await batch.commit();
+
+    await logActivity({
+      user,
+      action: 'Mark Freight Received',
+      entity: 'finishGoodTransactions',
+      referenceId: invoiceNo,
+      timestamp
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error marking freight as received:', error);
+    throw error;
+  }
+};
+

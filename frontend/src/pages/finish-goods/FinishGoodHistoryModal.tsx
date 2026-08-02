@@ -4,6 +4,7 @@ import { X, Search, History, ArrowDownToLine, ArrowUpFromLine } from 'lucide-rea
 import { queryDocuments } from '../../lib/firebase/services';
 import type { FinishGoodTransaction } from '../../lib/types/models';
 import { format } from 'date-fns';
+import ExportButtons from '../../components/ExportButtons';
 
 export default function FinishGoodHistoryModal({ onClose }: { onClose: () => void }) {
   const [search, setSearch] = useState('');
@@ -54,20 +55,56 @@ export default function FinishGoodHistoryModal({ onClose }: { onClose: () => voi
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-4 border-b border-border bg-card shrink-0 flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by Invoice, Customer, or Transporter..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+        {/* Search & Export */}
+        <div className="p-4 border-b border-border bg-card shrink-0 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by Invoice, Customer, or Transporter..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground hidden sm:block">
+              Showing {filteredHistory.length} transactions
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredHistory.length} transactions
+          
+          <div className="flex-shrink-0">
+            <ExportButtons 
+              data={filteredHistory.map(h => ({
+                ...h,
+                date: h.date || (h.createdAt ? format(new Date(h.createdAt), 'yyyy-MM-dd') : ''),
+                productName: getProductName(h.finishGoodId),
+                freight: h.freight || 0,
+                point: h.point || 0,
+                holding: h.holding || 0,
+                others: h.others || 0,
+              }))} 
+              filenamePrefix="FinishGoodTransactions"
+              title="Finish Goods Transaction History"
+              columnMap={{
+                'date': 'Date',
+                'type': 'Type',
+                'category': 'Category',
+                'productName': 'Product Name',
+                'quantity': 'Quantity',
+                'remainingBalance': 'Balance',
+                'invoiceNo': 'Invoice No',
+                'place': 'Place',
+                'transporterName': 'Transporter Name',
+                'vehicleNo': 'Vehicle No',
+                'vehicleSize': 'Vehicle Size',
+                'freight': 'Freight',
+                'point': 'Point',
+                'holding': 'Holding Charges',
+                'others': 'Others',
+                'performedBy': 'Performed By'
+              }}
+            />
           </div>
         </div>
 

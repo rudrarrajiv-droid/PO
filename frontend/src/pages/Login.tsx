@@ -57,13 +57,6 @@ export default function Login() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-card py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 border border-border/50 backdrop-blur-sm">
-          
-          <div className="mb-4 bg-muted p-3 rounded-md text-xs text-muted-foreground border">
-            <p><strong>Demo Credentials:</strong></p>
-            <p>Admin: admin@packwell.com / admin</p>
-            <p>User: user@packwell.com / user</p>
-          </div>
-
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-destructive/15 border border-destructive/30 text-destructive text-sm rounded-lg p-3 text-center">
@@ -85,7 +78,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm bg-background transition-shadow"
-                  placeholder="admin@packwell.com"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>

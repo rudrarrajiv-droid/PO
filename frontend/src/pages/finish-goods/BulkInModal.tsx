@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { ArrowDownToLine, X, CircleDashed, Plus, Trash2 } from 'lucide-react';
+import { ArrowDownToLine, X, CircleDashed, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { executeFinishGoodInwardTransaction, type FinishGoodInwardPayload } from '../../lib/firebase/services';
 import { queryDocuments } from '../../lib/firebase/services';
@@ -80,11 +80,11 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
       const currentVal = getValues(`rows.${index}.quantity`);
       // Only append if quantity is entered
       if (currentVal && String(currentVal) !== '') {
-        const prevRow = getValues(`rows.${index}`);
+        const prevRow = rows[index];
         append({
-          productId: prevRow.productId,
-          customerName: prevRow.customerName,
-          productName: prevRow.productName,
+          productId: '',
+          productName: '',
+          customerName: '',
           category: prevRow.category,
           quantity: '',
           rate: prevRow.rate
@@ -113,20 +113,54 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
       return;
     }
 
+    // Check for duplicates
+    const productCounts = new Map<string, { qty: number, rate: number }>();
+    let hasDuplicates = false;
+    
+    validRows.forEach(r => {
+      const key = `${r.productId}_${r.category}`;
+      if (productCounts.has(key)) {
+        hasDuplicates = true;
+      }
+      const existing = productCounts.get(key) || { qty: 0, rate: Number(r.rate) || 0 };
+      productCounts.set(key, { qty: existing.qty + Number(r.quantity), rate: Number(r.rate) || existing.rate });
+    });
+
+    if (hasDuplicates) {
+      const confirmMerge = window.confirm(
+        "Warning: You have duplicate product entries in this batch.\n\n" +
+        "Click OK to automatically merge their quantities.\n" +
+        "Click Cancel to abort and review your entries."
+      );
+      if (!confirmMerge) {
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      const payloads: FinishGoodInwardPayload[] = validRows.map(r => ({
-        productId: r.productId,
-        productName: r.productName,
-        customerId: products.find(p => p.id === r.productId)?.customerId || '',
-        customerName: r.customerName,
-        quantity: Number(r.quantity),
-        category: r.category,
-        date: data.inwardDate,
-        rate: Number(r.rate) || 0
-      }));
+      const mergedPayloads: FinishGoodInwardPayload[] = [];
+      const processed = new Set<string>();
 
-      await executeFinishGoodInwardTransaction(payloads, user?.name || 'System');
+      validRows.forEach(r => {
+        const key = `${r.productId}_${r.category}`;
+        if (!processed.has(key)) {
+          const aggregated = productCounts.get(key)!;
+          mergedPayloads.push({
+            productId: r.productId,
+            productName: r.productName,
+            customerId: products.find(p => p.id === r.productId)?.customerId || '',
+            customerName: r.customerName,
+            quantity: aggregated.qty,
+            category: r.category,
+            date: data.inwardDate,
+            rate: aggregated.rate
+          });
+          processed.add(key);
+        }
+      });
+
+      await executeFinishGoodInwardTransaction(mergedPayloads, user?.name || 'System');
       onSuccess();
     } catch (error) {
       console.error("Bulk IN failed", error);
@@ -178,25 +212,23 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
                 <div className="col-span-1 text-center">Action</div>
               </div>
 
-              {fields.map((field, index) => (
+              {fields.map((field, index) => {
+                const currentProductId = rows[index]?.productId;
+                const isDuplicate = currentProductId && rows.findIndex((r, i) => i !== index && r.productId === currentProductId) !== -1;
+
+                return (
                 <div key={field.id} className="grid grid-cols-12 gap-3 mb-3 items-start bg-card p-2 rounded-lg border border-border shadow-sm">
                   
                   {/* Product */}
                   <div className="col-span-4">
-                    <select
-                      {...register(`rows.${index}.productId` as const)}
-                      onChange={(e) => {
-                         register(`rows.${index}.productId`).onChange(e);
-                         handleProductChange(index, e.target.value);
-                      }}
-                      className={inputCls}
-                      required
-                    >
-                      <option value="">Select Product...</option>
-                      {products.map(p => (
-                        <option key={p.id} value={p.id}>{p.itemName} ({p.artworkNo})</option>
-                      ))}
-                    </select>
+                    <ProductSearchSelect 
+                      index={index} 
+                      products={products} 
+                      register={register} 
+                      setValue={setValue} 
+                      handleProductChange={handleProductChange} 
+                      inputCls={inputCls} 
+                    />
                   </div>
 
                   {/* Customer (Readonly mostly, auto-filled) */}
@@ -255,8 +287,15 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
                     </button>
                   </div>
 
+                  {isDuplicate && (
+                    <div className="col-span-12 mt-1 text-xs text-orange-600 flex items-center font-semibold bg-orange-50/50 p-1.5 rounded border border-orange-200">
+                      <AlertCircle className="w-4 h-4 mr-1.5" />
+                      Warning: This product is already selected in another row of this batch.
+                    </div>
+                  )}
+
                 </div>
-              ))}
+              )})}
             </div>
 
             <button
@@ -296,6 +335,63 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function ProductSearchSelect({ index, products, register, setValue, handleProductChange, inputCls }: any) {
+  const [searchText, setSearchText] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        placeholder="Search Product / Artwork..."
+        className={inputCls}
+        value={searchText}
+        onChange={(e) => {
+          setSearchText(e.target.value);
+          setIsOpen(true);
+          setValue(`rows.${index}.productId`, '');
+          handleProductChange(index, '');
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        required={!searchText}
+      />
+      <input type="hidden" {...register(`rows.${index}.productId` as const, { required: true })} />
+      
+      {isOpen && (
+        <div className="absolute z-[100] mt-1 w-[150%] bg-white border border-gray-300 rounded-md shadow-xl max-h-60 overflow-y-auto">
+          {products.filter((p: any) => {
+             const lower = searchText.toLowerCase();
+             const combined = `${p.itemName} ${p.artworkNo}`.toLowerCase();
+             return !searchText || combined.includes(lower);
+          }).map((p: any) => (
+            <div 
+              key={p.id}
+              className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm text-black border-b border-gray-100 last:border-0 flex flex-col"
+              onMouseDown={() => {
+                setValue(`rows.${index}.productId`, p.id);
+                setSearchText(`${p.itemName} (${p.artworkNo})`);
+                handleProductChange(index, p.id);
+                setIsOpen(false);
+              }}
+            >
+              <div className="font-bold">{p.itemName}</div>
+              <div className="text-xs text-gray-600">Artwork: {p.artworkNo}</div>
+            </div>
+          ))}
+          {products.filter((p: any) => {
+             const lower = searchText.toLowerCase();
+             const combined = `${p.itemName} ${p.artworkNo}`.toLowerCase();
+             return !searchText || combined.includes(lower);
+          }).length === 0 && (
+             <div className="px-3 py-2 text-sm text-gray-500 italic text-center">No matching products found.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

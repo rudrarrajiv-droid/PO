@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { ArrowUpFromLine, X, CircleDashed, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpFromLine, X, CircleDashed, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { executeFinishGoodOutwardTransaction, type FinishGoodOutwardPayload, type LogisticsPayload } from '../../lib/firebase/services';
 import { queryDocuments } from '../../lib/firebase/services';
@@ -24,12 +24,21 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
   
   // Fetch available finished goods (so we only show products that have stock)
   const [finishGoods, setFinishGoods] = useState<any[]>([]);
+  const [historyDocs, setHistoryDocs] = useState<any[]>([]);
   
   useEffect(() => {
     queryDocuments('finishGoods', []).then(data => {
       setFinishGoods(data);
     });
+    queryDocuments('finishGoodTransactions', []).then(data => {
+      setHistoryDocs(data);
+    });
   }, []);
+
+  const uniquePlaces = Array.from(new Set(historyDocs.map(d => d.place).filter(Boolean)));
+  const uniqueTransporters = Array.from(new Set(historyDocs.map(d => d.transporterName).filter(Boolean)));
+  const uniqueVehicleNos = Array.from(new Set(historyDocs.map(d => d.vehicleNo).filter(Boolean)));
+  const uniqueVehicleSizes = Array.from(new Set(historyDocs.map(d => d.vehicleSize).filter(Boolean)));
 
   const { register, control, handleSubmit, watch, getValues, setValue } = useForm<BulkOutwardForm>({
     defaultValues: {
@@ -68,6 +77,19 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
   }, [append]);
 
   const rows = watch('rows');
+  const vehicleNoValue = watch('vehicleNo');
+
+  useEffect(() => {
+    if (vehicleNoValue && historyDocs.length > 0) {
+      // Find the most recent record with this vehicleNo that has a freight > 0
+      const lastRecord = [...historyDocs].reverse().find(d => 
+        d.vehicleNo === vehicleNoValue && Number(d.freight) > 0
+      );
+      if (lastRecord) {
+        setValue('freight', Number(lastRecord.freight));
+      }
+    }
+  }, [vehicleNoValue, historyDocs, setValue]);
 
   const handleProductChange = (index: number, productId: string) => {
     const fg = finishGoods.find(p => p.productId === productId);
@@ -84,9 +106,9 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
       if (currentVal && String(currentVal) !== '') {
         const prevRow = getValues(`rows.${index}`);
         append({
-          productId: prevRow.productId,
-          customerName: prevRow.customerName,
-          productName: prevRow.productName,
+          productId: '',
+          customerName: '',
+          productName: '',
           category: prevRow.category,
           quantity: ''
         });
@@ -116,13 +138,45 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
       return;
     }
 
+    // Check for duplicates
+    const productCounts = new Map<string, number>();
+    let hasDuplicates = false;
+    
+    validRows.forEach(r => {
+      const key = `${r.productId}_${r.category}`;
+      if (productCounts.has(key)) {
+        hasDuplicates = true;
+      }
+      productCounts.set(key, (productCounts.get(key) || 0) + Number(r.quantity));
+    });
+
+    if (hasDuplicates) {
+      const confirmMerge = window.confirm(
+        "Warning: You have duplicate product entries in this batch.\n\n" +
+        "Click OK to automatically merge their quantities (e.g., 50 + 10 = 60).\n" +
+        "Click Cancel to abort and review your entries."
+      );
+      if (!confirmMerge) {
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      const payloads: FinishGoodOutwardPayload[] = validRows.map(r => ({
-        productId: r.productId,
-        quantity: Number(r.quantity),
-        category: r.category
-      }));
+      const mergedPayloads: FinishGoodOutwardPayload[] = [];
+      const processed = new Set<string>();
+      
+      validRows.forEach(r => {
+        const key = `${r.productId}_${r.category}`;
+        if (!processed.has(key)) {
+          mergedPayloads.push({
+            productId: r.productId,
+            quantity: productCounts.get(key)!,
+            category: r.category
+          });
+          processed.add(key);
+        }
+      });
 
       const logistics: LogisticsPayload = {
         date: data.date,
@@ -137,7 +191,7 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
         others: data.others
       };
 
-      await executeFinishGoodOutwardTransaction(logistics, payloads, user?.name || 'System');
+      await executeFinishGoodOutwardTransaction(logistics, mergedPayloads, user?.name || 'System');
       onSuccess();
     } catch (error: any) {
       console.error("Bulk OUT failed", error);
@@ -179,19 +233,31 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Place</label>
-                <input type="text" {...register('place')} className={inputCls} placeholder="City/Location" />
+                <input type="text" list="place-list" {...register('place')} className={inputCls} placeholder="City/Location" />
+                <datalist id="place-list">
+                  {uniquePlaces.map((v: any) => <option key={v} value={v} />)}
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Transporter Name</label>
-                <input type="text" {...register('transporterName')} className={inputCls} placeholder="Transporter..." />
+                <input type="text" list="transporter-list" {...register('transporterName')} className={inputCls} placeholder="Transporter..." />
+                <datalist id="transporter-list">
+                  {uniqueTransporters.map((v: any) => <option key={v} value={v} />)}
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Vehicle No.</label>
-                <input type="text" {...register('vehicleNo')} className={inputCls} placeholder="UP14 XX 0000" />
+                <input type="text" list="vehicle-list" {...register('vehicleNo')} className={inputCls} placeholder="UP14 XX 0000" />
+                <datalist id="vehicle-list">
+                  {uniqueVehicleNos.map((v: any) => <option key={v} value={v} />)}
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Vehicle Size</label>
-                <input type="text" {...register('vehicleSize')} className={inputCls} placeholder="e.g. 17ft" />
+                <input type="text" list="vehiclesize-list" {...register('vehicleSize')} className={inputCls} placeholder="e.g. 17ft" />
+                <datalist id="vehiclesize-list">
+                  {uniqueVehicleSizes.map((v: any) => <option key={v} value={v} />)}
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Freight (₹)</label>
@@ -223,27 +289,23 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
                 <div className="col-span-1 text-center">Action</div>
               </div>
 
-              {fields.map((field, index) => (
+              {fields.map((field, index) => {
+                const currentProductId = rows[index]?.productId;
+                const isDuplicate = currentProductId && rows.findIndex((r, i) => i !== index && r.productId === currentProductId) !== -1;
+
+                return (
                 <div key={field.id} className="grid grid-cols-12 gap-3 mb-3 items-start bg-card p-2 rounded-lg border border-border shadow-sm">
                   
                   {/* Product */}
                   <div className="col-span-5">
-                    <select
-                      {...register(`rows.${index}.productId` as const)}
-                      onChange={(e) => {
-                         register(`rows.${index}.productId`).onChange(e);
-                         handleProductChange(index, e.target.value);
-                      }}
-                      className={inputCls}
-                      required
-                    >
-                      <option value="">Select Available Product...</option>
-                      {finishGoods.map(p => (
-                        <option key={p.id} value={p.productId}>
-                          {p.productName} (Reg: {p.closingBalance || 0}, Non: {p.nonMovingBalance || 0})
-                        </option>
-                      ))}
-                    </select>
+                    <ProductSearchSelect 
+                      index={index} 
+                      finishGoods={finishGoods} 
+                      register={register} 
+                      setValue={setValue} 
+                      handleProductChange={handleProductChange} 
+                      inputCls={inputCls} 
+                    />
                   </div>
 
                   {/* Customer */}
@@ -291,8 +353,15 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
                     </button>
                   </div>
 
+                  {isDuplicate && (
+                    <div className="col-span-12 mt-1 text-xs text-orange-600 flex items-center font-semibold bg-orange-50/50 p-1.5 rounded border border-orange-200">
+                      <AlertCircle className="w-4 h-4 mr-1.5" />
+                      Warning: This product is already selected in another row of this batch.
+                    </div>
+                  )}
+
                 </div>
-              ))}
+              )})}
             </div>
 
             <button
@@ -332,6 +401,62 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function ProductSearchSelect({ index, finishGoods, register, setValue, handleProductChange, inputCls }: any) {
+  const [searchText, setSearchText] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        placeholder="Search Product / Artwork..."
+        className={inputCls}
+        value={searchText}
+        onChange={(e) => {
+          setSearchText(e.target.value);
+          setIsOpen(true);
+          setValue(`rows.${index}.productId`, '');
+          handleProductChange(index, '');
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        required={!searchText}
+      />
+      {/* Hidden input for react-hook-form to register productId */}
+      <input type="hidden" {...register(`rows.${index}.productId` as const, { required: true })} />
+      
+      {isOpen && (
+        <div className="absolute z-[100] mt-1 w-[150%] bg-white border border-gray-300 rounded-md shadow-xl max-h-60 overflow-y-auto">
+          {finishGoods.filter((p: any) => {
+             const lower = searchText.toLowerCase();
+             return !searchText || p.productName?.toLowerCase().includes(lower);
+          }).map((p: any) => (
+            <div 
+              key={p.id}
+              className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm text-black border-b border-gray-100 last:border-0"
+              onMouseDown={() => {
+                setValue(`rows.${index}.productId`, p.productId);
+                setSearchText(`${p.productName}`);
+                handleProductChange(index, p.productId);
+                setIsOpen(false);
+              }}
+            >
+              <div className="font-bold">{p.productName}</div>
+              <div className="text-xs text-gray-600">Stock: {p.closingBalance || 0} Reg | {p.nonMovingBalance || 0} Non-Mov</div>
+            </div>
+          ))}
+          {finishGoods.filter((p: any) => {
+             const lower = searchText.toLowerCase();
+             return !searchText || p.productName?.toLowerCase().includes(lower);
+          }).length === 0 && (
+             <div className="px-3 py-2 text-sm text-gray-500 italic text-center">No matching products found.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

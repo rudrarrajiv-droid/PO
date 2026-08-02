@@ -138,6 +138,11 @@ export interface FinishGoodTransaction extends BaseModel {
   holding?: number;
   point?: string;
   others?: string;
+  
+  // Receiving Status
+  receivingStatus?: 'PENDING' | 'RECEIVED';
+  receivingConfirmedAt?: any;
+  receivingConfirmedBy?: string;
 }
 
 export interface ActivityLog {

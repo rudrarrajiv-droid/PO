@@ -1,15 +1,23 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Truck, Search, CircleDollarSign } from 'lucide-react';
-import { queryDocuments } from '../lib/firebase/services';
+import { queryDocuments, markFreightReceived } from '../lib/firebase/services';
 import type { FinishGoodTransaction } from '../lib/types/models';
 import ExportButtons from '../components/ExportButtons';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function FreightCharge() {
   const [search, setSearch] = useState('');
   const [transporterFilter, setTransporterFilter] = useState('ALL');
   const [sizeFilter, setSizeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: transactions = [], isLoading: txLoading } = useQuery({
     queryKey: ['finishGoodTransactions'],
@@ -52,7 +60,10 @@ export default function FreightCharge() {
           holding: Number(tx.holding) || 0,
           point: Number(tx.point) || 0,
           others: Number(tx.others) || 0,
-          totalFreight: (Number(tx.freight) || 0) + (Number(tx.holding) || 0) + (Number(tx.point) || 0)
+          totalFreight: (Number(tx.freight) || 0) + (Number(tx.holding) || 0) + (Number(tx.point) || 0),
+          receivingStatus: tx.receivingStatus || 'PENDING',
+          receivingConfirmedAt: tx.receivingConfirmedAt || null,
+          receivingConfirmedBy: tx.receivingConfirmedBy || null
         });
       }
     });
@@ -71,14 +82,111 @@ export default function FreightCharge() {
       if (!searchStr.includes(search.toLowerCase())) return false;
       if (transporterFilter !== 'ALL' && item.transporterName !== transporterFilter) return false;
       if (sizeFilter !== 'ALL' && item.vehicleSize !== sizeFilter) return false;
+      if (statusFilter !== 'ALL' && item.receivingStatus !== statusFilter) return false;
       return true;
     });
-  }, [uniqueInvoices, search, transporterFilter, sizeFilter]);
+  }, [uniqueInvoices, search, transporterFilter, sizeFilter, statusFilter]);
 
   // Calculate overall total
   const overallTotalFreight = useMemo(() => {
     return filteredData.reduce((acc, curr) => acc + curr.totalFreight, 0);
   }, [filteredData]);
+
+  const handleMarkReceived = async (invoiceNo: string) => {
+    if (!window.confirm(`Mark Freight for Invoice ${invoiceNo} as RECEIVED?`)) return;
+    try {
+      await markFreightReceived(invoiceNo, user?.name || 'System');
+      queryClient.invalidateQueries({ queryKey: ['finishGoodTransactions'] });
+    } catch (error) {
+      alert("Failed to mark as received.");
+    }
+  };
+
+  const generateTransporterLedgerPDF = () => {
+    if (transporterFilter === 'ALL' || filteredData.length === 0) {
+      alert("Please select a specific Transporter to generate the ledger.");
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    // HEADER
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text("PACKWELL INDIA", 14, 20);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`TRANSPORTER NAME: ${transporterFilter}`, 14, 28);
+    
+    // TIMESTAMP
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 14, 34);
+
+    // TABLE HEADERS
+    const tableHeaders = [
+      "Date", "Invoice No", "Customer Name", "Place", 
+      "Vehicle No", "Size", "Freight", "Holding", "Point", "Status", "Total"
+    ];
+
+    // TABLE DATA
+    const tableData = filteredData.map(item => [
+      item.date ? format(new Date(item.date), 'dd/MM/yy') : '-',
+      item.invoiceNo,
+      item.customerName,
+      item.place,
+      item.vehicleNo,
+      item.vehicleSize,
+      item.freight ? item.freight.toString() : '0',
+      item.holding ? item.holding.toString() : '0',
+      item.point ? item.point.toString() : '0',
+      item.receivingStatus,
+      item.totalFreight ? item.totalFreight.toString() : '0'
+    ]);
+
+    // Calculate totals
+    const tFreight = filteredData.reduce((acc, curr) => acc + (curr.freight || 0), 0);
+    const tHolding = filteredData.reduce((acc, curr) => acc + (curr.holding || 0), 0);
+    const tPoint = filteredData.reduce((acc, curr) => acc + (curr.point || 0), 0);
+    const tTotal = filteredData.reduce((acc, curr) => acc + (curr.totalFreight || 0), 0);
+
+    // Add totals row
+    tableData.push([
+      '', '', '', '', '', 'TOTALS:',
+      tFreight.toString(),
+      tHolding.toString(),
+      tPoint.toString(),
+      '',
+      tTotal.toString()
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [tableHeaders],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      styles: { fontSize: 8, cellPadding: 2 },
+      willDrawCell: (data) => {
+        if (data.row.index === tableData.length - 1) {
+          // Make the last row (Totals) bold
+          doc.setFont('helvetica', 'bold');
+        }
+      },
+      didDrawPage: (data) => {
+        const str = `Page ${(doc as any).internal.getNumberOfPages()}`;
+        doc.setFontSize(8);
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+        doc.text(str, data.settings.margin.left, pageHeight - 10);
+      }
+    });
+
+    const safeName = transporterFilter.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const dateStr = format(new Date(), 'dd-MM-yyyy');
+    doc.save(`ledger_${safeName}_${dateStr}.pdf`);
+  };
 
   const inputCls = "w-full text-sm rounded-md border border-input px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring";
 
@@ -132,6 +240,16 @@ export default function FreightCharge() {
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
+          
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className={`${inputCls} w-full sm:w-36`}
+          >
+            <option value="ALL">All Status</option>
+            <option value="PENDING">PENDING</option>
+            <option value="RECEIVED">RECEIVED</option>
+          </select>
 
           <select 
             value={sizeFilter}
@@ -146,6 +264,15 @@ export default function FreightCharge() {
         </div>
 
         <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+          {transporterFilter !== 'ALL' && (
+            <button
+              onClick={generateTransporterLedgerPDF}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-md shadow-sm hover:bg-primary/90 transition-colors focus:outline-none focus:ring-1 focus:ring-primary whitespace-nowrap"
+            >
+              <Truck className="w-4 h-4 mr-2" />
+              Transporter Ledger
+            </button>
+          )}
           <ExportButtons 
             data={filteredData} 
             filenamePrefix="FreightCharges"
@@ -163,6 +290,7 @@ export default function FreightCharge() {
               'point': 'Point (₹)',
               'others': 'Others (₹)',
               'totalFreight': 'Total Freight (₹)',
+              'receivingStatus': 'Status'
             }}
           />
         </div>
@@ -187,6 +315,8 @@ export default function FreightCharge() {
                   <th className="px-4 py-3 font-medium text-right">Holding</th>
                   <th className="px-4 py-3 font-medium text-right">Point</th>
                   <th className="px-4 py-3 font-medium text-right text-primary">Total</th>
+                  <th className="px-4 py-3 font-medium text-center">Status</th>
+                  <th className="px-4 py-3 font-medium text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -222,6 +352,27 @@ export default function FreightCharge() {
                     </td>
                     <td className="px-4 py-3 text-right font-black text-primary text-base">
                       ₹{item.totalFreight.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded-full border ${item.receivingStatus === 'RECEIVED' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                        {item.receivingStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {item.receivingStatus === 'PENDING' ? (
+                        <button
+                          onClick={() => handleMarkReceived(item.invoiceNo)}
+                          className="px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded hover:bg-primary/90 transition-colors"
+                        >
+                          Mark OK
+                        </button>
+                      ) : (
+                        <div className="text-[10px] text-muted-foreground leading-tight">
+                          OK by <span className="font-semibold">{item.receivingConfirmedBy}</span>
+                          <br />
+                          {item.receivingConfirmedAt && format(item.receivingConfirmedAt.toDate ? item.receivingConfirmedAt.toDate() : new Date(item.receivingConfirmedAt), 'dd/MM/yy')}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
