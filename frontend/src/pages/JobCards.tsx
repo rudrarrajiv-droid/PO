@@ -7,7 +7,10 @@ import { queryDocuments, createDocument, updateDocument } from '../lib/firebase/
 import { useAuth } from '../contexts/AuthContext';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
+import { exportToExcel, exportToPDF } from '../lib/exportUtils';
 import PrintableJobCard from './job-cards/PrintableJobCard';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import ReelAllocationModal from './job-cards/ReelAllocationModal';
 import IssueJobCardModal from './job-cards/IssueJobCardModal';
 import ExportButtons from '../components/ExportButtons';
@@ -20,10 +23,15 @@ export default function JobCards() {
   const [allocatingJobCard, setAllocatingJobCard] = useState<any>(null);
   const [issuingJobCard, setIssuingJobCard] = useState<any>(null);
 
-  // 3-way smart search state
+  // 3-way smart search state (Inputs)
   const [searchCustomer, setSearchCustomer] = useState('');
   const [searchProduct, setSearchProduct] = useState('');
   const [searchJC, setSearchJC] = useState('');
+
+  // Applied search state (Triggered by Search button)
+  const [appliedSearchCustomer, setAppliedSearchCustomer] = useState('');
+  const [appliedSearchProduct, setAppliedSearchProduct] = useState('');
+  const [appliedSearchJC, setAppliedSearchJC] = useState('');
 
   const { data: jobCards = [], isLoading: loadingCards, refetch: refetchCards } = useQuery({
     queryKey: ['jobcards'],
@@ -33,15 +41,33 @@ export default function JobCards() {
     },
   });
 
-  // Smart Relational Filtering
+  // Smart Relational Filtering + Status Ordering
   const filteredCards = useMemo(() => {
-    return jobCards.filter(jc => {
-      const matchC = (jc.customerName || '').toLowerCase().includes(searchCustomer.toLowerCase());
-      const matchP = (jc.productName || '').toLowerCase().includes(searchProduct.toLowerCase());
-      const matchJ = (jc.jobCardNo || '').toLowerCase().includes(searchJC.toLowerCase());
+    let list = jobCards.filter(jc => {
+      const matchC = (jc.customerName || '').toLowerCase().includes(appliedSearchCustomer.toLowerCase());
+      const matchP = (jc.productName || '').toLowerCase().includes(appliedSearchProduct.toLowerCase());
+      const matchJ = (jc.jobCardNo || '').toLowerCase().includes(appliedSearchJC.toLowerCase());
       return matchC && matchP && matchJ;
     });
-  }, [jobCards, searchCustomer, searchProduct, searchJC]);
+
+    const statusWeight: Record<string, number> = {
+      'PENDING': 1,
+      'ISSUED': 2,
+      'IN-PROCESS': 2,
+      'COMPLETED': 3
+    };
+
+    list.sort((a, b) => {
+      const weightA = statusWeight[a.status] || 99;
+      const weightB = statusWeight[b.status] || 99;
+      if (weightA !== weightB) {
+        return weightA - weightB;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return list;
+  }, [jobCards, appliedSearchCustomer, appliedSearchProduct, appliedSearchJC]);
 
   // Dynamic Datalists (Narrowed based on other filters)
   const uniqueCustomers = useMemo(() => {
@@ -68,6 +94,39 @@ export default function JobCards() {
     return Array.from(new Set(list.map(j => j.jobCardNo))).filter(Boolean) as string[];
   }, [jobCards, searchCustomer, searchProduct]);
 
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('job-card-print-area');
+    if (!element) return;
+    
+    // Optional: Add a loading state here if generation is slow
+    const originalStyle = element.style.cssText;
+    
+    try {
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`JobCard_${printingJobCard?.jobCardNo}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed', err);
+      alert('Failed to generate PDF automatically. You can still use Print -> Save as PDF.');
+    } finally {
+      element.style.cssText = originalStyle;
+    }
+  };
+
   return (
     <div className="h-full flex flex-col relative">
       {/* --- PRINT PREVIEW OVERLAY --- */}
@@ -80,10 +139,7 @@ export default function JobCards() {
             </div>
             <div className="flex gap-3">
               <button 
-                onClick={() => {
-                  alert('To save as PDF, just change the Printer Destination to "Save as PDF" in the browser print dialog.');
-                  window.print();
-                }} 
+                onClick={handleDownloadPDF} 
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md text-sm font-bold flex items-center shadow transition-colors text-white"
               >
                 Download as PDF
@@ -104,7 +160,7 @@ export default function JobCards() {
           </div>
           
           <div className="flex-1 p-8 overflow-y-auto flex justify-center pb-20 no-print-bg">
-            <div className="bg-white shadow-2xl overflow-hidden print-view-container min-h-[297mm]">
+            <div id="job-card-print-area" className="bg-white shadow-2xl overflow-hidden print-view-container min-h-[297mm]">
               <PrintableJobCard jobCard={printingJobCard} />
             </div>
           </div>
@@ -125,7 +181,7 @@ export default function JobCards() {
               title="Job Cards Report"
               columnMap={{
                 'jobCardNo': 'Job Card #',
-                'date': 'Date',
+                'targetDate': 'Job Card Date',
                 'customerName': 'Customer',
                 'productName': 'Product',
                 'orderQty': 'Order Qty',
@@ -145,45 +201,72 @@ export default function JobCards() {
 
         <div className="flex-1 bg-card border border-border shadow-sm rounded-lg overflow-hidden flex flex-col">
           {/* Smart Relational Search Bar */}
-          <div className="p-4 border-b border-border bg-secondary/20 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                value={searchCustomer} onChange={e => setSearchCustomer(e.target.value)}
-                placeholder="Search Customer..." 
-                list="customers-list"
-                className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
-              />
-              <datalist id="customers-list">
-                {uniqueCustomers.map(c => <option key={c} value={c} />)}
-              </datalist>
+          <div className="p-4 border-b border-border bg-secondary/20 flex flex-col md:flex-row gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 w-full">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  value={searchCustomer} onChange={e => setSearchCustomer(e.target.value)}
+                  placeholder="Search Customer..." 
+                  list="customers-list"
+                  className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
+                />
+                <datalist id="customers-list">
+                  {uniqueCustomers.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  value={searchProduct} onChange={e => setSearchProduct(e.target.value)}
+                  placeholder="Search Product Name..." 
+                  list="products-list"
+                  className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
+                />
+                <datalist id="products-list">
+                  {uniqueProducts.map(p => <option key={p} value={p} />)}
+                </datalist>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  value={searchJC} onChange={e => setSearchJC(e.target.value)}
+                  placeholder="Search Job Card No..." 
+                  list="jcs-list"
+                  className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
+                />
+                <datalist id="jcs-list">
+                  {uniqueJCs.map(j => <option key={j} value={j} />)}
+                </datalist>
+              </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                value={searchProduct} onChange={e => setSearchProduct(e.target.value)}
-                placeholder="Search Product Name..." 
-                list="products-list"
-                className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
-              />
-              <datalist id="products-list">
-                {uniqueProducts.map(p => <option key={p} value={p} />)}
-              </datalist>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                value={searchJC} onChange={e => setSearchJC(e.target.value)}
-                placeholder="Search Job Card No..." 
-                list="jcs-list"
-                className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
-              />
-              <datalist id="jcs-list">
-                {uniqueJCs.map(j => <option key={j} value={j} />)}
-              </datalist>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  setAppliedSearchCustomer(searchCustomer);
+                  setAppliedSearchProduct(searchProduct);
+                  setAppliedSearchJC(searchJC);
+                }}
+                className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md shadow hover:bg-primary/90 transition-colors whitespace-nowrap"
+              >
+                Search
+              </button>
+              <button 
+                onClick={() => {
+                  setSearchCustomer('');
+                  setSearchProduct('');
+                  setSearchJC('');
+                  setAppliedSearchCustomer('');
+                  setAppliedSearchProduct('');
+                  setAppliedSearchJC('');
+                }}
+                className="px-4 py-2 bg-secondary text-secondary-foreground border border-border text-sm font-medium rounded-md shadow hover:bg-secondary/80 transition-colors whitespace-nowrap"
+              >
+                Reset
+              </button>
             </div>
           </div>
 
@@ -452,10 +535,10 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
         productName: activeProductData.itemName,
         
         orderQty,
-        oneBoxWeight: liveCalculations.oneBoxWeight,
-        totalWeight: liveCalculations.totalWeight,
-        paperQuantity: liveCalculations.noOfPaper,
-        plyQuantity: liveCalculations.noOfPaper, // For corrugated boxes, paper quantity (cuts) equals ply production quantity
+        oneBoxWeight: liveCalculations?.oneBoxWeight || 0,
+        totalWeight: liveCalculations?.totalWeight || 0,
+        paperQuantity: liveCalculations?.noOfPaper || 0,
+        plyQuantity: liveCalculations?.noOfPaper || 0, // For corrugated boxes, paper quantity (cuts) equals ply production quantity
         
         priority: data.priority || 'Normal',
         remarks: data.remarks || '',
@@ -463,7 +546,7 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
         // Update snapshot if product changed, else keep existing
         productSnapshot: {
           ...activeProductData,
-          layers: liveCalculations.layers
+          layers: liveCalculations?.layers || activeProductData.layers || []
         },
       };
 

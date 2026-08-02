@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, CheckCircle2, AlertTriangle, AlertCircle, LayoutDashboard } from 'lucide-react';
+import { Clock, CheckCircle2, AlertTriangle, LayoutDashboard, MessageSquarePlus, Activity, CalendarClock } from 'lucide-react';
 import { queryDocuments } from '../lib/firebase/services';
 import { cn } from '../lib/utils';
 import CompleteProductionModal from './job-cards/CompleteProductionModal';
+import AddRemarkModal from './job-cards/AddRemarkModal';
 import ExportButtons from '../components/ExportButtons';
 
 export default function ProductionTracker() {
   const [now, setNow] = useState(new Date());
   const [completingJobCard, setCompletingJobCard] = useState<any>(null);
+  const [addingRemarkJob, setAddingRemarkJob] = useState<any>(null);
 
   // Update clock every minute for dynamic delay calculation
   useEffect(() => {
@@ -54,6 +56,9 @@ export default function ProductionTracker() {
     return <div className="p-8 text-center text-muted-foreground">Loading production tracker...</div>;
   }
 
+  const delayedCount = activeJobs.filter(jc => getDelayInfo(jc.expectedDeliveryAt).isDelayed).length;
+  const onTimeCount = activeJobs.length - delayedCount;
+
   return (
     <div className="h-full flex flex-col p-6 max-w-7xl mx-auto w-full gap-8">
       <div>
@@ -62,6 +67,28 @@ export default function ProductionTracker() {
           Production Tracker
         </h1>
         <p className="text-muted-foreground mt-1">Live monitoring of active Job Cards on the production floor.</p>
+      </div>
+
+      {/* DASHBOARD METRICS */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-red-50/50 border border-red-100 rounded-xl p-5 flex items-center shadow-sm">
+          <div className="bg-red-100 text-red-600 p-3 rounded-lg mr-4">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-red-800 tracking-wider">TOTAL DELAYED JOBS</div>
+            <div className="text-3xl font-black text-red-600">{delayedCount}</div>
+          </div>
+        </div>
+        <div className="bg-green-50/50 border border-green-100 rounded-xl p-5 flex items-center shadow-sm">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-green-800 tracking-wider">TOTAL ON-TIME JOBS</div>
+            <div className="text-3xl font-black text-green-600">{onTimeCount}</div>
+          </div>
+        </div>
       </div>
 
       {/* ACTIVE PRODUCTION */}
@@ -80,44 +107,79 @@ export default function ProductionTracker() {
             {activeJobs.map(jc => {
               const { isDelayed, text: delayText } = getDelayInfo(jc.expectedDeliveryAt);
               return (
-                <div key={jc.id} className={cn(
-                  "bg-card border rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm transition-all hover:shadow-md",
-                  isDelayed ? "border-red-300 bg-red-50/30" : "border-border"
-                )}>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-bold text-lg">{jc.jobCardNo}</span>
-                      {isDelayed ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold flex items-center">
-                          <AlertTriangle className="w-3 h-3 mr-1" />
-                          DELAYED: {delayText}
+                <div key={jc.id} className="flex flex-col gap-2">
+                  <div className={cn(
+                    "bg-card border rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm transition-all hover:shadow-md",
+                    isDelayed ? "border-red-300 bg-red-50/30" : "border-border"
+                  )}>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-bold text-lg">{jc.jobCardNo}</span>
+                        {isDelayed ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold flex items-center">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            DELAYED: {delayText}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                            IN PROCESS
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium text-foreground mb-1">
+                        {jc.customerName} - {jc.productName}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
+                        <span><strong className="text-foreground">Order Qty:</strong> {jc.orderQty}</span>
+                        <span className="flex items-center text-blue-700">
+                          <Activity className="w-3.5 h-3.5 mr-1" />
+                          <strong className="text-foreground mr-1">Issued:</strong> {jc.issuedAt ? new Date(jc.issuedAt).toLocaleString([], { dateStyle: 'medium' }) : '-'}
                         </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
-                          IN PROCESS
+                        <span className="flex items-center text-orange-700">
+                          <CalendarClock className="w-3.5 h-3.5 mr-1" />
+                          <strong className="text-foreground mr-1">Expected:</strong> {new Date(jc.expectedDeliveryAt).toLocaleString([], { dateStyle: 'medium' })}
                         </span>
-                      )}
+                      </div>
                     </div>
-                    <div className="text-sm font-medium text-foreground mb-1">
-                      {jc.customerName} - {jc.productName}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-4">
-                      <span><strong className="text-foreground">Order Qty:</strong> {jc.orderQty}</span>
-                      <span>
-                        <strong className="text-foreground">Expected Delivery:</strong> {new Date(jc.expectedDeliveryAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                      </span>
+
+                    <div className="flex flex-col gap-2 shrink-0 border-t md:border-t-0 pt-4 md:pt-0">
+                      <button
+                        onClick={() => setAddingRemarkJob(jc)}
+                        className="w-full md:w-auto px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold rounded-lg shadow-sm flex items-center justify-center transition-colors border border-border"
+                      >
+                        <MessageSquarePlus className="w-4 h-4 mr-2 text-primary" />
+                        Add Remark
+                      </button>
+                      <button
+                        onClick={() => setCompletingJobCard(jc)}
+                        className="w-full md:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-sm flex items-center justify-center transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Complete Job
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 shrink-0 border-t md:border-t-0 pt-4 md:pt-0">
-                    <button
-                      onClick={() => setCompletingJobCard(jc)}
-                      className="w-full md:w-auto px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow flex items-center justify-center transition-colors"
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Complete Job
-                    </button>
-                  </div>
+                  {/* Remarks Timeline */}
+                  {jc.remarks && jc.remarks.length > 0 && (
+                    <div className="bg-secondary/10 border border-border rounded-xl p-4 ml-8 relative before:absolute before:inset-0 before:ml-4 before:h-full before:w-0.5 before:bg-border">
+                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 pl-8">Production Timeline</h4>
+                      <div className="space-y-4">
+                        {jc.remarks.map((rmk: any, idx: number) => (
+                          <div key={idx} className="relative pl-8">
+                            <div className="absolute left-[9px] top-1.5 w-2 h-2 rounded-full bg-primary ring-4 ring-background z-10" />
+                            <div className="bg-card border border-border rounded-md p-3 shadow-sm inline-block min-w-[250px] max-w-full">
+                              <div className="text-sm font-medium text-foreground">{rmk.text}</div>
+                              <div className="text-[10px] text-muted-foreground mt-1.5 flex justify-between gap-4">
+                                <span>{new Date(rmk.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                <span className="font-semibold">{rmk.by}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -182,6 +244,17 @@ export default function ProductionTracker() {
           onClose={() => setCompletingJobCard(null)}
           onSuccess={() => {
             setCompletingJobCard(null);
+            refetch();
+          }}
+        />
+      )}
+
+      {addingRemarkJob && (
+        <AddRemarkModal 
+          jobCard={addingRemarkJob}
+          onClose={() => setAddingRemarkJob(null)}
+          onSuccess={() => {
+            setAddingRemarkJob(null);
             refetch();
           }}
         />

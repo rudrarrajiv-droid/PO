@@ -26,12 +26,20 @@ export default function Inventory() {
       (r.bf?.toLowerCase() || '').includes(search.toLowerCase())
     );
 
-    // Sort by: Paper Type → Reel Size → BF → GSM
+    // Sort by: Balance > 0 first, then Paper Type → Reel Size → BF → GSM
     result.sort((a, b) => {
+      const aBal = Number(a.currentBalance) || 0;
+      const bBal = Number(b.currentBalance) || 0;
+      const aEmpty = aBal <= 0;
+      const bEmpty = bBal <= 0;
+
+      if (aEmpty && !bEmpty) return 1;
+      if (!aEmpty && bEmpty) return -1;
+
       if (a.paperType !== b.paperType) return (a.paperType || '').localeCompare(b.paperType || '');
       if (a.reelSize !== b.reelSize) return (Number(a.reelSize) || 0) - (Number(b.reelSize) || 0);
       if (a.bf !== b.bf) return (a.bf || '').localeCompare(b.bf || '');
-      return (Number(a.gsm) || 0) - (Number(a.gsm) || 0);
+      return (Number(a.gsm) || 0) - (Number(b.gsm) || 0);
     });
 
     return result;
@@ -57,7 +65,8 @@ export default function Inventory() {
               'gsm': 'GSM',
               'weight': 'Initial Wt',
               'currentBalance': 'Balance Wt',
-              'supplierName': 'Supplier'
+              'supplierName': 'Supplier',
+              'manufacturerName': 'Manufacturer'
             }}
           />
           <button 
@@ -160,6 +169,7 @@ export default function Inventory() {
 
       {isBulkInwardOpen && (
         <BulkInwardModal 
+          reels={reels}
           onClose={() => setIsBulkInwardOpen(false)} 
           onSuccess={() => {
             setIsBulkInwardOpen(false);
@@ -181,6 +191,7 @@ export default function Inventory() {
 
       {isHistoryOpen && (
         <ReelHistoryModal
+          reels={reels}
           onClose={() => setIsHistoryOpen(false)}
         />
       )}

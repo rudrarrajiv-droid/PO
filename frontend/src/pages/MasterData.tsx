@@ -81,90 +81,129 @@ export default function MasterData() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      {/* Header & Summary Cards */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Master Data</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage customers and products</p>
         </div>
-        <div className="flex items-center gap-3">
-          <ExportButtons 
-            data={tab === 'customers' ? filteredCustomers : filteredProducts} 
-            filenamePrefix={tab === 'customers' ? 'Customers' : 'Products'}
-            title={tab === 'customers' ? 'Customer Directory' : 'Product Master'}
-            columnMap={tab === 'customers' ? {
-              'name': 'Customer Name',
-              'createdAt': 'Added On'
-            } : {
-              'artworkNo': 'Artwork No',
-              'itemName': 'Item Name',
-              'customerName': 'Customer',
-              'length': 'Length',
-              'width': 'Width',
-              'height': 'Height',
-              'ply': 'Ply',
-              'flute': 'Flute'
-            }}
-          />
-          <RoleGuard requireRole="ADMIN">
-            <button
-              onClick={() => {
-                if (tab === 'customers') {
-                  setEditingCustomer(null);
-                  setShowCustomerModal(true);
-                } else {
-                  setEditingProduct(null);
-                  setShowProductModal(true);
-                }
-              }}
-              className="bg-primary text-primary-foreground px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {tab === 'customers' ? 'Add Customer' : 'Add Product'}
-            </button>
-          </RoleGuard>
+        <div className="flex gap-4">
+          <div 
+            onClick={() => { setTab('customers'); setSearch(''); }}
+            className={cn(
+              "px-4 py-3 rounded-lg flex flex-col items-center min-w-[140px] shadow-sm cursor-pointer transition-all hover:scale-105",
+              tab === 'customers' 
+                ? "bg-primary/20 border-2 border-primary ring-2 ring-primary/20" 
+                : "bg-primary/5 border border-primary/20 opacity-70 hover:opacity-100"
+            )}
+          >
+            <span className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Total Customers</span>
+            <span className="text-2xl font-extrabold text-primary leading-none">{customers.length}</span>
+          </div>
+          <div 
+            onClick={() => { setTab('products'); setSearch(''); }}
+            className={cn(
+              "px-4 py-3 rounded-lg flex flex-col items-center min-w-[140px] shadow-sm cursor-pointer transition-all hover:scale-105",
+              tab === 'products' 
+                ? "bg-indigo-500/20 border-2 border-indigo-500 ring-2 ring-indigo-500/20" 
+                : "bg-indigo-500/5 border border-indigo-500/20 opacity-70 hover:opacity-100"
+            )}
+          >
+            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">Total Products</span>
+            <span className="text-2xl font-extrabold text-indigo-700 leading-none">{products.length}</span>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 bg-secondary/50 p-1 rounded-lg w-fit">
-        <button
-          onClick={() => { setTab('customers'); setSearch(''); }}
-          className={cn(
-            'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors',
-            tab === 'customers' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Users className="w-4 h-4 mr-2" /> Customers
-          <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{customers.length}</span>
-        </button>
-        <button
-          onClick={() => { setTab('products'); setSearch(''); }}
-          className={cn(
-            'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors',
-            tab === 'products' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Package className="w-4 h-4 mr-2" /> Products
-          <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{products.length}</span>
-        </button>
-      </div>
+      {/* Removed Redundant Tabs Row */}
 
       {/* Table Card */}
       <div className="flex-1 bg-card border border-border shadow-sm rounded-lg overflow-hidden flex flex-col">
         
         {/* Top Controls */}
         <div className="p-4 border-b border-border space-y-4">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={tab === 'customers' ? 'Search customers...' : 'Search products or customers...'}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+          <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
+            
+            <div className="flex gap-4 items-center w-full max-w-2xl">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder={tab === 'customers' ? 'Search customers...' : 'Search products by name or artwork...'}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              
+              {/* Customer Filter (Phase 19.2) for Products */}
+              {tab === 'products' && (
+                <div className="flex-1 flex gap-4 items-center">
+                  <select 
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="px-3 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">-- All Customers --</option>
+                    {customers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <ExportButtons 
+                data={tab === 'customers' ? filteredCustomers : filteredProducts} 
+                filenamePrefix={tab === 'customers' ? 'Customers' : 'Products'}
+                title={tab === 'customers' ? 'Customer Directory' : 'Product Master'}
+                columnMap={tab === 'customers' ? {
+                  'name': 'Customer Name',
+                  'createdAt': 'Added On'
+                } : {
+                  'artworkNo': 'Artwork No',
+                  'itemName': 'Item Name',
+                  'customerName': 'Customer',
+                  'length': 'Length',
+                  'width': 'Width',
+                  'height': 'Height',
+                  'ply': 'Ply',
+                  'flute': 'Flute'
+                }}
+              />
+              <RoleGuard requireRole="ADMIN">
+                <button
+                  onClick={() => {
+                    if (tab === 'customers') {
+                      setEditingCustomer(null);
+                      setShowCustomerModal(true);
+                    } else {
+                      setEditingProduct(null);
+                      setShowProductModal(true);
+                    }
+                  }}
+                  className="bg-primary text-primary-foreground px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {tab === 'customers' ? 'Add Customer' : 'Add Product'}
+                </button>
+              </RoleGuard>
+            </div>
           </div>
+          
+          {/* Customer Specific Product Count (Phase 19.2) */}
+          {tab === 'products' && search && customers.some(c => c.name.toLowerCase() === search.toLowerCase()) && (
+            <div className="bg-secondary/30 px-4 py-3 rounded-md border border-border flex gap-8 items-center max-w-fit shadow-sm">
+               <div>
+                 <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-0.5">Selected Customer</span>
+                 <span className="font-extrabold text-foreground text-sm">{search}</span>
+               </div>
+               <div className="h-8 w-px bg-border"></div>
+               <div>
+                 <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-0.5">Total Products</span>
+                 <span className="font-extrabold text-indigo-600 text-lg leading-none">{filteredProducts.length}</span>
+               </div>
+            </div>
+          )}
 
           {/* Smart Filters (Products Only) */}
           {tab === 'products' && (
@@ -435,10 +474,32 @@ type ProductForm = Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' 
 
 function ProductModal({ product, customers, onClose, onSuccess }: { product: Product | null; customers: Customer[]; onClose: () => void; onSuccess: () => void }) {
   const { user } = useAuth();
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<ProductForm>({
-    defaultValues: product ? { ...product } : { ups: 1, pinQty: 0, layers: [] }
+  const { register, handleSubmit, control, watch, formState: { errors, isSubmitting } } = useForm<ProductForm>({
+    defaultValues: product ? { ...product } : { ply: 3, ups: 1, pinQty: 0, layers: [] }
   });
   const { fields, append, remove } = useFieldArray({ control, name: 'layers' });
+
+  const plyValue = Number(watch('ply') || 0);
+
+  React.useEffect(() => {
+    if (plyValue) {
+      const currentLayers = fields.length;
+      if (plyValue > currentLayers) {
+        const layersToAdd = [];
+        for (let i = currentLayers; i < plyValue; i++) {
+          const type = (i % 2 !== 0) ? 'Flute' : (i === 0 ? 'Top' : 'Bottom');
+          layersToAdd.push({ layerName: type, paperType: 'Kraft', bf: '', gsm: 0 });
+        }
+        append(layersToAdd);
+      } else if (plyValue < currentLayers) {
+        const indexesToRemove = [];
+        for (let i = currentLayers - 1; i >= plyValue; i--) {
+          indexesToRemove.push(i);
+        }
+        remove(indexesToRemove);
+      }
+    }
+  }, [plyValue]); // intentionally omitting fields.length to avoid infinite loop on mount
 
   const onSubmit = async (data: ProductForm) => {
     try {
@@ -546,6 +607,7 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
                     </div>
                     <div className="space-y-1.5"><label className={labelCls}>UPS</label><input type="number" step="0.1" {...register('ups')} className={inputCls} placeholder="1" /></div>
                     <div className="space-y-1.5"><label className={labelCls}>Creasing</label><input {...register('creasing')} className={inputCls} placeholder="e.g. 2 Lines" /></div>
+                    <div className="space-y-1.5 col-span-2"><label className={labelCls}>Die Number</label><input {...register('dieNumber')} className={inputCls} placeholder="e.g. DIE-102" /></div>
                   </div>
                </div>
                <div className="space-y-4">
@@ -555,6 +617,7 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
                   <div className="space-y-1.5"><label className={labelCls}>Packing</label><input {...register('packing')} className={inputCls} placeholder="e.g. Bundle of 25" /></div>
                   <div className="space-y-1.5"><label className={labelCls}>Pin Qty</label><input type="number" {...register('pinQty')} className={inputCls} placeholder="0" /></div>
                   <div className="space-y-1.5"><label className={labelCls}>Pin/Pasting</label><input {...register('pinPasting')} className={inputCls} placeholder="e.g. Stitching" /></div>
+                  <div className="space-y-1.5 col-span-2"><label className={labelCls}>Pin Type</label><input {...register('pinType')} className={inputCls} placeholder="e.g. Heavy Duty" /></div>
                  </div>
                </div>
             </div>

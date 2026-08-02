@@ -20,6 +20,9 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
   const [filterPaperType, setFilterPaperType] = useState('');
   const [filterBF, setFilterBF] = useState('');
   const [filterGSM, setFilterGSM] = useState('');
+  
+  // Date State
+  const [outwardDate, setOutwardDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Selection & Input State
   // selectedReels holds reelId -> { remainingWeight: number | '' }
@@ -96,7 +99,8 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
       payloads.push({
         reelId: reel.id,
         reelNumber: reel.reelNumber,
-        consumedWeight: consumed
+        consumedWeight: consumed,
+        outwardDate
       });
     }
 
@@ -137,14 +141,28 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
           <div className="w-3/5 border-r border-border flex flex-col bg-secondary/10">
             {/* Filters */}
             <div className="p-4 border-b border-border space-y-3 shrink-0">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by Reel No..." 
-                  className={inputCls + " pl-9"}
-                />
+              <div className="flex gap-4">
+                <div className="w-1/3 space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Outward Date</label>
+                  <input 
+                    type="date" 
+                    value={outwardDate} 
+                    onChange={e => setOutwardDate(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                <div className="flex-1 space-y-1 relative">
+                  <label className="text-xs font-semibold text-muted-foreground opacity-0">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input 
+                      type="text" 
+                      value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="Search by Reel No..." 
+                      className={inputCls + " pl-9"}
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <select className={inputCls + " w-32 py-1.5"} value={filterReelSize} onChange={e => setFilterReelSize(e.target.value)}>
@@ -238,10 +256,21 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
                         <div className="space-y-1">
                           <label className="text-xs font-semibold text-primary">Physical Remaining (Kg)</label>
                           <input 
+                            id={`outward-weight-${r.id}`}
                             type="number" step="0.1" 
-                            className={inputCls + " border-primary/50 focus:border-primary font-bold text-lg h-10"} 
+                            className={inputCls + " border-primary/50 focus:border-primary font-bold text-lg h-10 outward-weight-input"} 
                             value={remaining}
                             onChange={(e) => handleRemainingChange(r.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const inputs = Array.from(document.querySelectorAll('.outward-weight-input')) as HTMLInputElement[];
+                                const currentIndex = inputs.indexOf(e.currentTarget);
+                                if (currentIndex > -1 && currentIndex < inputs.length - 1) {
+                                  inputs[currentIndex + 1].focus();
+                                }
+                              }
+                            }}
                             placeholder="0"
                           />
                         </div>

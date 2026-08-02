@@ -38,8 +38,10 @@ export interface Product extends BaseModel {
   pinPasting?: string;
   ups?: number;
   creasing?: string;
+  dieNumber?: string;
   color?: string;
   packing?: string;
+  pinType?: string;
   specialRequirement?: string;
   layers: ProductLayer[];
 }
@@ -71,6 +73,11 @@ export interface JobCard extends BaseModel {
   issuedBy?: string;
   expectedDeliveryAt?: any;
   completedAt?: any;
+  remarks?: {
+    text: string;
+    date: string; // ISO string
+    by: string;
+  }[];
 }
 
 export interface Reel extends BaseModel {
@@ -83,6 +90,7 @@ export interface Reel extends BaseModel {
   reelSize: string;
   bf: string;
   gsm: string;
+  rate?: number;
   inwardDate: string;
 }
 

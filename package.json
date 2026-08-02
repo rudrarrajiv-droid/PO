@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install && npx prisma generate",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "postinstall": "cd backend && npm install && npx prisma generate"
   },
   "dependencies": {
@@ -22,6 +26,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.1.2",
+    "concurrently": "^10.0.4",
     "prisma": "^6.19.3",
     "typescript": "^5.9.3"
   }

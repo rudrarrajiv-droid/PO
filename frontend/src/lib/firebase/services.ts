@@ -178,6 +178,7 @@ export interface OutwardPayload {
   reelNumber: string;
   consumedWeight: number;
   jobCardId?: string;
+  outwardDate?: string;
 }
 
 export const executeOutwardTransaction = async (
@@ -232,7 +233,7 @@ export const executeOutwardTransaction = async (
           remainingBalance: newBalance,
           jobCardId: item.payload.jobCardId || null,
           performedBy: user,
-          date: new Date().toISOString(),
+          date: item.payload.outwardDate ? new Date(item.payload.outwardDate).toISOString() : new Date().toISOString(),
           createdAt: timestamp,
           updatedAt: timestamp,
           createdBy: user,
