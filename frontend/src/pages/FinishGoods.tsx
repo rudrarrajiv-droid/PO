@@ -119,7 +119,7 @@ export default function FinishGoods() {
           </select>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pb-2 sm:pb-0">
           <ExportButtons 
             data={filteredFG} 
             filenamePrefix="FinishGoodsInventory"
@@ -185,7 +185,7 @@ export default function FinishGoods() {
                   const closingBal = Number(item.closingBalance) || 0;
                   const nonMovingBal = Number(item.nonMovingBalance) || 0;
                   const rate = Number(item.rate) || 0;
-                  const totalVal = closingBal * rate;
+                  const totalVal = (closingBal + nonMovingBal) * rate;
                   
                   return (
                     <tr key={item.id} className="hover:bg-muted/50 transition-colors">

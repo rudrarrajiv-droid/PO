@@ -13,6 +13,7 @@ export default function Inventory() {
   const [isOutwardOpen, setIsOutwardOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [paperTypeFilter, setPaperTypeFilter] = useState('ALL');
 
   const { data: reels = [], isLoading: loadingReels, refetch } = useQuery({
     queryKey: ['reels'],
@@ -20,11 +21,18 @@ export default function Inventory() {
   });
 
   const sortedAndFilteredReels = useMemo(() => {
-    let result = reels.filter(r => 
-      (r.reelNumber?.toLowerCase() || '').includes(search.toLowerCase()) ||
-      (r.paperType?.toLowerCase() || '').includes(search.toLowerCase()) ||
-      (r.bf?.toLowerCase() || '').includes(search.toLowerCase())
-    );
+    let result = reels.filter(r => {
+      const matchesSearch = (r.reelNumber?.toLowerCase() || '').includes(search.toLowerCase()) ||
+        (r.paperType?.toLowerCase() || '').includes(search.toLowerCase()) ||
+        (r.bf?.toLowerCase() || '').includes(search.toLowerCase());
+        
+      if (!matchesSearch) return false;
+      
+      const pt = (r.paperType || '').toUpperCase();
+      if (paperTypeFilter === 'ALL') return true;
+      if (paperTypeFilter === 'OTHERS') return !['SK', 'VK', 'DUPLEX'].includes(pt);
+      return pt === paperTypeFilter;
+    });
 
     // Sort by: Balance > 0 first, then Paper Type → Reel Size → BF → GSM
     result.sort((a, b) => {
@@ -36,14 +44,24 @@ export default function Inventory() {
       if (aEmpty && !bEmpty) return 1;
       if (!aEmpty && bEmpty) return -1;
 
-      if (a.paperType !== b.paperType) return (a.paperType || '').localeCompare(b.paperType || '');
+      if (a.paperType !== b.paperType) return String(a.paperType || '').localeCompare(String(b.paperType || ''));
       if (a.reelSize !== b.reelSize) return (Number(a.reelSize) || 0) - (Number(b.reelSize) || 0);
-      if (a.bf !== b.bf) return (a.bf || '').localeCompare(b.bf || '');
+      if (a.bf !== b.bf) return String(a.bf || '').localeCompare(String(b.bf || ''));
       return (Number(a.gsm) || 0) - (Number(b.gsm) || 0);
     });
 
     return result;
-  }, [reels, search]);
+  }, [reels, search, paperTypeFilter]);
+
+  const { totalReels, totalWeight, totalValue } = useMemo(() => {
+    return sortedAndFilteredReels.reduce((acc, r) => {
+      acc.totalReels += 1;
+      const bal = Number(r.currentBalance) || 0;
+      acc.totalWeight += bal;
+      acc.totalValue += bal * (Number(r.rate) || 0);
+      return acc;
+    }, { totalReels: 0, totalWeight: 0, totalValue: 0 });
+  }, [sortedAndFilteredReels]);
 
   return (
     <div className="h-full flex flex-col">
@@ -97,18 +115,41 @@ export default function Inventory() {
 
       <div className="flex-1 bg-card border border-border shadow-sm rounded-lg overflow-hidden flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/20">
-          <div className="relative w-72">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input 
-              type="text" 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search reels by No, Type, BF..." 
-              className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+          <div className="flex gap-4 items-center">
+            <div className="relative w-72">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input 
+                type="text" 
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search reels by No, Type, BF..." 
+                className="pl-9 pr-4 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            
+            <select
+              value={paperTypeFilter}
+              onChange={e => setPaperTypeFilter(e.target.value)}
+              className="px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring font-medium"
+            >
+              <option value="ALL">All Types</option>
+              <option value="SK">SK</option>
+              <option value="VK">VK</option>
+              <option value="DUPLEX">DUPLEX</option>
+              <option value="OTHERS">Others</option>
+            </select>
           </div>
-          <div className="text-xs text-muted-foreground">
-             <span className="font-semibold text-foreground">{sortedAndFilteredReels.length}</span> records found
+          
+          <div className="flex gap-4 text-sm">
+            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-md font-medium border border-primary/20 shadow-sm">
+              Total Reels: <span className="font-bold">{totalReels}</span>
+            </div>
+            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-md font-medium border border-primary/20 shadow-sm">
+              Total Weight: <span className="font-bold">{totalWeight.toLocaleString()} kg</span>
+            </div>
+            <div className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md font-medium border border-green-200 shadow-sm">
+              Total Value: <span className="font-bold">Rs. {totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
           </div>
         </div>
 
