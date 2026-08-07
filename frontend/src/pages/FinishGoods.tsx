@@ -1,15 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PackageCheck, Search, ArrowDownToLine, ArrowUpFromLine, FileText, History, CircleDollarSign } from 'lucide-react';
+import { PackageCheck, Search, ArrowDownToLine, ArrowUpFromLine, FileText, History, Calendar } from 'lucide-react';
 import { queryDocuments } from '../lib/firebase/services';
+import { cn } from '../lib/utils';
 import ExportButtons from '../components/ExportButtons';
 import BulkInModal from './finish-goods/BulkInModal';
 import BulkOutModal from './finish-goods/BulkOutModal';
 import FinishGoodHistoryModal from './finish-goods/FinishGoodHistoryModal';
 
 export default function FinishGoods() {
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'EMPTY' | 'REPORT'>('ACTIVE');
   const [search, setSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<'ALL' | 'REGULAR' | 'NON-MOVING'>('ALL');
+  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
   const [isBulkInOpen, setIsBulkInOpen] = useState(false);
   const [isBulkOutOpen, setIsBulkOutOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -19,6 +23,12 @@ export default function FinishGoods() {
     queryFn: () => queryDocuments('finishGoods', []) as Promise<any[]>
   });
 
+  const { data: transactions = [], isLoading: loadingTx } = useQuery({
+    queryKey: ['finishGoodTransactions'],
+    queryFn: () => queryDocuments('finishGoodTransactions', []) as Promise<any[]>,
+    enabled: activeTab === 'REPORT'
+  });
+
   const filteredFG = useMemo(() => {
     return fgList.filter((item: any) => {
       const searchString = `${item.productName} ${item.customerName}`.toLowerCase();
@@ -26,7 +36,13 @@ export default function FinishGoods() {
       
       const aReg = Number(item.closingBalance) || 0;
       const aNon = Number(item.nonMovingBalance) || 0;
+      const totalBal = aReg + aNon;
 
+      // Filter by Tab
+      if (activeTab === 'ACTIVE' && totalBal <= 0) return false;
+      if (activeTab === 'EMPTY' && totalBal > 0) return false;
+
+      // Filter by Stock Category
       if (stockFilter === 'REGULAR' && aReg === 0) return false;
       if (stockFilter === 'NON-MOVING' && aNon === 0) return false;
 
@@ -55,7 +71,7 @@ export default function FinishGoods() {
       if (custCompare !== 0) return custCompare;
       return (a.productName || '').localeCompare(b.productName || '');
     });
-  }, [fgList, search, stockFilter]);
+  }, [fgList, search, stockFilter, activeTab]);
 
   const { totalRegValue, totalNonValue } = useMemo(() => {
     return filteredFG.reduce((acc: any, curr: any) => {
@@ -69,6 +85,49 @@ export default function FinishGoods() {
       };
     }, { totalRegValue: 0, totalNonValue: 0 });
   }, [filteredFG]);
+
+  // Generate Date Report
+  const reportData = useMemo(() => {
+    if (activeTab !== 'REPORT') return [];
+    
+    // Filter tx for the specific date
+    const txForDate = transactions.filter(tx => {
+      if (!tx.date) return false;
+      return tx.date.startsWith(reportDate);
+    });
+
+    // Group by Product
+    const groups: Record<string, { 
+      productId: string, 
+      productName: string, 
+      customerName: string, 
+      inQty: number, 
+      outQty: number 
+    }> = {};
+    
+    txForDate.forEach(tx => {
+      const fg = fgList.find(f => f.id === tx.finishGoodId);
+      if (!fg) return;
+      
+      if (!groups[fg.id]) {
+        groups[fg.id] = { 
+          productId: fg.id, 
+          productName: fg.productName, 
+          customerName: fg.customerName,
+          inQty: 0, 
+          outQty: 0 
+        };
+      }
+      
+      if (tx.type === 'IN') {
+        groups[fg.id].inQty += Number(tx.quantity) || 0;
+      } else if (tx.type === 'OUT') {
+        groups[fg.id].outQty += Number(tx.quantity) || 0;
+      }
+    });
+
+    return Object.values(groups).sort((a, b) => a.customerName.localeCompare(b.customerName));
+  }, [transactions, fgList, reportDate, activeTab]);
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-4 md:p-6 max-w-7xl mx-auto w-full">
@@ -94,46 +153,93 @@ export default function FinishGoods() {
         </div>
       </div>
 
+      <div className="flex gap-4 border-b border-border shrink-0">
+        <button
+          onClick={() => setActiveTab('ACTIVE')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2",
+            activeTab === 'ACTIVE' ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Active Stock
+        </button>
+        <button
+          onClick={() => setActiveTab('EMPTY')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2",
+            activeTab === 'EMPTY' ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Empty / Nil Stock
+        </button>
+        <button
+          onClick={() => setActiveTab('REPORT')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2",
+            activeTab === 'REPORT' ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          In/Out Date Report
+        </button>
+      </div>
+
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 rounded-lg border border-border shadow-sm shrink-0">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by customer or product..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+        {activeTab !== 'REPORT' ? (
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by customer or product..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+            </div>
+            
+            <select 
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value as any)}
+              className="border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+            >
+              <option value="ALL">All Items</option>
+              <option value="REGULAR">Regular Stock Only</option>
+              <option value="NON-MOVING">Non-Moving Only</option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <label className="font-medium text-sm flex items-center">
+              <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+              Select Date:
+            </label>
+            <input 
+              type="date"
+              value={reportDate}
+              onChange={e => setReportDate(e.target.value)}
+              className="px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary font-medium"
             />
           </div>
-          
-          <select 
-            value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value as any)}
-            className="border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-          >
-            <option value="ALL">All Items</option>
-            <option value="REGULAR">Regular Stock Only</option>
-            <option value="NON-MOVING">Non-Moving Only</option>
-          </select>
-        </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pb-2 sm:pb-0">
-          <ExportButtons 
-            data={filteredFG} 
-            filenamePrefix="FinishGoodsInventory"
-            title="Finish Goods Inventory Status"
-            columnMap={{
-              'customerName': 'Customer',
-              'productName': 'Product',
-              'openingQty': 'Opening Qty',
-              'inQty': 'IN',
-              'outQty': 'OUT',
-              'closingBalance': 'Closing Balance',
-              'rate': 'Rate',
-            }}
-          />
+          {activeTab !== 'REPORT' && (
+            <ExportButtons 
+              data={filteredFG} 
+              filenamePrefix="FinishGoodsInventory"
+              title="Finish Goods Inventory Status"
+              columnMap={{
+                'customerName': 'Customer',
+                'productName': 'Product',
+                'openingQty': 'Opening Qty',
+                'inQty': 'IN',
+                'outQty': 'OUT',
+                'closingBalance': 'Closing Balance',
+                'rate': 'Rate',
+              }}
+            />
+          )}
           <button 
             onClick={() => setIsHistoryOpen(true)}
             className="bg-secondary text-secondary-foreground border border-border px-4 py-2 flex items-center text-sm font-medium rounded-md shadow-sm hover:bg-secondary/80 transition-colors"
@@ -163,8 +269,37 @@ export default function FinishGoods() {
       {/* Main Table */}
       <div className="flex-1 bg-card border border-border shadow-sm rounded-lg overflow-hidden flex flex-col">
         <div className="flex-1 overflow-auto">
-          {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading inventory records...</div>
+          {isLoading || (activeTab === 'REPORT' && loadingTx) ? (
+            <div className="p-8 text-center text-muted-foreground">Loading records...</div>
+          ) : activeTab === 'REPORT' ? (
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Customer Name</th>
+                  <th className="px-6 py-4 font-medium">Product Name</th>
+                  <th className="px-6 py-4 font-medium text-right text-green-600">Total IN (Pcs)</th>
+                  <th className="px-6 py-4 font-medium text-right text-red-600">Total OUT (Pcs)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {reportData.map((row: any, i: number) => (
+                  <tr key={i} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-foreground">{row.customerName}</td>
+                    <td className="px-6 py-4 font-medium text-muted-foreground">{row.productName}</td>
+                    <td className="px-6 py-4 text-right font-bold text-green-600">{row.inQty > 0 ? row.inQty : '-'}</td>
+                    <td className="px-6 py-4 text-right font-bold text-red-600">{row.outQty > 0 ? row.outQty : '-'}</td>
+                  </tr>
+                ))}
+                {reportData.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                      <FileText className="w-12 h-12 mx-auto text-muted mb-3 opacity-20" />
+                      <p>No inward or outward transactions found for {new Date(reportDate).toLocaleDateString('en-IN')}.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           ) : (
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border sticky top-0 z-10">
@@ -203,9 +338,9 @@ export default function FinishGoods() {
                 })}
                 {filteredFG.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                    <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
                       <FileText className="w-12 h-12 mx-auto text-muted mb-3 opacity-20" />
-                      <p>No finished goods found. Use Bulk IN to add stock.</p>
+                      <p>No {activeTab === 'EMPTY' ? 'empty' : 'active'} finished goods found.</p>
                     </td>
                   </tr>
                 )}
@@ -215,8 +350,8 @@ export default function FinishGoods() {
         </div>
         
         <div className="p-3 border-t border-border bg-secondary/20 text-xs text-muted-foreground flex justify-between">
-          <span>Showing {filteredFG.length} records</span>
-          <span>Only Finished Goods are shown here. Total Value calculates only Regular stock.</span>
+          <span>Showing {activeTab === 'REPORT' ? reportData.length : filteredFG.length} records</span>
+          <span>{activeTab === 'REPORT' ? 'Showing IN/OUT quantities for the selected date.' : 'Only Finished Goods are shown here. Total Value calculates only Regular stock.'}</span>
         </div>
       </div>
       

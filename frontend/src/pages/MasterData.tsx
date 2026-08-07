@@ -490,7 +490,7 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
         const layersToAdd = [];
         for (let i = currentLayers; i < plyValue; i++) {
           const type = (i % 2 !== 0) ? 'Flute' : (i === 0 ? 'Top' : 'Bottom');
-          layersToAdd.push({ layerName: type, paperType: 'Kraft', bf: '', gsm: 0 });
+          layersToAdd.push({ layerName: type, paperType: 'SK', bf: '', gsm: 0 });
         }
         append(layersToAdd);
       } else if (plyValue < currentLayers) {
@@ -619,7 +619,8 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
                   <div className="space-y-1.5"><label className={labelCls}>Packing</label><input {...register('packing')} className={inputCls} placeholder="e.g. Bundle of 25" /></div>
                   <div className="space-y-1.5"><label className={labelCls}>Pin Qty</label><input type="number" {...register('pinQty')} className={inputCls} placeholder="0" /></div>
                   <div className="space-y-1.5"><label className={labelCls}>Pin/Pasting</label><input {...register('pinPasting')} className={inputCls} placeholder="e.g. Stitching" /></div>
-                  <div className="space-y-1.5 col-span-2"><label className={labelCls}>Pin Type</label><input {...register('pinType')} className={inputCls} placeholder="e.g. Heavy Duty" /></div>
+                  <div className="space-y-1.5"><label className={labelCls}>Pin Type</label><input {...register('pinType')} className={inputCls} placeholder="e.g. Heavy Duty" /></div>
+                  <div className="space-y-1.5"><label className={labelCls}>Box Type</label><input {...register('boxType')} className={inputCls} placeholder="e.g. Universal" /></div>
                  </div>
                </div>
             </div>
@@ -633,7 +634,7 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
             <div>
               <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
                 <h3 className="text-sm font-semibold text-primary uppercase tracking-wider flex items-center"><div className="w-2 h-2 rounded-full bg-primary mr-2"/> Paper Layers</h3>
-                <button type="button" onClick={() => append({ layerName: '', paperType: 'Kraft', bf: '', gsm: 0 })} className="text-xs flex items-center text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-full">
+                <button type="button" onClick={() => append({ layerName: '', paperType: 'SK', bf: '', gsm: 0 })} className="text-xs flex items-center text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-full">
                   <Plus className="w-3.5 h-3.5 mr-1" /> Add Layer
                 </button>
               </div>
@@ -652,10 +653,9 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-muted-foreground">Paper Type</label>
                       <select {...register(`layers.${idx}.paperType` as const)} className={inputCls}>
-                        <option value="Kraft">Kraft</option>
-                        <option value="Semi-Kraft">Semi-Kraft</option>
-                        <option value="Duplex">Duplex</option>
-                        <option value="Test">Test</option>
+                        <option value="SK">SK</option>
+                        <option value="VK">VK</option>
+                        <option value="DUPLEX">DUPLEX</option>
                       </select>
                     </div>
                     <div className="space-y-1">

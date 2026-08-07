@@ -55,6 +55,26 @@ export default function Production() {
     .filter((l: any) => l.department === 'Finish Goods')
     .reduce((sum: number, l: any) => sum + l.productionQty, 0);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const sortedJobCards = [...jobCards].sort((a: any, b: any) => {
+    const aDate = new Date(a.targetDate || 0);
+    aDate.setHours(0, 0, 0, 0);
+    const bDate = new Date(b.targetDate || 0);
+    bDate.setHours(0, 0, 0, 0);
+
+    const aIsDelayed = aDate.getTime() < today.getTime();
+    const bIsDelayed = bDate.getTime() < today.getTime();
+
+    // 1. Delayed jobs first
+    if (aIsDelayed && !bIsDelayed) return -1;
+    if (!aIsDelayed && bIsDelayed) return 1;
+
+    // 2. Sort by Target Date Ascending (closest first)
+    return aDate.getTime() - bDate.getTime();
+  });
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
@@ -76,7 +96,7 @@ export default function Production() {
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {loadingCards ? (
               <p className="text-center text-muted-foreground p-4 text-sm">Loading job cards...</p>
-            ) : jobCards.map((jc: any) => (
+            ) : sortedJobCards.map((jc: any) => (
               <button
                 key={jc.id}
                 onClick={() => setSelectedJobCardId(jc.id)}
@@ -87,11 +107,23 @@ export default function Production() {
                     : "bg-background border-border hover:border-primary/50 text-foreground"
                 )}
               >
-                <div>
-                  <div className="font-bold">{jc.jobCardNo}</div>
-                  <div className="text-xs opacity-80 mt-1">{jc.product?.itemName} - {jc.orderQty} Qty</div>
+                <div className="w-full">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold">{jc.jobCardNo}</div>
+                    {jc.targetDate && (
+                      <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        new Date(jc.targetDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0)
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {new Date(jc.targetDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) ? 'DELAYED' : 'ON TIME'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs opacity-80 mt-1 truncate">{jc.product?.itemName} - {jc.orderQty} Qty</div>
+                  <div className="text-[10px] opacity-70 mt-0.5">Delivery: {jc.targetDate ? new Date(jc.targetDate).toLocaleDateString('en-IN') : 'N/A'}</div>
                 </div>
-                <ChevronRight className="w-4 h-4 opacity-50" />
+                <ChevronRight className="w-4 h-4 opacity-50 shrink-0 ml-2" />
               </button>
             ))}
           </div>

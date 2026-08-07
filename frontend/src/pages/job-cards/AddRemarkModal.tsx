@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, MessageSquarePlus, Send } from 'lucide-react';
-import { updateDocument } from '../../lib/firebase/services';
+import { updateDocument, executeJobCardTransaction } from '../../lib/firebase/services';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AddRemarkModal({ jobCard, onClose, onSuccess }: { jobCard: any, onClose: () => void, onSuccess: () => void }) {
@@ -23,9 +23,9 @@ export default function AddRemarkModal({ jobCard, onClose, onSuccess }: { jobCar
       const existingRemarks = jobCard.remarks || [];
       const updatedRemarks = [...existingRemarks, newRemark];
 
-      await updateDocument('jobCards', jobCard.id, {
+      await executeJobCardTransaction(jobCard.id, {
         remarks: updatedRemarks
-      }, user?.name);
+      }, jobCard, user?.name);
 
       onSuccess();
     } catch (error) {

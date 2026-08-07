@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer } from 'lucide-react';
+import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, AlertTriangle, Layers, Play } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { cn } from '../lib/utils';
-import { queryDocuments, createDocument, updateDocument } from '../lib/firebase/services';
+import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction } from '../lib/firebase/services';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
@@ -11,17 +11,62 @@ import { exportToExcel, exportToPDF } from '../lib/exportUtils';
 import PrintableJobCard from './job-cards/PrintableJobCard';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import ReelAllocationModal from './job-cards/ReelAllocationModal';
+
 import IssueJobCardModal from './job-cards/IssueJobCardModal';
+import ReelAllocationWizard from './job-cards/ReelAllocationWizard';
 import ExportButtons from '../components/ExportButtons';
-import { Layers, Play } from 'lucide-react';
+
+export const isJobCardAllocationComplete = (jc: any) => {
+  if (!jc || !jc.productSnapshot || !jc.productSnapshot.layers) return false;
+  if (jc.reelAllocationSkipped) return true;
+  const requiredLayers = jc.productSnapshot.layers.filter((l: any) => Number(l.gsm) > 0);
+  if (requiredLayers.length === 0) return true;
+  return requiredLayers.every((layer: any) => {
+    // Legacy support
+    if (layer.allocatedReelNumber && layer.allocatedReelWeight) return true;
+    
+    // Array support (Partial allocations)
+    if (layer.allocatedReels && Array.isArray(layer.allocatedReels) && layer.allocatedReels.length > 0) {
+      const totalAllocated = layer.allocatedReels.reduce((sum: number, r: any) => sum + (Number(r.allocatedWeight) || 0), 0);
+      const required = Number(layer.requiredWeight) || Number(layer.calculatedWeight) || Number(layer.weight) || 0;
+      return totalAllocated >= (required - 0.1);
+    }
+    return false;
+  });
+};
+
+function ValidationDialog({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6">
+      <div className="bg-card w-full max-w-md rounded-xl shadow-2xl flex flex-col border border-border overflow-hidden">
+        <div className="bg-red-50 border-b border-red-100 p-4 flex items-center gap-3">
+           <AlertTriangle className="w-6 h-6 text-red-600" />
+           <h2 className="text-lg font-bold text-red-900">Reel Allocation Required</h2>
+        </div>
+        <div className="p-6 text-sm text-foreground leading-relaxed">
+          This Job Card cannot be submitted because one or more required paper layers do not have allocated reels.
+          <br /><br />
+          Please complete reel allocation before continuing.
+        </div>
+        <div className="bg-muted/50 p-4 border-t border-border flex justify-end">
+           <button onClick={onClose} className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded-md shadow hover:bg-primary/90">
+             OK
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function JobCards() {
+  const { user, hasRole } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingJobCard, setEditingJobCard] = useState<any>(null);
   const [printingJobCard, setPrintingJobCard] = useState<any>(null);
   const [allocatingJobCard, setAllocatingJobCard] = useState<any>(null);
   const [issuingJobCard, setIssuingJobCard] = useState<any>(null);
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
 
   // 3-way smart search state (Inputs)
   const [searchCustomer, setSearchCustomer] = useState('');
@@ -95,6 +140,10 @@ export default function JobCards() {
   }, [jobCards, searchCustomer, searchProduct]);
 
   const handleDownloadPDF = async () => {
+    if (!isJobCardAllocationComplete(printingJobCard)) {
+      setShowValidationDialog(true);
+      return;
+    }
     const element = document.getElementById('job-card-print-area');
     if (!element) return;
     
@@ -145,7 +194,13 @@ export default function JobCards() {
                 Download as PDF
               </button>
               <button 
-                onClick={() => window.print()} 
+                onClick={() => {
+                  if (!isJobCardAllocationComplete(printingJobCard)) {
+                    setShowValidationDialog(true);
+                    return;
+                  }
+                  window.print();
+                }} 
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-sm font-bold flex items-center shadow transition-colors text-white"
               >
                 Print Document
@@ -319,7 +374,13 @@ export default function JobCards() {
                         <div className="flex justify-end gap-2">
                           {jc.status === 'PENDING' && (
                             <button 
-                              onClick={() => setIssuingJobCard(jc)}
+                              onClick={() => {
+                                if (!isJobCardAllocationComplete(jc)) {
+                                  setShowValidationDialog(true);
+                                  return;
+                                }
+                                setIssuingJobCard(jc);
+                              }}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md border border-transparent hover:border-blue-200 transition-colors"
                               title="Issue to Production"
                             >
@@ -341,7 +402,13 @@ export default function JobCards() {
                             <Edit className="w-4 h-4" />
                           </button>
                           <button 
-                            onClick={() => setPrintingJobCard(jc)}
+                            onClick={() => {
+                              if (!isJobCardAllocationComplete(jc)) {
+                                alert("PDF BLOCKED. Reel allocation is incomplete.");
+                                return;
+                              }
+                              setPrintingJobCard(jc);
+                            }}
                             className="p-1.5 text-primary hover:bg-primary/10 rounded-md border border-transparent hover:border-primary/20 transition-colors"
                             title="Print / PDF"
                           >
@@ -369,6 +436,7 @@ export default function JobCards() {
       {isFormOpen && (
         <JobCardModal 
           initialData={editingJobCard}
+          onValidationFailed={() => setShowValidationDialog(true)}
           onClose={() => { setIsFormOpen(false); setEditingJobCard(null); }} 
           onSuccess={() => {
             setIsFormOpen(false);
@@ -379,14 +447,39 @@ export default function JobCards() {
       )}
 
       {allocatingJobCard && (
-        <ReelAllocationModal 
-          jobCard={allocatingJobCard}
-          onClose={() => setAllocatingJobCard(null)}
-          onSuccess={() => {
-            setAllocatingJobCard(null);
-            refetchCards();
-          }}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-auto">
+          <ReelAllocationWizard 
+            jobCard={allocatingJobCard}
+            isAdmin={hasRole('ADMIN')}
+            onBack={() => setAllocatingJobCard(null)}
+            onConfirm={async (layers) => {
+              try {
+                await updateDocument('jobCards', allocatingJobCard.id, {
+                  productSnapshot: {
+                    ...allocatingJobCard.productSnapshot,
+                    layers
+                  },
+                  reelAllocationSkipped: false
+                });
+                setAllocatingJobCard(null);
+                refetchCards();
+              } catch (err: any) {
+                alert('Failed to save allocation: ' + err.message);
+              }
+            }}
+            onSkip={async () => {
+              try {
+                await updateDocument('jobCards', allocatingJobCard.id, {
+                  reelAllocationSkipped: true
+                });
+                setAllocatingJobCard(null);
+                refetchCards();
+              } catch (err: any) {
+                alert('Failed to skip allocation: ' + err.message);
+              }
+            }}
+          />
+        </div>
       )}
 
       {issuingJobCard && (
@@ -399,12 +492,14 @@ export default function JobCards() {
           }}
         />
       )}
+      
+      <ValidationDialog isOpen={showValidationDialog} onClose={() => setShowValidationDialog(false)} />
     </div>
   );
 }
 
-function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, onClose: () => void, onSuccess: () => void }) {
-  const { user } = useAuth();
+function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: { initialData?: any, onClose: () => void, onSuccess: () => void, onValidationFailed?: () => void }) {
+  const { user, hasRole } = useAuth();
   const isEditMode = !!initialData;
   const { register, handleSubmit, watch, setValue, formState: { isSubmitting } } = useForm({
     defaultValues: isEditMode ? {
@@ -511,7 +606,13 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
         layerWeight = Math.round(layerWeight * 100) / 100;
         totalWeight += layerWeight;
       }
-      return { ...layer, calculatedWeight: layerWeight };
+      const cleanLayer = { ...layer };
+      if (!isEditMode || isProductChanged) {
+        delete cleanLayer.allocatedReelNumber;
+        delete cleanLayer.allocatedReelWeight;
+        delete cleanLayer.allocatedReels;
+      }
+      return { ...cleanLayer, calculatedWeight: layerWeight };
     });
     
     totalWeight = Math.round(totalWeight * 100) / 100;
@@ -525,43 +626,66 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
     };
   }, [activeProductData, orderQtyVal]);
 
+  const [step, setStep] = useState<1 | 2>(1);
+  const [draftPayload, setDraftPayload] = useState<any>(null);
+
   const onSubmit = async (data: any) => {
     if (!activeProductData) return;
+    
+    const orderQty = Number(data.orderQty);
+    
+    // Construct final payload
+    const jobCardPayload = {
+      jobCardNo: data.jobCardNo,
+      targetDate: data.targetDate,
+      
+      customerId: activeProductData.customerId,
+      customerName: activeProductData.customerName,
+      productId: activeProductData.id || activeProductData.productId,
+      productName: activeProductData.itemName,
+      
+      orderQty,
+      oneBoxWeight: liveCalculations?.oneBoxWeight || 0,
+      totalWeight: liveCalculations?.totalWeight || 0,
+      paperQuantity: liveCalculations?.noOfPaper || 0,
+      plyQuantity: liveCalculations?.noOfPaper || 0,
+      
+      priority: data.priority || 'Normal',
+      remarks: data.remarks || '',
+      
+      productSnapshot: {
+        ...activeProductData,
+        layers: liveCalculations?.layers || activeProductData.layers || []
+      },
+    };
 
+    setDraftPayload(jobCardPayload);
+    setStep(2);
+  };
+
+  const handleFinalSave = async (allocatedLayers: any[] | null) => {
     try {
-      const orderQty = Number(data.orderQty);
-
-      // Construct final payload
-      const jobCardPayload = {
-        jobCardNo: data.jobCardNo,
-        targetDate: data.targetDate,
-        
-        customerId: activeProductData.customerId,
-        customerName: activeProductData.customerName,
-        productId: activeProductData.id || activeProductData.productId,
-        productName: activeProductData.itemName,
-        
-        orderQty,
-        oneBoxWeight: liveCalculations?.oneBoxWeight || 0,
-        totalWeight: liveCalculations?.totalWeight || 0,
-        paperQuantity: liveCalculations?.noOfPaper || 0,
-        plyQuantity: liveCalculations?.noOfPaper || 0, // For corrugated boxes, paper quantity (cuts) equals ply production quantity
-        
-        priority: data.priority || 'Normal',
-        remarks: data.remarks || '',
-        
-        // Update snapshot if product changed, else keep existing
+      if (!draftPayload) return;
+      
+      const finalPayload = {
+        ...draftPayload,
         productSnapshot: {
-          ...activeProductData,
-          layers: liveCalculations?.layers || activeProductData.layers || []
+          ...draftPayload.productSnapshot,
+          layers: allocatedLayers || draftPayload.productSnapshot.layers
         },
+        status: 'PENDING',
+        reelAllocationSkipped: allocatedLayers === null ? true : false
       };
 
-      if (isEditMode) {
-        await updateDocument('jobCards', initialData.id, jobCardPayload, user?.name);
-      } else {
-        await createDocument('jobCards', { ...jobCardPayload, status: 'PENDING' }, user?.name);
-      }
+      let jobId = initialData?.id;
+
+      jobId = await executeJobCardTransaction(
+        isEditMode ? jobId : null,
+        finalPayload,
+        isEditMode ? initialData : null,
+        user?.name
+      );
+
       onSuccess();
     } catch (error: any) {
       alert(error.message || 'Failed to save job card');
@@ -569,6 +693,20 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
   };
 
   const inputCls = "w-full text-sm rounded-md border border-input px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring";
+
+  if (step === 2 && draftPayload) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-auto">
+        <ReelAllocationWizard 
+          jobCard={draftPayload} 
+          onBack={() => setStep(1)} 
+          onConfirm={(layers) => handleFinalSave(layers)} 
+          isAdmin={hasRole('ADMIN')}
+          onSkip={() => handleFinalSave(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 overflow-auto">
@@ -809,7 +947,7 @@ function JobCardModal({ initialData, onClose, onSuccess }: { initialData?: any, 
               )}
             >
               {isSubmitting && <CircleDashed className="w-4 h-4 mr-2 animate-spin" />}
-              {isEditMode ? 'Update Job Card' : 'Generate Job Card'}
+              Next: Proceed to Allocation
             </button>
           </div>
         </div>

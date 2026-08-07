@@ -42,6 +42,7 @@ export interface Product extends BaseModel {
   color?: string;
   packing?: string;
   pinType?: string;
+  boxType?: string;
   specialRequirement?: string;
   layers: ProductLayer[];
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { ArrowDownToLine, X, CircleDashed, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowDownToLine, X, CircleDashed, Plus, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { executeFinishGoodInwardTransaction, type FinishGoodInwardPayload } from '../../lib/firebase/services';
 import { queryDocuments } from '../../lib/firebase/services';
@@ -12,11 +12,101 @@ interface FGRow {
   category: 'REGULAR' | 'REJECTED';
   quantity: number | '';
   rate: number | '';
+  jobCardAllocations?: { jobCardId: string; quantity: number; expected: number }[];
 }
 
 interface BulkInwardForm {
   inwardDate: string;
   rows: FGRow[];
+}
+
+function JobCardSelector({ 
+  productId, 
+  rowQuantity, 
+  allocations = [], 
+  onChange 
+}: { 
+  productId: string, 
+  rowQuantity: number, 
+  allocations?: { jobCardId: string; quantity: number; expected: number }[],
+  onChange: (allocs: { jobCardId: string; quantity: number; expected: number }[]) => void
+}) {
+  const [jobCards, setJobCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!productId) return;
+    setLoading(true);
+    queryDocuments('jobCards', [])
+      .then(data => {
+        const openCards = data.filter(jc => 
+          jc.productId === productId && 
+          jc.status === 'IN_PROCESS' &&
+          !jc.isArchived
+        );
+        // Sort by date oldest first
+        openCards.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        setJobCards(openCards);
+      })
+      .finally(() => setLoading(false));
+  }, [productId]);
+
+  // Auto allocate logic when rowQuantity changes
+  useEffect(() => {
+    if (jobCards.length === 0 || rowQuantity <= 0) return;
+    
+    let remaining = rowQuantity;
+    const newAllocs: { jobCardId: string; quantity: number; expected: number }[] = [];
+
+    for (const jc of jobCards) {
+      if (remaining <= 0) break;
+      const req = (jc.quantity || 0) - (jc.producedQuantity || 0);
+      if (req <= 0) continue;
+      
+      const allocQty = Math.min(req, remaining);
+      newAllocs.push({ jobCardId: jc.id, quantity: allocQty, expected: req });
+      remaining -= allocQty;
+    }
+    
+    const currentStr = JSON.stringify(allocations);
+    const newStr = JSON.stringify(newAllocs);
+    if (currentStr !== newStr) {
+      onChange(newAllocs);
+    }
+  }, [rowQuantity, jobCards, allocations, onChange]);
+
+  if (!productId || loading || jobCards.length === 0) return null;
+
+  return (
+    <div className="col-span-12 mt-1 p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+      <div className="text-xs font-semibold text-blue-800 mb-2 flex items-center">
+        <CheckCircle2 className="w-4 h-4 mr-1" /> 
+        Auto-Allocated to Open Job Cards:
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        {jobCards.map(jc => {
+          const req = (jc.quantity || 0) - (jc.producedQuantity || 0);
+          if (req <= 0) return null;
+          const alloc = allocations.find(a => a.jobCardId === jc.id);
+          const isAllocated = !!alloc;
+
+          return (
+            <div key={jc.id} className={`flex items-center justify-between text-xs p-2 rounded border ${isAllocated ? 'bg-blue-100 border-blue-200' : 'bg-white border-gray-200'}`}>
+              <div className="flex items-center gap-4">
+                <span className="font-mono font-medium">{jc.jobCardNumber || jc.id.slice(0,6)}</span>
+                <span className="text-gray-600">Req: {req} pcs</span>
+              </div>
+              {isAllocated && (
+                <div className="font-bold text-blue-700">
+                  Closing: {alloc.quantity} / {req} pcs
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function BulkInModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
@@ -154,7 +244,8 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
             quantity: aggregated.qty,
             category: r.category,
             date: data.inwardDate,
-            rate: aggregated.rate
+            rate: aggregated.rate,
+            jobCardAllocations: r.jobCardAllocations
           });
           processed.add(key);
         }
@@ -292,6 +383,16 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
                       <AlertCircle className="w-4 h-4 mr-1.5" />
                       Warning: This product is already selected in another row of this batch.
                     </div>
+                  )}
+
+                  {/* Job Card Selector */}
+                  {rows[index]?.productId && (
+                     <JobCardSelector
+                       productId={rows[index].productId}
+                       rowQuantity={Number(rows[index].quantity) || 0}
+                       allocations={rows[index].jobCardAllocations}
+                       onChange={(allocs) => setValue(`rows.${index}.jobCardAllocations`, allocs)}
+                     />
                   )}
 
                 </div>

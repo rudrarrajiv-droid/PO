@@ -1,0 +1,667 @@
+# PACKWELL ERP - CONTROLLED DEVELOPMENT MASTER PROMPT
+# JOB CARD PDF / PRINT ENHANCEMENT
+# VERSION 1.0
+
+IMPORTANT
+
+This is an EXISTING WORKING application.
+
+I DO NOT want a redesign.
+
+I DO NOT want refactoring.
+
+I DO NOT want architecture changes.
+
+I ONLY want the exact changes requested below.
+
+=========================================================
+ABSOLUTE DEVELOPMENT RULES
+=========================================================
+
+Follow these rules STRICTLY.
+
+1. NEVER modify unrelated files.
+
+2. NEVER redesign existing pages.
+
+3. NEVER change existing Firestore collections.
+
+4. NEVER rename existing fields.
+
+5. NEVER modify Dashboard.
+
+6. NEVER modify Master Data.
+
+7. NEVER modify Finish Goods.
+
+8. NEVER modify Tracker.
+
+9. NEVER modify Freight.
+
+10. NEVER modify Settings.
+
+11. NEVER modify Sidebar.
+
+12. NEVER modify Login.
+
+13. NEVER deploy automatically.
+
+14. NEVER continue automatically.
+
+15. NEVER change any business logic unless requested.
+
+16. NEVER touch any module outside the current phase.
+
+17. NEVER perform large refactoring.
+
+18. NEVER delete existing code unless absolutely required.
+
+19. NEVER replace working components unnecessarily.
+
+20. BEFORE modifying anything,
+
+inspect
+
+component
+
+service
+
+utility
+
+PDF generator
+
+print layout
+
+and explain what will be modified.
+
+=========================================================
+
+EVERY PHASE MUST FOLLOW THIS PROCESS
+
+Inspect
+
+↓
+
+Understand
+
+↓
+
+Plan
+
+↓
+
+Implement
+
+↓
+
+Build
+
+↓
+
+Test
+
+↓
+
+Regression
+
+↓
+
+STOP
+
+=========================================================
+
+AFTER EVERY PHASE
+
+You MUST provide
+
+Files Modified
+
+Reason
+
+Components Changed
+
+Build Status
+
+Testing Result
+
+Regression Result
+
+Then STOP.
+
+WAIT FOR MY PERMISSION.
+
+DO NOT START NEXT PHASE.
+
+=========================================================
+PHASE 1
+A4 PDF LAYOUT FIX
+=========================================================
+
+ONLY fix PDF layout.
+
+Current problem:
+
+Right side content is getting cut in print.
+
+Required:
+
+A4 Paper
+
+Portrait
+
+All four margins exactly 10 mm.
+
+Entire Job Card must fit inside ONE page.
+
+No horizontal clipping.
+
+No content outside printable area.
+
+No page overflow.
+
+No scaling hacks.
+
+Do NOT change:
+
+Logo
+
+Tables
+
+Header
+
+Data
+
+Calculations
+
+Business Logic
+
+Only fix page size, printable width, printable height and margins.
+
+Build.
+
+Generate PDF.
+
+Print Test.
+
+STOP.
+
+=========================================================
+PHASE 2
+HEADER DESIGN
+=========================================================
+
+ONLY modify Header.
+
+Do NOT touch anything else.
+
+Required:
+
+Logo background
+
+White
+
+Logo
+
+Slightly bigger
+
+Replace
+
+PRODUCTION JOB CARD
+
+with
+
+JOB CARD
+
+Top Right
+
+Only
+
+Document No.
+
+should remain.
+
+Do NOT move any other fields yet.
+
+Build
+
+Test
+
+STOP
+
+=========================================================
+PHASE 3
+CUSTOMER INFORMATION BOX
+=========================================================
+
+ONLY modify the Customer Information Box.
+
+Move
+
+Job Card Number
+
+into
+
+Top Left corner of Customer Box.
+
+Move
+
+Date
+
+into
+
+Top Right corner of Customer Box.
+
+Remove Job Card Number and Date from previous position.
+
+Keep Customer and Product exactly where they are.
+
+Under Product
+
+show
+
+347 mm (L) × 170 mm (W) × 236 mm (H)
+
+Remove inch symbol completely.
+
+Do NOT change any calculation.
+
+STOP.
+
+=========================================================
+PHASE 4
+PAPER SPECIFICATION TABLE
+=========================================================
+
+Rename
+
+Paper Specifications
+
+to
+
+Paper Specification With Allocated Reels
+
+Create exactly 7 columns.
+
+1 Layer
+
+2 Paper Type
+
+3 BF
+
+4 GSM
+
+5 Required Weight
+
+6 Reel Weight
+
+7 Reel Number
+
+All columns
+
+Center aligned.
+
+Automatic wrapping.
+
+Automatic row height.
+
+If multiple reels exist,
+
+expand row height automatically.
+
+Nothing should overflow.
+
+Nothing should be clipped.
+
+Do NOT modify calculations.
+
+STOP.
+
+=========================================================
+PHASE 5
+REEL ALLOCATION VALIDATION
+=========================================================
+
+Before Job Card submission
+
+System must verify
+
+All required reels are allocated.
+
+If NOT allocated
+
+User CANNOT
+
+Save
+
+Submit
+
+Generate PDF
+
+Print
+
+Show clear validation message.
+
+Do NOT change allocation logic yet.
+
+STOP.
+
+=========================================================
+PHASE 6
+SMART AUTO REEL SEARCH
+=========================================================
+
+ONLY implement automatic search.
+
+Matching Priority
+
+Exact Reel Size
+
+↓
+
++0.5
+
+↓
+
++1.0
+
+↓
+
++1.5
+
+↓
+
++2.0
+
+If still unavailable
+
+Match BF
+
+If unavailable
+
+Match GSM
+
+If unavailable
+
+Try logical BF/GSM combinations.
+
+If still unavailable
+
+STOP automatic search
+
+Open Manual Search.
+
+Automatic search must never exceed
+
+2 inch difference.
+
+Do not change manual allocation.
+
+STOP.
+
+=========================================================
+PHASE 7
+MANUAL REEL SEARCH
+=========================================================
+
+Open ONLY if automatic matching fails.
+
+Manual Search must show
+
+Nearest reel first.
+
+Display
+
+Reel Number
+
+Size
+
+BF
+
+GSM
+
+Weight
+
+User selects reel manually.
+
+Allocate.
+
+Show inside Job Card.
+
+STOP.
+
+=========================================================
+PHASE 8
+REEL WEIGHT ALLOCATION LOGIC
+=========================================================
+
+Example
+
+Required
+
+350 Kg
+
+Reels
+
+100
+
+150
+
+600
+
+Allocate
+
+100
+
++
+
+150
+
++
+
+100 from 600
+
+Remaining
+
+500
+
+Actual Reel Weight
+
+MUST NEVER CHANGE.
+
+Only
+
+Available Allocation Weight
+
+changes.
+
+Build.
+
+Test.
+
+STOP.
+
+=========================================================
+PHASE 9
+ACTIVE JOB CARD REEL RESERVATION
+=========================================================
+
+Allocated reels remain RESERVED.
+
+Available Weight
+
+=
+
+Actual Weight
+
+-
+
+Reserved Weight
+
+Only while
+
+Job Card
+
+Status
+
+Active
+
+If
+
+Completed
+
+or
+
+Cancelled
+
+Reservation removed.
+
+Actual Reel Weight remains unchanged forever.
+
+Reservation only affects allocation.
+
+Nothing else.
+
+STOP.
+
+=========================================================
+PHASE 10
+LINE CLEARANCE TABLE
+=========================================================
+
+Replace title
+
+Production Tracker
+
+with
+
+Line Clearance
+
+Keep table printable.
+
+Auto height.
+
+Everything inside ONE page.
+
+Do not redesign entire page.
+
+STOP.
+
+=========================================================
+PHASE 11
+FINAL PDF QUALITY CHECK
+=========================================================
+
+Verify
+
+A4
+
+10 mm margins
+
+One Page
+
+No clipping
+
+Logo
+
+Header
+
+Customer Box
+
+Paper Specification Table
+
+Allocated Reels
+
+Line Clearance
+
+Everything visible.
+
+Generate
+
+PDF
+
+Print Preview
+
+Physical print layout verification.
+
+STOP.
+
+=========================================================
+PHASE 12
+FINAL REGRESSION
+=========================================================
+
+Verify
+
+Job Card Creation
+
+Job Card Update
+
+Reel Allocation
+
+Manual Allocation
+
+Automatic Allocation
+
+PDF
+
+Print
+
+No page broken.
+
+No Firestore changes.
+
+No Dashboard changes.
+
+No Finish Goods changes.
+
+No Master Data changes.
+
+No Tracker changes.
+
+No Freight changes.
+
+No Settings changes.
+
+No Login changes.
+
+Build passes.
+
+Regression passes.
+
+STOP.
+
+WAIT FOR MY PERMISSION.
+
+=========================================================
+VERY IMPORTANT
+=========================================================
+
+You MUST NEVER continue to the next phase automatically.
+
+After every phase,
+
+STOP.
+
+Wait for my approval.
+
+Only after I explicitly write
+
+"Continue to Phase X"
+
+may you start the next phase.
+
+If any requested change requires touching unrelated modules,
+
+STOP first,
+
+explain why,
+
+and wait for my approval.
+
+The safety of the existing application is more important than speed.
+
+Accuracy > Features.
+
+Data Safety > UI.
+
+Existing Working Functionality > Refactoring.

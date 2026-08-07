@@ -4,57 +4,90 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
   if (!jobCard) return null;
   const product = jobCard.productSnapshot;
   const loggedInUser = jobCard.createdBy || 'System';
+  const roundWeight = (w: any) => Math.round(Number(w) || 0);
 
   return (
-    <div id="job-card-print-area" className="w-[210mm] mx-auto bg-white text-black p-[15mm] text-[12px] font-sans leading-snug">
+    <div id="job-card-print-area" className="w-[210mm] h-[297mm] mx-auto bg-white text-black p-[10mm] text-[12px] font-sans leading-snug box-border overflow-hidden relative">
       
       {/* HEADER */}
-      <div className="flex justify-between items-start border-b-2 border-black pb-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 flex items-center justify-center">
-             <img src="/logo.gif" alt="Packwell India Logo" className="w-full h-full object-contain grayscale" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold uppercase tracking-wider mb-0.5">Production Job Card</h1>
-            <p className="font-semibold text-gray-700">PACKWELL INDIA</p>
+      <div className="grid grid-cols-3 items-center border-b-2 border-black pb-2 mb-2">
+        <div className="flex justify-start">
+          <div className="w-16 h-16 bg-white flex items-center justify-center">
+             <img src="/logo.gif" alt="Packwell India Logo" className="w-full h-full object-contain grayscale invert bg-white" />
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-lg font-bold mb-1">{jobCard.jobCardNo}</div>
-          <div className="text-xs font-bold text-gray-600 mb-1">Document No.: F/QA/016</div>
-          <div className="text-xs">Date: <span className="font-semibold">{new Date(jobCard.targetDate || jobCard.createdAt).toLocaleDateString()}</span></div>
+        <div className="text-center">
+          <h1 className="text-xl font-bold uppercase tracking-wider mb-0.5">Job Card</h1>
+          <p className="font-semibold text-gray-700">PACKWELL INDIA</p>
+        </div>
+        <div className="text-right flex flex-col justify-start h-full pt-1">
+          <div className="text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">DOCUMENT NO. : F/QA/016</div>
         </div>
       </div>
 
       {/* PRODUCT + DIMENSIONS */}
-      <div className="mb-4 bg-gray-100 border border-black p-3 text-center">
-        <div className="text-sm font-bold text-gray-700 mb-1 uppercase">Customer Name: {jobCard.customerName || '-'}</div>
-        <div className="text-xl font-extrabold uppercase">{jobCard.productName}</div>
-        <div className="text-sm font-bold text-gray-700 mt-1">
-          {product?.length}" (L) x {product?.width}" (W) x {product?.height}" (H)
+      <div className="mb-2 bg-gray-100 border border-black p-2 text-center relative">
+        <div className="absolute top-2 left-2 text-xs font-bold text-gray-800 uppercase text-left">
+          Job Card No. : {jobCard.jobCardNo}
+        </div>
+        <div className="absolute top-2 right-2 text-xs font-bold text-gray-800 uppercase text-right">
+          Date : {new Date(jobCard.targetDate || jobCard.createdAt).toLocaleDateString()}
+        </div>
+        <div className="text-sm mb-1 uppercase mt-0.5"><span className="text-gray-500 font-semibold mr-1">CUSTOMER NAME:</span><span className="font-extrabold text-gray-900">{jobCard.customerName || '-'}</span></div>
+        <div className="text-sm mb-1 uppercase"><span className="text-gray-500 font-semibold mr-1">ITEM NAME:</span><span className="font-extrabold text-gray-900">{jobCard.productName}</span></div>
+        <div className="text-sm uppercase">
+          <span className="text-gray-500 font-semibold mr-1">DIMENSIONS:</span><span className="font-extrabold text-gray-900">{product?.length}(L) X {product?.width}(W) X {product?.height}(H) MM</span>
         </div>
       </div>
 
       {/* REQUIRED PRINT SEQUENCE */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4 border border-black p-3">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-2 border border-black p-2">
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">1. Reel Size:</span>
+          <span className="font-bold text-gray-600">1. No of Boxes:</span>
+          <span className="font-bold uppercase">{jobCard.orderQty ? `${jobCard.orderQty} BOXES` : '-'}</span>
+        </div>
+        <div className="flex justify-between border-b border-gray-300 pb-1">
+          <span className="font-bold text-gray-600">2. Box Type:</span>
+          <span className="font-bold uppercase">{product?.boxType || '-'}</span>
+        </div>
+        <div className="flex justify-between border-b border-gray-300 pb-1">
+          <span className="font-bold text-gray-600">3. Reel Size:</span>
           <span className="font-bold">{product?.reelSize}"</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">2. Cut Size:</span>
+          <span className="font-bold text-gray-600">4. Cut Size:</span>
           <span className="font-bold">{product?.cutSize}"</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">3. Paper Quantity:</span>
+          <span className="font-bold text-gray-600">5. Paper Quantity:</span>
           <span className="font-bold">{jobCard.paperQuantity ? `${jobCard.paperQuantity} Paper` : '-'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">4. Ply Quantity:</span>
+          <span className="font-bold text-gray-600">6. Ply Quantity:</span>
           <span className="font-bold text-right">
             {(() => {
-              const totalPly = jobCard.plyQuantity;
-              if (!totalPly) return '-';
+              const ups = Number(product?.ups) || 1;
+              const ply = Number(product?.ply) || 0;
+              const qty = Number(jobCard?.orderQty) || 0;
+              
+              let calcTotalPly: number | string = '';
+              
+              if (ups === 2 && ply === 5) calcTotalPly = Math.round(qty * 1/1);
+              else if (ups === 3 && ply === 7) calcTotalPly = Math.round(qty * 1/1);
+              else if (ups === 2 && ply === 3) calcTotalPly = Math.round(qty * 1/2);
+              else if (ups === 3 && ply === 5) calcTotalPly = Math.round(qty * 2/3);
+              else if (ups === 3 && ply === 3) calcTotalPly = Math.round(qty * 1/3);
+              else if (ups === 0.5 && ply === 5) calcTotalPly = Math.round(qty * 4/1);
+              else if (ups === 1 && ply === 5) calcTotalPly = Math.round(qty * 2/1);
+              else if (ups === 1 && ply === 3) calcTotalPly = Math.round(qty * 1/1);
+              else if (ups === 6 && ply === 3) calcTotalPly = Math.round(qty * 0.17);
+              else if (ups === 1 && ply === 7) calcTotalPly = Math.round(qty * 3);
+              else if (ups === 0.5 && ply === 7) calcTotalPly = Math.round(qty * 6);
+              else if (ups === 4 && ply === 3) calcTotalPly = Math.round(qty * 1/4);
+              
+              if (calcTotalPly === '') return '-';
+              
+              const totalPly = Number(calcTotalPly);
               const fluteStr = product?.flute || '';
               if (!fluteStr) return `${totalPly} Ply`;
               
@@ -83,73 +116,160 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
           </span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">5. Ply & Flute:</span>
+          <span className="font-bold text-gray-600">7. Ply & Flute:</span>
           <span className="font-bold">{product?.ply} Ply / '{product?.flute}' Flute</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">6. Color:</span>
+          <span className="font-bold text-gray-600">8. Color:</span>
           <span className="font-bold uppercase">{product?.color || 'Plain'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">7. Creasing:</span>
+          <span className="font-bold text-gray-600">9. Creasing:</span>
           <span className="font-bold uppercase">{product?.creasing || '-'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">8. Die Number:</span>
+          <span className="font-bold text-gray-600">10. Die Number:</span>
           <span className="font-bold uppercase">{product?.creasing === 'DIE' ? (product?.dieNo || '-') : 'N/A'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">9. UPS:</span>
+          <span className="font-bold text-gray-600">11. UPS:</span>
           <span className="font-bold">{product?.ups || 1}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">10. Pin / Pasting:</span>
-          <span className="font-bold uppercase">{product?.jointType || '-'}</span>
+          <span className="font-bold text-gray-600">12. Pin / Pasting:</span>
+          <span className="font-bold uppercase">{product?.pinPasting || '-'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">11. Pin Type:</span>
-          <span className="font-bold uppercase">{product?.jointType === 'PIN' ? (product?.pinType || '-') : 'N/A'}</span>
+          <span className="font-bold text-gray-600">13. Pin Type:</span>
+          <span className="font-bold uppercase">{product?.pinType || '-'}</span>
         </div>
         <div className="flex justify-between border-b border-gray-300 pb-1">
-          <span className="font-bold text-gray-600">12. Pin Quantity:</span>
-          <span className="font-bold uppercase">{product?.jointType === 'PIN' ? (product?.pinQty || '-') : 'N/A'}</span>
+          <span className="font-bold text-gray-600">14. Pin Quantity:</span>
+          <span className="font-bold uppercase">{product?.pinQty || '-'}</span>
         </div>
       </div>
 
-      {/* PAPER SPECIFICATIONS */}
-      <div className="mb-4">
-        <h3 className="font-bold text-xs uppercase mb-1 bg-gray-100 p-1 border-y border-black">Paper Specifications</h3>
-        <table className="w-full text-left border-collapse border border-black text-[11px]">
+      {/* PAPER SPECIFICATIONS WITH ALLOCATED REELS */}
+      <div className="mb-2">
+        <h3 className="font-bold text-xs uppercase mb-1 bg-gray-100 p-1 border-y border-black text-center">Paper Specification With Allocated Reels</h3>
+        <table className="w-full text-center align-middle border-collapse border border-black text-[11px] table-auto">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-black p-1">Layer</th>
-              <th className="border border-black p-1">Paper Type</th>
-              <th className="border border-black p-1">BF</th>
-              <th className="border border-black p-1">GSM</th>
-              <th className="border border-black p-1 text-right">Required Weight</th>
+              <th className="border border-black p-1 text-center align-middle">Layer</th>
+              <th className="border border-black p-1 text-center align-middle">Paper</th>
+              <th className="border border-black p-1 text-center align-middle">BF</th>
+              <th className="border border-black p-1 text-center align-middle">GSM</th>
+              <th className="border border-black p-1 text-center align-middle">Required</th>
+              <th className="border border-black p-1 text-center align-middle">Allocated</th>
+              <th className="border border-black p-1 text-center align-middle">Reel No.</th>
+              <th className="border border-black p-1 text-center align-middle">Remarks</th>
             </tr>
           </thead>
           <tbody>
-            {(product?.layers || []).map((layer: any, idx: number) => (
-              <tr key={idx}>
-                <td className="border border-black p-1 font-bold">{layer.layerName}</td>
-                <td className="border border-black p-1">{layer.paperType}</td>
-                <td className="border border-black p-1">{layer.bf}</td>
-                <td className="border border-black p-1 font-semibold">{layer.gsm}</td>
-                <td className="border border-black p-1 text-right font-bold">{layer.calculatedWeight || layer.weight || 0} Kg</td>
-              </tr>
-            ))}
+            {(product?.layers || []).map((layer: any, idx: number) => {
+              const hasLegacy = !!layer.allocatedReelNumber && !!layer.allocatedReelWeight;
+              const hasArray = layer.allocatedReels && Array.isArray(layer.allocatedReels) && layer.allocatedReels.length > 0;
+              const isAllocated = hasLegacy || hasArray;
+              
+              return (
+                <tr key={idx}>
+                  <td className="border border-black p-1 font-bold text-center align-middle">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <span>{layer.layerName}</span>
+                      {isAllocated ? (
+                        <span className="bg-green-100 text-green-800 border border-green-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">Allocated</span>
+                      ) : (
+                        <span className="bg-red-100 text-red-800 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">Not Allocated</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="border border-black p-1 text-center align-middle">{layer.paperType}</td>
+                  <td className="border border-black p-1 text-center align-middle">{layer.bf}</td>
+                  <td className="border border-black p-1 font-semibold text-center align-middle">{layer.gsm}</td>
+                  <td className="border border-black p-1 font-bold text-center align-middle">{roundWeight(layer.calculatedWeight || layer.weight || layer.requiredWeight)} Kg</td>
+                  <td className="border border-black p-1 text-center align-middle whitespace-pre-line break-words">
+                    {hasArray ? (
+                      <div className="flex flex-col gap-1">
+                        {layer.allocatedReels.map((r: any, i: number) => (
+                          <span key={i} className="whitespace-nowrap font-bold text-blue-900 border-b border-gray-200 last:border-0 pb-0.5 last:pb-0">{roundWeight(r.allocatedWeight)} Kg</span>
+                        ))}
+                      </div>
+                    ) : (
+                      layer.allocatedReelWeight ? <span className="font-bold text-blue-900">{roundWeight(layer.allocatedReelWeight)} Kg</span> : '-'
+                    )}
+                  </td>
+                  <td className="border border-black p-1 text-center align-middle whitespace-pre-line break-words">
+                    {hasArray ? (
+                      <div className="flex flex-col gap-1 items-center">
+                        {layer.allocatedReels.map((r: any, i: number) => (
+                          <div key={i} className="flex items-center justify-center gap-1 border-b border-gray-200 last:border-0 pb-0.5 last:pb-0 w-full">
+                            <span className="font-bold">
+                              {r.reelNumber}
+                              {r.actualReelWeight ? ` (${roundWeight(r.actualReelWeight)} Kg)` : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : layer.allocatedReelNumber ? (
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold">{layer.allocatedReelNumber}</span>
+                      </div>
+                    ) : '-'}
+                  </td>
+                  <td className="border border-black p-1 text-center align-middle font-bold text-[10px]">
+                    {(() => {
+                      if (!hasArray && !hasLegacy) return '';
+                      const reqW = layer.calculatedWeight || layer.weight || layer.requiredWeight || 0;
+                      let allocW = 0;
+                      if (hasArray) {
+                        allocW = layer.allocatedReels.reduce((sum: number, r: any) => sum + (Number(r.allocatedWeight) || 0), 0);
+                      } else if (hasLegacy) {
+                        allocW = Number(layer.allocatedReelWeight) || 0;
+                      }
+                      
+                      const diff = reqW - allocW;
+                      let remarkText = '';
+                      if (diff <= 0.1) {
+                        remarkText = 'MATCHED';
+                      } else {
+                        remarkText = `BALANCE REQUIRED ${roundWeight(diff)} KG`;
+                      }
+                      
+                      if (jobCard.status === 'PENDING') {
+                        remarkText += ' (PENDING FOR ISSUE)';
+                      }
+
+                      return <span className={diff <= 0.1 ? "text-green-700 uppercase" : "text-red-700 uppercase"}>{remarkText}</span>;
+                    })()}
+                  </td>
+                </tr>
+              );
+            })}
             <tr className="bg-gray-100 font-bold">
-              <td colSpan={4} className="border border-black p-1 text-right">Total Paper Weight:</td>
-              <td className="border border-black p-1 text-right">{jobCard.totalWeight || 0} Kg</td>
+              <td colSpan={4} className="border border-black p-1 text-right align-middle">Total Paper Weight:</td>
+              <td className="border border-black p-1 text-center align-middle">{roundWeight(jobCard.totalWeight)} Kg</td>
+              <td className="border border-black p-1 text-center align-middle">
+                {(() => {
+                  const totalAllocatedWeight = (product?.layers || []).reduce((acc: number, layer: any) => {
+                    if (layer.allocatedReels && Array.isArray(layer.allocatedReels)) {
+                      return acc + layer.allocatedReels.reduce((sum: number, r: any) => sum + Number(r.allocatedWeight || 0), 0);
+                    } else if (layer.allocatedReelWeight) {
+                      return acc + Number(layer.allocatedReelWeight || 0);
+                    }
+                    return acc;
+                  }, 0);
+                  return totalAllocatedWeight > 0 ? `${roundWeight(totalAllocatedWeight)} Kg` : '-';
+                })()}
+              </td>
+              <td colSpan={2} className="border border-black p-1 bg-gray-100"></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* REEL ALLOCATION */}
-      {(jobCard.allocations && jobCard.allocations.length > 0) ? (
-        <div className="mb-4">
+      {/* REEL ALLOCATION (LEGACY SUPPORT) */}
+      {(jobCard.allocations && jobCard.allocations.length > 0) && (
+        <div className="mb-2">
           <h3 className="font-bold text-xs uppercase mb-1 bg-gray-100 p-1 border-y border-black">Allocated Reels</h3>
           <table className="w-full text-left border-collapse border border-black text-[11px]">
             <thead>
@@ -162,35 +282,33 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
               {jobCard.allocations.map((a: any, idx: number) => (
                 <tr key={idx}>
                   <td className="border border-black p-1 font-bold">{a.reelNumber}</td>
-                  <td className="border border-black p-1 text-right font-bold">{a.allocatedWeight} Kg</td>
+                  <td className="border border-black p-1 text-right font-bold">{roundWeight(a.allocatedWeight)} Kg</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      ) : (
-         <div className="mb-4 text-[11px] italic text-gray-500">No reels allocated yet.</div>
       )}
 
-      {/* PRODUCTION DEPARTMENT & SIGNATURES */}
-      <div className="mb-4">
-        <h3 className="font-bold text-xs uppercase mb-1 bg-gray-100 p-1 border-y border-black">Production Tracker</h3>
+      {/* LINE CLEARANCE & SIGNATURES */}
+      <div className="mb-2">
+        <h3 className="font-bold text-xs uppercase mb-1 bg-gray-100 p-1 border-y border-black">Line Clearance</h3>
         <table className="w-full text-left border-collapse border border-black text-[11px]">
           <thead>
             <tr className="bg-gray-50">
-              <th className="border border-black p-2 w-[25%]">Department</th>
-              <th className="border border-black p-2 w-[20%]">Production Quantity</th>
-              <th className="border border-black p-2 w-[30%]">Operator Name</th>
-              <th className="border border-black p-2 w-[25%]">Signature</th>
+              <th className="border border-black p-1 w-[25%]">Production Department</th>
+              <th className="border border-black p-1 w-[20%] text-center">Production Quantity</th>
+              <th className="border border-black p-1 w-[30%] text-center">Operator Name</th>
+              <th className="border border-black p-1 w-[25%] text-center">Sign</th>
             </tr>
           </thead>
           <tbody>
-            {['Corrugation M/C', 'Paper Cutting M/C', 'Pasting M/C', 'Rotary / Die M/C', 'RS4 M/C', 'FG'].map((dept, i) => (
-              <tr key={i}>
-                <td className="border border-black p-3 font-bold">{dept}</td>
-                <td className="border border-black p-3"></td>
-                <td className="border border-black p-3"></td>
-                <td className="border border-black p-3"></td>
+            {['CORRUGATION M/C', 'PAPER CUTTING M/C', 'PASTING M/C', 'ROTARY / DIE M/C', 'RS4 M/C', 'FG'].map((dept, i) => (
+              <tr key={i} className="h-6">
+                <td className="border border-black p-1 font-bold whitespace-nowrap">{dept}</td>
+                <td className="border border-black p-1"></td>
+                <td className="border border-black p-1"></td>
+                <td className="border border-black p-1"></td>
               </tr>
             ))}
           </tbody>
@@ -199,17 +317,17 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
       
       {/* INSTRUCTIONS */}
       {(jobCard.remarks || jobCard.specialInstructions) && (
-        <div className="mb-6 p-2 border border-black min-h-[40px]">
+        <div className="mb-2 p-2 border border-black min-h-[40px]">
           <h3 className="font-bold text-xs mb-1">Remarks / Special Instructions:</h3>
           <p className="text-[11px] whitespace-pre-wrap">{jobCard.remarks || jobCard.specialInstructions}</p>
         </div>
       )}
 
       {/* PREPARED / CHECKED / PRODUCTION HEAD */}
-      <div className="grid grid-cols-3 gap-8 mt-12 pt-6 text-center text-gray-800 font-bold uppercase text-[10px] break-inside-avoid">
+      <div className="grid grid-cols-3 gap-8 mt-6 pt-4 text-center text-gray-800 font-bold uppercase text-[10px] break-inside-avoid relative bottom-0">
         <div className="border-t border-black pt-1">
           Prepared By<br/>
-          <span className="font-normal text-[11px] capitalize">{loggedInUser}</span>
+          <span className="font-normal text-[11px] uppercase">{loggedInUser}</span>
         </div>
         <div className="border-t border-black pt-1">Checked By</div>
         <div className="border-t border-black pt-1">Production Head</div>

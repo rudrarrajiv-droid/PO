@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CircleDashed, Play } from 'lucide-react';
-import { updateDocument } from '../../lib/firebase/services';
+import { updateDocument, executeJobCardTransaction } from '../../lib/firebase/services';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
@@ -27,7 +27,7 @@ export default function IssueJobCardModal({ jobCard, onClose, onSuccess }: { job
         expectedDeliveryAt: new Date(deliveryDateTime).toISOString()
       };
 
-      await updateDocument('jobCards', jobCard.id, payload, user?.name);
+      await executeJobCardTransaction(jobCard.id, payload, jobCard, user?.name);
       onSuccess();
     } catch (err: any) {
       alert(err.message || 'Failed to issue job card');

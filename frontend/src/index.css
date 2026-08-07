@@ -59,6 +59,10 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
   /* Hide everything by default in body */
   body * {
     visibility: hidden;
@@ -71,10 +75,12 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
+    width: 210mm;
+    height: 297mm;
     margin: 0;
     padding: 0;
     background: white;
+    box-shadow: none !important;
   }
   /* Hide elements marked as no-print (like the close button) */
   .no-print, .no-print * {

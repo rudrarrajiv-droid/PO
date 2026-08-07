@@ -253,7 +253,130 @@ export const executeOutwardTransaction = async (
 
     return true;
   } catch (error) {
-    console.error(`Error executing outward transaction:`, error);
+    console.error('Error executing outward transaction:', error);
+    throw error;
+  }
+};
+
+export const executeJobCardTransaction = async (
+  jobId: string | null,
+  newPayload: any,
+  oldJobCard: any | null,
+  user: string = 'System'
+) => {
+  try {
+    const reservedDeltas: Record<string, { delta: number, reelNumber: string }> = {};
+
+    const addAllocation = (layer: any, multiplier: number, targetDeltas: Record<string, { delta: number, reelNumber: string }>) => {
+      if (layer.allocatedReels && Array.isArray(layer.allocatedReels)) {
+        layer.allocatedReels.forEach((r: any) => {
+          if (!r.reelId) return;
+          const w = Number(r.allocatedWeight) || 0;
+          if (!targetDeltas[r.reelId]) targetDeltas[r.reelId] = { delta: 0, reelNumber: r.reelNumber || '' };
+          targetDeltas[r.reelId].delta += (w * multiplier);
+        });
+      }
+    };
+
+    // Merge oldJobCard and newPayload to get the full final document state
+    const finalNewState = { ...(oldJobCard || {}), ...newPayload };
+
+    // ACTIVE for reservation means it is PENDING
+    // The user wants ALL Job Card allocations to be strictly "imaginary" (Virtual).
+    // They ONLY block weight when PENDING. When issued, the block is removed and NO inventory is deducted automatically.
+    const isNewActive = finalNewState && finalNewState.status === 'PENDING';
+    const isOldActive = oldJobCard && oldJobCard.status === 'PENDING';
+
+    if (isOldActive && oldJobCard.productSnapshot?.layers) {
+      oldJobCard.productSnapshot.layers.forEach((l: any) => addAllocation(l, -1, reservedDeltas));
+    }
+    if (isNewActive && finalNewState.productSnapshot?.layers) {
+      finalNewState.productSnapshot.layers.forEach((l: any) => addAllocation(l, 1, reservedDeltas));
+    }
+
+    let resultingJobId = jobId;
+
+    await runTransaction(db, async (transaction) => {
+      const reelsCol = collection(db, 'reels');
+      const jcCol = collection(db, 'jobCards');
+      if (!resultingJobId) {
+        resultingJobId = doc(jcCol).id;
+      }
+      const readDocs = [];
+
+      // 1. Read all affected reels for reservation
+      const allReelIds = Object.keys(reservedDeltas);
+
+      for (const reelId of allReelIds) {
+        const resDelta = reservedDeltas[reelId]?.delta || 0;
+        
+        if (Math.abs(resDelta) < 0.001) continue;
+        
+        const reelNumber = reservedDeltas[reelId]?.reelNumber || '';
+        
+        const reelRef = doc(reelsCol, reelId);
+        const reelSnap = await transaction.get(reelRef);
+        if (!reelSnap.exists()) {
+          throw new Error(`Reel ${reelNumber} does not exist.`);
+        }
+        
+        const data = reelSnap.data();
+        const currentBalance = data.currentBalance || 0;
+        const currentReserved = data.activeReservedWeight || 0;
+        
+        const newReserved = currentReserved + resDelta;
+        
+        if (newReserved > currentBalance + 0.1) { // 0.1 float tolerance
+           throw new Error(`Insufficient available weight for Reel ${data.reelNumber}. Available: ${currentBalance - currentReserved} Kg, Requested Extra: ${resDelta} Kg.\n\nReel availability has changed. Please review the reel allocation.`);
+        }
+
+        readDocs.push({
+          ref: reelRef,
+          newReserved: Math.max(0, newReserved)
+        });
+      }
+
+      // 2. Write all reel updates
+      for (const item of readDocs) {
+        transaction.update(item.ref, {
+          activeReservedWeight: item.newReserved,
+          updatedAt: serverTimestamp(),
+          updatedBy: user
+        });
+      }
+
+      // 3. Write Job Card
+      const jcRef = doc(jcCol, resultingJobId);
+      const safePayload = Object.fromEntries(Object.entries(newPayload).filter(([_, v]) => v !== undefined));
+      if (jobId) { // It was an update
+         transaction.update(jcRef, {
+           ...safePayload,
+           updatedAt: serverTimestamp(),
+           updatedBy: user
+         });
+      } else { // It is a new creation
+         transaction.set(jcRef, {
+           ...safePayload,
+           createdAt: serverTimestamp(),
+           updatedAt: serverTimestamp(),
+           createdBy: user,
+           updatedBy: user,
+           isArchived: false,
+         });
+      }
+    });
+
+    await logActivity({
+      user,
+      action: jobId ? 'Updated Job Card with Reservation' : 'Created Job Card with Reservation',
+      entity: 'jobCards',
+      referenceId: resultingJobId,
+      timestamp: serverTimestamp()
+    });
+
+    return resultingJobId;
+  } catch (error) {
+    console.error('Error executing job card transaction:', error);
     throw error;
   }
 };
@@ -372,6 +495,7 @@ export interface FinishGoodInwardPayload {
   category: 'REGULAR' | 'REJECTED';
   date: string;
   rate: number;
+  jobCardAllocations?: { jobCardId: string, quantity: number }[];
 }
 
 export const executeFinishGoodInwardTransaction = async (
@@ -382,13 +506,22 @@ export const executeFinishGoodInwardTransaction = async (
     await runTransaction(db, async (transaction) => {
       const timestamp = serverTimestamp();
       const txCol = collection(db, 'finishGoodTransactions');
+      const jcCol = collection(db, 'jobCards');
       
       const fgRefs = payloads.map(p => ({
         payload: p,
         ref: doc(db, 'finishGoods', p.productId) // Use productId as document ID for FinishGood
       }));
 
-      // 1. Read all required docs
+      // Gather all required Job Card references
+      const jcRefs = payloads.flatMap(p => 
+        (p.jobCardAllocations || []).map(alloc => ({
+          ref: doc(jcCol, alloc.jobCardId),
+          alloc
+        }))
+      );
+
+      // 1. Read all required docs (FinishGoods AND JobCards)
       const readDocs = [];
       for (const item of fgRefs) {
         const snap = await transaction.get(item.ref);
@@ -397,6 +530,18 @@ export const executeFinishGoodInwardTransaction = async (
           snap,
           data: snap.exists() ? snap.data() : null
         });
+      }
+
+      const jcReadDocs = [];
+      for (const item of jcRefs) {
+        const snap = await transaction.get(item.ref);
+        if (snap.exists()) {
+          jcReadDocs.push({
+            ...item,
+            snap,
+            data: snap.data()
+          });
+        }
       }
 
       // 2. Perform all writes
@@ -468,6 +613,29 @@ export const executeFinishGoodInwardTransaction = async (
           updatedBy: user,
           isArchived: false,
         });
+      }
+
+      // 3. Update Job Cards (Close them)
+      for (const item of jcReadDocs) {
+        const existing = item.data;
+        const newProduced = (existing.producedQuantity || 0) + item.alloc.quantity;
+        const reqQty = existing.quantity || 0;
+        
+        const jcData: any = {
+          producedQuantity: newProduced,
+          updatedAt: timestamp,
+          updatedBy: user
+        };
+        
+        // If produced meets or exceeds required, mark COMPLETED
+        if (newProduced >= reqQty) {
+          jcData.status = 'COMPLETED';
+          // Find the related payload date for completionDate
+          const relatedPayload = payloads.find(p => p.jobCardAllocations?.some(a => a.jobCardId === item.ref.id));
+          jcData.completionDate = relatedPayload?.date || new Date().toISOString().split('T')[0];
+        }
+
+        transaction.update(item.ref, jcData);
       }
     });
 
@@ -640,3 +808,83 @@ export const markFreightReceived = async (invoiceNo: string, user: string) => {
   }
 };
 
+export const deleteFinishGoodTransaction = async (transactionId: string, finishGoodId: string, type: 'IN' | 'OUT', category: string, quantity: number, user: string) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const fgRef = doc(db, 'finishGoods', finishGoodId);
+      const txRef = doc(db, 'finishGoodTransactions', transactionId);
+
+      const fgSnap = await transaction.get(fgRef);
+      if (!fgSnap.exists()) throw new Error('Finish Good not found');
+      
+      const fgData = fgSnap.data();
+      const isRegular = category === 'REGULAR' || category === 'DISPATCH';
+      
+      let closingBalance = Number(fgData.closingBalance) || 0;
+      let nonMovingBalance = Number(fgData.nonMovingBalance) || 0;
+      let inQty = Number(fgData.inQty) || 0;
+      let outQty = Number(fgData.outQty) || 0;
+
+      if (type === 'IN') {
+        inQty -= quantity;
+        if (isRegular) closingBalance -= quantity;
+        else nonMovingBalance -= quantity;
+      } else if (type === 'OUT') {
+        outQty -= quantity;
+        if (isRegular) closingBalance += quantity;
+        else nonMovingBalance += quantity;
+      }
+
+      transaction.update(fgRef, {
+        inQty,
+        outQty,
+        closingBalance,
+        nonMovingBalance,
+        updatedAt: serverTimestamp(),
+        updatedBy: user
+      });
+
+      transaction.delete(txRef);
+    });
+    
+    await logActivity({ user, action: 'Delete Finish Good Transaction', entity: 'finishGoodTransactions', referenceId: transactionId, timestamp: serverTimestamp() });
+    return true;
+  } catch (error) {
+    console.error('Error deleting FG transaction:', error);
+    throw error;
+  }
+};
+
+export const deleteReelTransaction = async (transactionId: string, reelId: string, type: 'INWARD' | 'OUTWARD', quantity: number, user: string) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const reelRef = doc(db, 'reels', reelId);
+      const txRef = doc(db, 'reelTransactions', transactionId);
+
+      const reelSnap = await transaction.get(reelRef);
+      if (!reelSnap.exists()) throw new Error('Reel not found');
+      
+      let currentBalance = Number(reelSnap.data().currentBalance) || 0;
+
+      if (type === 'OUTWARD') {
+        currentBalance += quantity; // Reverse outward
+      } else if (type === 'INWARD') {
+        currentBalance -= quantity; // Reverse inward
+      }
+
+      transaction.update(reelRef, {
+        currentBalance,
+        updatedAt: serverTimestamp(),
+        updatedBy: user
+      });
+
+      transaction.delete(txRef);
+    });
+    
+    await logActivity({ user, action: 'Delete Reel Transaction', entity: 'reelTransactions', referenceId: transactionId, timestamp: serverTimestamp() });
+    return true;
+  } catch (error) {
+    console.error('Error deleting Reel transaction:', error);
+    throw error;
+  }
+};

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CircleDashed, CheckCircle } from 'lucide-react';
-import { updateDocument } from '../../lib/firebase/services';
+import { updateDocument, executeJobCardTransaction } from '../../lib/firebase/services';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function CompleteProductionModal({ jobCard, onClose, onSuccess }: { jobCard: any, onClose: () => void, onSuccess: () => void }) {
@@ -32,7 +32,7 @@ export default function CompleteProductionModal({ jobCard, onClose, onSuccess }:
         completionStatus: isDelayed ? 'DELAYED' : 'ON TIME'
       };
 
-      await updateDocument('jobCards', jobCard.id, payload, user?.name);
+      await executeJobCardTransaction(jobCard.id, payload, jobCard, user?.name);
       onSuccess();
     } catch (err: any) {
       alert(err.message || 'Failed to complete job card');

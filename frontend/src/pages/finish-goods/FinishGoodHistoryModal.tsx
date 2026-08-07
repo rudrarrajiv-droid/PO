@@ -1,18 +1,35 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { X, Search, History, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { queryDocuments } from '../../lib/firebase/services';
+import { X, Search, History, ArrowDownToLine, ArrowUpFromLine, Trash2 } from 'lucide-react';
+import { queryDocuments, deleteFinishGoodTransaction } from '../../lib/firebase/services';
 import type { FinishGoodTransaction } from '../../lib/types/models';
 import { format } from 'date-fns';
 import ExportButtons from '../../components/ExportButtons';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function FinishGoodHistoryModal({ onClose }: { onClose: () => void }) {
+  const { user, hasRole } = useAuth();
   const [search, setSearch] = useState('');
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   
-  const { data: history = [], isLoading } = useQuery({
+  const { data: history = [], isLoading, refetch } = useQuery({
     queryKey: ['finishGoodTransactions'],
     queryFn: () => queryDocuments('finishGoodTransactions', []) as Promise<FinishGoodTransaction[]>
   });
+
+  const handleDelete = async (tx: FinishGoodTransaction) => {
+    if (!window.confirm('Are you sure you want to delete this transaction? This will reverse the stock balance mathematically.')) return;
+    try {
+      setIsDeleting(tx.id!);
+      await deleteFinishGoodTransaction(tx.id!, tx.finishGoodId, tx.type as any, tx.category, Number(tx.quantity), user?.name || 'System');
+      refetch();
+    } catch (error) {
+      alert('Failed to delete transaction. See console.');
+      console.error(error);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   // Sort descending by created/date
   const sortedHistory = [...history].sort((a, b) => {
@@ -124,6 +141,7 @@ export default function FinishGoodHistoryModal({ onClose }: { onClose: () => voi
                   <th className="px-4 py-3 font-medium text-right">Remaining Bal</th>
                   <th className="px-4 py-3 font-medium">Invoice/Ref No.</th>
                   <th className="px-4 py-3 font-medium">Transporter</th>
+                  {hasRole('ADMIN') && <th className="px-4 py-3 font-medium">Action</th>}
                   <th className="px-4 py-3 font-medium">Performed By</th>
                 </tr>
               </thead>
@@ -168,6 +186,18 @@ export default function FinishGoodHistoryModal({ onClose }: { onClose: () => voi
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {item.transporterName ? `${item.transporterName} (${item.vehicleNo})` : '-'}
                     </td>
+                    {hasRole('ADMIN') && (
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDelete(item)}
+                          disabled={isDeleting === item.id}
+                          className="text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors p-1 rounded-md hover:bg-red-50"
+                          title="Delete Transaction & Reverse Balance"
+                        >
+                          <Trash2 className={`w-4 h-4 ${isDeleting === item.id ? 'animate-pulse' : ''}`} />
+                        </button>
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {item.performedBy}
                     </td>

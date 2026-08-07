@@ -1,0 +1,43 @@
+bhai plz mai jo bhi update ya changes bol raha hu usko aapne step by step or one by one karna hai ek baar me kuch nahi karna hai kyu ki bahut mehnat ke baad ye sab thik chal raha hai so plz every phase ke complete hone ke baad stop ho jaana hai then maine check karne ke baad aapko jab permission du tab aap agle phase ke liye continue karoge and repeat same so plz be carefully koi jalsi nahi hai bas sabdhani se aur usi field me kaam karna hai jiske liye bolu aur kuch nahi chedna kyuki aapne bhi is par bahu mehnat ki hai jo kharab nahi honi chahiye ok so star karte hai phases me aur har phase me points hoge ok continue karta hu.....................
+
+pahle thoda job card format par baat karte hai ...............
+1. jaise top me customer name , item name , dimensions aur inke saamne inke results hai inme koi fark nahi nahi hai example NAME: RAJIV PAL ab isme name aur Rajiv pal dono same size me hai jisse pata hi nahi lag raha hai ki ki ye pura ek sentence hai ya name aur uska result hai matlab dono me ek highlight hota hai ab aap dekho teeno ke header with unke result taaki professionaly thoda accha lage but in teeno ka size isse aur bada mat karna
+2.1 se lekar 14 tak jo feilds hai us box me usme 13 and 14 number with field 1 aur 2 par laaye and uske neeche baaki sab pahle jaisa hi rahega but ye karne se pahle 1 se 14 ki sabhi fields ki mapping jarur kar le taaki kisi bhi fields ki calculation par koi fark na pade aur filds shifting hone se calculations par koi problem nahi aani chahiye so mapping first
+3. paper specification with allocated reels ki table me 1st column thik hai 2nd column me paper type ki jagah par only paper likh de aur uski width usi ke anusar kar de kam 3rd aur 4th column bhi thik hai 5th column me required weight ki jagah only required  likh de aur usi ke anushar column ki width ko adjust kar de 6th column me allocated likh de 7th column me reel No. likh de and ye dono column bhi usi ke anushar adjust ho jaaye baaki ke space me remarks ka column with bacha hua total space use ho remarks me.
+4. is table ke 6th column ka total bhi 5th column ki Tarah se aana chahiye
+
+Pape Allocation ke liye system work actual me kaise kare.......................
+1. new system me job card generate karte samay us job ki required reels ki detail saamne aani chahiye matching ke saath wo bhi 0.5 mm ya phir max to max 1 mm extra ya oversize le sakte hai automatically reel size me example job card me reel size 44 hai but 44 size not available nahi to to auto metically wo pahli priority 44.5 mm ko dega agar ye bhi nahi hai to 45 check karega phir uski with bf and gsm agar match Banega to perfect match ke sign ke saath green color me allocated bhi kar dega aur agar perfect match nahi hua then manually search ka option aaye but usme only admin hi kuch ched chaad kar paaye user nahi user ke liye only automatic hi chalega no permission.
+2. suppose 5 layer yaani 5 ply ka dibba hai jisme ek chodkar ek me paper not matching aa raha hai to usme job card generate na ho without allocation.
+3. example required 375 kgs hai aur us layer ke liye mere paas 460kgs ki reel hai to allocated me 375 kgs out of 460 kgs aana chahiye aur use agle column me uska reel no. with bracket me actual reel weight bhi aayega aur remarks me matched aa jayega and agar 375 required hai and matched only 250 hai to required column me 375 aur allocated me 250kgs  and remarks me Balnce required 125 kgs jarur aaye likh kar and  same repeated all other 1 to 5 or 6 or 7 layer boxes ek bhi paper layer agar rah gayi hai to bhi job card na bane  all layer matched hone par hi job card bane  
+4. haa agar user ki jagah par ye job card admin bana raha hai to usko saari permission hai jaise reels ko chahe to full menupulate kar sakta hai reel size and bf and gsm me bhi aur chahe to all reels allocation skip bhi kar sakta hai 
+5. skip karne se table ke 5 column aur row to automatically fill hokar ayege but aage ke 3 column blank aayege
+6. jo bhi job card generate ho means current wala job card jo abhi issue nahi hua hai sabse upar top me aaye sequence ke andar aur uske neeche use thoda purana pending aise hi decering order ke sequence me aaye phir sabhi pending ke neeche issue huye job card target date current to old ke sequence me aaye  
+
+reel issue or allocated mateer ..............
+1. jab bhi job card bane aur suppose example 34 reel size 18bf me 220 gsm 3 layer me alag alag 500 , 500, 500 chahiye total 1500 kg but hamari inventory me 600, 200, 400 hai to 1 st layer me allocated 500 hoga 100% ke satth and remarks pefect match full and 2nd layer same size me 600kg wali reel ka 100 kg bacha hua first then 200 kg then 3rd reel se 200 kg allocated me show ho aur teeno ka reel no. reel number wale column me aur remark me full matched 100% and 3rd layer me 200 ks with reel no. and remark me 300 kgs required dikhayega  aur reel allocate karte samay aap remark me manuaaly bhi type kar sakte ho but only admin
+2. job card me reel allocate karte samay jo bhi reels allocate ho rahi hai wo internally total reel weight me se minus karke agle job card me dikhaye but reel inventory me iska koi effect na aaye jaise example mere pass us ek size ki 1 reel hai 800 kgs ki aur meri ek job me 650 lagna tha aur maine job card submit kar diya to ab mai jaise hi ya jab bhi same reel size ki koi job ka job card kabhi bhi bananta hu to reel allocation automatically us reel ka weight jiska ki job card ban chuka hai freeze ya block karke rakhega 650 kgs aur 150 kgs free show karega chahe manuaaly ho ya automatically aur jaise hi job card issue hoga to wo reel internally job card issue hone par show nahi karegi kyuki issue ka matlab wo 650 kg reel production me chal gayi aur jab tak issue nahi hoti hai tabtak job card me bhi reels ke aage remark me 650 kg block show karega issue hone ke baad wo 650 kgs bhi nahi remark me dikhega but in sab se reel inventory ka koi lena ya dena nahi hai aur na hi koi iska inventory par effect hoga.
+3. job card jab tak pending rahega tab tak us size me agar koi another job card banta hai to reel size blocked weight with number and jis job card me block hai weight wo job card no. bhi show karega aur naye job card me bhi ye reel for issue show karegi automatically 
+
+delivery ya dispatch date..............
+1. agar koi customer apna delivery date badata ya ghatata hai to admin ke pass ye authority hogi delivery date update karne ki only
+
+reel inventory.................
+1. reel inventory me sequence automatically rahana chahiye jaise sabse upar duplex and hwc with se quence of reel size 
+2. uske baad ka sequence 2 sk me reel size ke according 
+3. uske baad vk me reel size ke according
+4. jis reel ka balance zero ya nil ho jaaye wo reel bottom me shift ho jaaye aur wo reels searching ya filter me show nahi hogaieven zero weight wali reels ek alag jagh shift hohi 
+5. isme ek issue date ka search box banao jisme date dalte hi us date out hui sabhi reels show kare with all sizes and total weight 
+6. sequence rahega duplex then sk then vk me bf wise example vk ki 18bf ki then 20 bf ki then 22bf ki total no of reels and total weight 
+
+finish goods related..............
+1. finish goods me bulk in karne par inward date aur product date ke dalte hi ek new box me us inward date se kam se kam 1 din pahle ke sabhi job card show lage taaki mai job card select kar saku  aur quantity dalte hi wo job card ki quantity se adjust hokar job card close kare jaise 2 ya 3 job card dikhyae 2000, 3000, 8000 ka but fg mere pass aaya 3000 aur job card 2000 yani ki ab job card fg bulk in se hi close hoga  aur agar pura maal job card se match nahi karta hai ya short hai to show karega 200 pcs shor for production aur ham chahe to ise bhi manual complete kar sakte hai but admin se 
+2. finish goods bhi date wise in and out dono hi dekh sake
+3. kisi fg ka qty nil ya zero hai to wo bhi bottom me jaaye 
+4. koi bhi entry chahe reel inventory ki ho ya finish goods ki ho in ya out ki usko admin dwara change ya update ya delete kiya ja sake 
+
+production mateers............
+1. production me sequence sabse upar wo job card dikhaye jiske delivery date sabse najdik hi phir kam najdik waale ki aise ghatte kram me 
+2. pahle delay wale phir on time wale
+
+bas bhai ab ise Dheere Dheere kai phases me pura karo but bhai thoda se aaram se barso ki mehant hai

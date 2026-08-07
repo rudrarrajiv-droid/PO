@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, History, FilterX, ArrowDownToLine, ArrowUpFromLine, Receipt } from 'lucide-react';
-import { queryDocuments } from '../../lib/firebase/services';
+import { Search, X, History, FilterX, ArrowDownToLine, ArrowUpFromLine, Receipt, Trash2 } from 'lucide-react';
+import { queryDocuments, deleteReelTransaction } from '../../lib/firebase/services';
+import { useAuth } from '../../contexts/AuthContext';
 import { where } from 'firebase/firestore';
 
 interface ReelHistoryModalProps {
@@ -10,6 +11,9 @@ interface ReelHistoryModalProps {
 }
 
 export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalProps) {
+  const { user, hasRole } = useAuth();
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   // Filtering States
   const [search, setSearch] = useState('');
   const [filterSize, setFilterSize] = useState('');
@@ -43,7 +47,7 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
   const uniqueWeights = Array.from(new Set(reels.map(p => p.weight))).filter(Boolean).sort((a,b)=>Number(b)-Number(a));
 
   // Fetch transactions ONLY when a reel is selected
-  const { data: transactions = [], isLoading: loadingTx } = useQuery({
+  const { data: transactions = [], isLoading: loadingTx, refetch } = useQuery({
     queryKey: ['reelTransactions', selectedReel?.id],
     queryFn: () => queryDocuments('reelTransactions', [
       where('reelId', '==', selectedReel.id)
@@ -52,6 +56,22 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
   });
 
   const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const handleDelete = async (tx: any) => {
+    if (!window.confirm('Are you sure you want to delete this transaction? This will reverse the reel balance mathematically.')) return;
+    try {
+      setIsDeleting(tx.id);
+      await deleteReelTransaction(tx.id, tx.reelId, tx.type, Number(tx.quantity), user?.name || 'System');
+      refetch();
+      // It might be nice to refresh reels too, but they are passed in as props.
+      // We can just trust the transaction goes away.
+    } catch (error) {
+      alert('Failed to delete transaction. See console.');
+      console.error(error);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   const inputCls = "w-full text-sm rounded-md border border-input px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring";
 
@@ -264,8 +284,20 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
                               <div className="text-xs text-muted-foreground">
                                 By <span className="font-semibold text-foreground">{tx.performedBy || 'System'}</span>
                               </div>
-                              <div className="text-xs font-bold bg-secondary px-2 py-1 rounded text-foreground">
-                                Bal: {tx.remainingBalance} Kg
+                              <div className="flex items-center gap-2">
+                                {hasRole('ADMIN') && (
+                                  <button
+                                    onClick={() => handleDelete(tx)}
+                                    disabled={isDeleting === tx.id}
+                                    className="text-red-500 hover:text-red-700 disabled:opacity-50 p-1 rounded hover:bg-red-50 transition-colors"
+                                    title="Delete Transaction"
+                                  >
+                                    <Trash2 className={`w-3.5 h-3.5 ${isDeleting === tx.id ? 'animate-pulse' : ''}`} />
+                                  </button>
+                                )}
+                                <div className="text-xs font-bold bg-secondary px-2 py-1 rounded text-foreground">
+                                  Bal: {tx.remainingBalance} Kg
+                                </div>
                               </div>
                             </div>
                             
