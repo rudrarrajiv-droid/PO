@@ -38,7 +38,7 @@ function JobCardSelector({
     if (!productId) return;
     setLoading(true);
     queryDocuments('jobCards', [])
-      .then(data => {
+      .then((data: any[]) => {
         const openCards = data.filter(jc => 
           jc.productId === productId && 
           jc.status === 'IN_PROCESS' &&
