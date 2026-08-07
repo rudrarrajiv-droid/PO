@@ -8,14 +8,21 @@ export interface AppUser {
 
 export const CONFIGURED_USERS: AppUser[] = [
   {
-    id: 'user-admin',
+    id: 'user-admin-rajiv',
     name: 'RAJIV PAL',
     email: 'admin@packwell.com',
     role: 'ADMIN',
-    password: 'admin' // Simple password for local config
+    password: 'admin'
   },
   {
-    id: 'user-limited',
+    id: 'user-admin-packwell',
+    name: 'PACKWELL',
+    email: 'packwell@packwell.com',
+    role: 'ADMIN',
+    password: 'packwell'
+  },
+  {
+    id: 'user-limited-shubham',
     name: 'SHUBHAM',
     email: 'user@packwell.com',
     role: 'LIMITED',

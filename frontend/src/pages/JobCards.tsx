@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, AlertTriangle, Layers, Play } from 'lucide-react';
+import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, AlertTriangle, Layers, Play, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { cn } from '../lib/utils';
-import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction } from '../lib/firebase/services';
+import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction, deleteJobCardAndRecycleNo } from '../lib/firebase/services';
 import { useAuth } from '../contexts/AuthContext';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
 import { exportToExcel, exportToPDF } from '../lib/exportUtils';
 import PrintableJobCard from './job-cards/PrintableJobCard';
@@ -108,7 +108,9 @@ export default function JobCards() {
       if (weightA !== weightB) {
         return weightA - weightB;
       }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      const numA = parseInt(String(a.jobCardNo).split('/').pop() || '0', 10);
+      const numB = parseInt(String(b.jobCardNo).split('/').pop() || '0', 10);
+      return numB - numA;
     });
 
     return list;
@@ -414,6 +416,24 @@ export default function JobCards() {
                           >
                             <Printer className="w-4 h-4" />
                           </button>
+                          {hasRole('ADMIN') && (
+                            <button 
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to permanently delete Job Card ${jc.jobCardNo}? Its number will be reused.`)) {
+                                  try {
+                                    await deleteJobCardAndRecycleNo(jc.id, user?.name);
+                                    refetchCards();
+                                  } catch (err: any) {
+                                    alert('Failed to delete Job Card: ' + err.message);
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md border border-transparent hover:border-red-200 transition-colors"
+                              title="Delete Job Card"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -540,19 +560,32 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
     // Fetch next job card number natively from Firestore
     const fetchNextNo = async () => {
       try {
-        const q = query(collection(db, 'jobCards'), orderBy('jobCardNo', 'desc'), limit(1));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          setValue('jobCardNo', 'PI/JC/1001');
+        // First check for recycled numbers
+        const metadataRef = doc(db, 'metadata', 'jobCardsConfig');
+        const metaSnap = await getDoc(metadataRef);
+        if (metaSnap.exists() && metaSnap.data().recycledNumbers && metaSnap.data().recycledNumbers.length > 0) {
+          // Get the smallest recycled number to keep order
+          const recycled = metaSnap.data().recycledNumbers.sort((a: string, b: string) => {
+            const numA = parseInt(a.split('/').pop() || '0', 10);
+            const numB = parseInt(b.split('/').pop() || '0', 10);
+            return numA - numB;
+          });
+          setValue('jobCardNo', recycled[0]);
         } else {
-          const lastDoc = snap.docs[0].data();
-          const lastNo = lastDoc.jobCardNo;
-          const parts = lastNo.split('/');
-          const num = parseInt(parts[parts.length - 1], 10);
-          if (!isNaN(num)) {
-            setValue('jobCardNo', `PI/JC/${num + 1}`);
-          } else {
+          const q = query(collection(db, 'jobCards'), orderBy('jobCardNo', 'desc'), limit(1));
+          const snap = await getDocs(q);
+          if (snap.empty) {
             setValue('jobCardNo', 'PI/JC/1001');
+          } else {
+            const lastDoc = snap.docs[0].data();
+            const lastNo = lastDoc.jobCardNo;
+            const parts = lastNo.split('/');
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num)) {
+              setValue('jobCardNo', `PI/JC/${num + 1}`);
+            } else {
+              setValue('jobCardNo', 'PI/JC/1001');
+            }
           }
         }
       } catch (err) {

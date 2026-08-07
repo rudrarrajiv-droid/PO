@@ -10,7 +10,11 @@ import {
   where,
   QueryConstraint,
   writeBatch,
-  runTransaction
+  runTransaction,
+  deleteDoc,
+  arrayUnion,
+  arrayRemove,
+  setDoc
 } from 'firebase/firestore';
 import { db } from './config';
 
@@ -111,6 +115,40 @@ export const softDeleteDocument = async (
     return true;
   } catch (error) {
     console.error(`Error archiving document ${id} in ${collectionName}:`, error);
+    throw error;
+  }
+};
+
+export const deleteJobCardAndRecycleNo = async (id: string, user: string = 'System') => {
+  try {
+    const docRef = doc(db, 'jobCards', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error('Job Card not found');
+    }
+    
+    const jobCardNo = docSnap.data().jobCardNo;
+    
+    // Hard delete the job card
+    await deleteDoc(docRef);
+    
+    // Add job card number to recycled array in metadata
+    const metadataRef = doc(db, 'metadata', 'jobCardsConfig');
+    await setDoc(metadataRef, { recycledNumbers: arrayUnion(jobCardNo) }, { merge: true });
+    
+    await logActivity({
+      user,
+      action: 'Deleted & Recycled',
+      entity: 'jobCards',
+      referenceId: id,
+      details: `Deleted job card ${jobCardNo}`,
+      timestamp: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting and recycling job card:', error);
     throw error;
   }
 };
@@ -363,6 +401,14 @@ export const executeJobCardTransaction = async (
            updatedBy: user,
            isArchived: false,
          });
+         
+         // Remove from recycled numbers if applicable
+         if (newPayload.jobCardNo) {
+           const metadataRef = doc(db, 'metadata', 'jobCardsConfig');
+           transaction.set(metadataRef, { 
+             recycledNumbers: arrayRemove(newPayload.jobCardNo) 
+           }, { merge: true });
+         }
       }
     });
 
