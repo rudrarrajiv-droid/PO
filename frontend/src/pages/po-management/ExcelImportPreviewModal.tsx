@@ -202,7 +202,9 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
         if (status === 'READY TO IMPORT') { 
           const existingPo = existingPOs.find(p => 
             p.poNo?.toLowerCase() === poNo.toLowerCase() && 
-            p.productName?.toLowerCase() === itemName.toLowerCase()
+            p.productName?.toLowerCase() === itemName.toLowerCase() &&
+            (p.deliveryDate || '') === (deliveryDate || '') &&
+            String(p.orderQty || '') === (opnQty || '')
           );
           if (existingPo) {
             const isMatch = 
