@@ -1319,3 +1319,23 @@ export const updatePurchaseOrder = async (
     throw error;
   }
 };
+
+export const deletePurchaseOrder = async (id: string, user: string) => {
+  try {
+    const poRef = doc(db, 'purchaseOrders', id);
+    await deleteDoc(poRef);
+    
+    await logActivity({
+      user,
+      action: `Deleted Purchase Order (ID: ${id})`,
+      entity: 'purchaseOrders',
+      referenceId: id,
+      timestamp: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting purchase order:', error);
+    throw error;
+  }
+};

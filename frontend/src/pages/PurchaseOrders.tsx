@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, FileText, ShoppingCart, Activity, XCircle, ArrowUpDown, ArrowUp, ArrowDown, Users, List, ChevronLeft, Link, FileSpreadsheet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments, updateDocument, type PurchaseOrder } from '../lib/firebase/services';
+import { queryDocuments, updateDocument, deletePurchaseOrder, type PurchaseOrder } from '../lib/firebase/services';
 import { exportPurchaseOrdersToExcel } from '../utils/exportUtils';
 import AddPOModal from './po-management/AddPOModal';
 import POInModal from './po-management/POInModal';
@@ -10,7 +10,8 @@ import LinkedJobCardsModal from './po-management/LinkedJobCardsModal';
 import ExcelImportPreviewModal from './po-management/ExcelImportPreviewModal';
 import EditPOModal from './po-management/EditPOModal';
 import { cn } from '../lib/utils';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 type SortField = 'poNo' | 'poDate' | 'deliveryDate' | 'customerName' | 'orderQty' | 'inQty' | 'outQty' | 'closingBal' | 'value';
 type SortDir = 'asc' | 'desc';
@@ -41,6 +42,7 @@ const getCalculatedStatus = (po: PurchaseOrder) => {
 };
 
 export default function PurchaseOrders() {
+  const { user } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [inActionPo, setInActionPo] = useState<PurchaseOrder | null>(null);
@@ -363,6 +365,18 @@ export default function PurchaseOrders() {
   };
 
   const thClass = "px-3 py-3 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors group select-none whitespace-nowrap";
+
+  const handleDelete = async (po: PurchaseOrder) => {
+    if (window.confirm(`Are you sure you want to delete PO No. ${po.poNo}? This cannot be undone.`)) {
+      try {
+        await deletePurchaseOrder(po.id!, user?.name || 'Unknown');
+        refetch();
+      } catch (err) {
+        console.error('Failed to delete PO:', err);
+        alert('Failed to delete PO. It might be linked to other records.');
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-fade-in">
@@ -776,6 +790,13 @@ export default function PurchaseOrders() {
                             title="Edit Purchase Order"
                           >
                             <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(po)}
+                            className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors"
+                            title="Delete Purchase Order"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setHistoryPo(po)}
