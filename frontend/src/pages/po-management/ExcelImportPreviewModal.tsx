@@ -191,7 +191,7 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
           errorMsgs.push('Warning: ITEM NOT FOUND IN MASTER DATA');
         }
 
-        const uniqueKey = (poNo + '_' + itemName + '_' + (deliveryDate || '')).toLowerCase();
+        const uniqueKey = (poNo + '_' + itemName + '_' + (deliveryDate || '') + '_' + (opnQty || '')).toLowerCase();
         if (excelPoSet.has(uniqueKey)) {
           status = 'DUPLICATE IN EXCEL';
           errorMsgs.push(`PO NO ${poNo} with Item ${itemName} (Del: ${deliveryDate || 'none'}) appears multiple times in this file`);

@@ -1225,7 +1225,7 @@ export const importPurchaseOrdersBatch = async (
     existingSnap.forEach(doc => {
       const data = doc.data();
       if (data.poNo && data.productName) {
-        existingPoKeys.add((data.poNo + '_' + data.productName + '_' + (data.deliveryDate || '')).toLowerCase());
+        existingPoKeys.add((data.poNo + '_' + data.productName + '_' + (data.deliveryDate || '') + '_' + (data.orderQty || '')).toLowerCase());
       }
     });
 
@@ -1244,7 +1244,7 @@ export const importPurchaseOrdersBatch = async (
         if (!po.poNo) continue;
         
         // Final Duplicate Protection
-        const uniqueKey = (po.poNo + '_' + po.productName + '_' + (po.deliveryDate || '')).toLowerCase();
+        const uniqueKey = (po.poNo + '_' + po.productName + '_' + (po.deliveryDate || '') + '_' + (po.orderQty || '')).toLowerCase();
         if (existingPoKeys.has(uniqueKey)) {
           skippedCount++;
           continue;
