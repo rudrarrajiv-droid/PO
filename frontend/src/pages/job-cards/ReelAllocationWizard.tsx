@@ -79,7 +79,8 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
       let reqWeight = 0;
       if (gsm > 0 && snapshot.reelSize > 0 && snapshot.cutSize > 0) {
         let eff_gsm = gsm;
-        if ((layer.layerName || '').toLowerCase().includes('flute')) {
+        const lName = (layer.layerName || '').toLowerCase().trim();
+        if (lName.includes('flute') || ['p2', 'p4', 'p6'].includes(lName)) {
           eff_gsm = gsm * 1.4;
         }
         reqWeight = (snapshot.reelSize * snapshot.cutSize * eff_gsm) / 3100 / 500 * noOfPaper;
