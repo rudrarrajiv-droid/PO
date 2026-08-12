@@ -72,18 +72,10 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
               
               let calcTotalPly: number | string = '';
               
-              if (ups === 2 && ply === 5) calcTotalPly = Math.round(qty * 1/1);
-              else if (ups === 3 && ply === 7) calcTotalPly = Math.round(qty * 1/1);
-              else if (ups === 2 && ply === 3) calcTotalPly = Math.round(qty * 1/2);
-              else if (ups === 3 && ply === 5) calcTotalPly = Math.round(qty * 2/3);
-              else if (ups === 3 && ply === 3) calcTotalPly = Math.round(qty * 1/3);
-              else if (ups === 0.5 && ply === 5) calcTotalPly = Math.round(qty * 4/1);
-              else if (ups === 1 && ply === 5) calcTotalPly = Math.round(qty * 2/1);
-              else if (ups === 1 && ply === 3) calcTotalPly = Math.round(qty * 1/1);
-              else if (ups === 6 && ply === 3) calcTotalPly = Math.round(qty * 0.17);
-              else if (ups === 1 && ply === 7) calcTotalPly = Math.round(qty * 3);
-              else if (ups === 0.5 && ply === 7) calcTotalPly = Math.round(qty * 6);
-              else if (ups === 4 && ply === 3) calcTotalPly = Math.round(qty * 1/4);
+              if (ups > 0 && ply > 0) {
+                const flutedLayers = Math.floor(ply / 2);
+                calcTotalPly = Math.round((qty * flutedLayers) / ups);
+              }
               
               if (calcTotalPly === '') return '-';
               
