@@ -161,9 +161,9 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
         status = 'ERROR';
         errorMsgs.push('Contains Formula Error');
       } 
-      else if (!poNo || !poDate || !customerName || !itemName || !rate || !opnQty) {
+      else if (!poNo || !poDate || !customerName || !itemName || !opnQty) {
         status = 'MISSING REQUIRED DATA';
-        errorMsgs.push('Missing: ' + [!poNo && 'PO NO', !poDate && 'PO DT', !customerName && 'CUSTOMER', !itemName && 'ITEM', !rate && 'RATE', !opnQty && 'OPN QTY'].filter(Boolean).join(', '));
+        errorMsgs.push('Missing: ' + [!poNo && 'PO NO', !poDate && 'PO DT', !customerName && 'CUSTOMER', !itemName && 'ITEM', !opnQty && 'OPN QTY'].filter(Boolean).join(', '));
       } 
       else if (isNaN(numRate) || isNaN(numOpn) || isNaN(numIn) || isNaN(numOut) || isNaN(numClosing)) {
         status = 'ERROR';
@@ -191,10 +191,10 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
           errorMsgs.push('Warning: ITEM NOT FOUND IN MASTER DATA');
         }
 
-        const uniqueKey = (poNo + '_' + itemName).toLowerCase();
+        const uniqueKey = (poNo + '_' + itemName + '_' + (deliveryDate || '')).toLowerCase();
         if (excelPoSet.has(uniqueKey)) {
           status = 'DUPLICATE IN EXCEL';
-          errorMsgs.push(`PO NO ${poNo} with Item ${itemName} appears multiple times in this file`);
+          errorMsgs.push(`PO NO ${poNo} with Item ${itemName} (Del: ${deliveryDate || 'none'}) appears multiple times in this file`);
         } else {
           excelPoSet.add(uniqueKey);
         }
@@ -230,7 +230,7 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
         artworkNo: getVal('artworkNo') || '-',
         itemName: itemName || 'MISSING',
         size: getVal('size') || '-',
-        rate: rate || 'MISSING',
+        rate: rate || '0',
         opnQty: opnQty || 'MISSING',
         inQty: inQty || '0',
         outQty: outQty || '0',
