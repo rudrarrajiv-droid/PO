@@ -1221,10 +1221,12 @@ export const importPurchaseOrdersBatch = async (
   try {
     // 1. Fetch all existing PO numbers to prevent duplicates (Step 13)
     const existingSnap = await getDocs(collection(db, 'purchaseOrders'));
-    const existingPoNos = new Set<string>();
+    const existingPoKeys = new Set<string>();
     existingSnap.forEach(doc => {
       const data = doc.data();
-      if (data.poNo) existingPoNos.add(data.poNo.toLowerCase());
+      if (data.poNo && data.productName) {
+        existingPoKeys.add((data.poNo + '_' + data.productName).toLowerCase());
+      }
     });
 
     let successCount = 0;
@@ -1242,10 +1244,14 @@ export const importPurchaseOrdersBatch = async (
         if (!po.poNo) continue;
         
         // Final Duplicate Protection
-        if (existingPoNos.has(po.poNo.toLowerCase())) {
+        const uniqueKey = (po.poNo + '_' + po.productName).toLowerCase();
+        if (existingPoKeys.has(uniqueKey)) {
           skippedCount++;
           continue;
         }
+        
+        // Add to Set to prevent duplicates within the same batch chunk
+        existingPoKeys.add(uniqueKey);
 
         const newRef = doc(collection(db, 'purchaseOrders'));
         batch.set(newRef, {
@@ -1258,7 +1264,7 @@ export const importPurchaseOrdersBatch = async (
           isArchived: false,
         });
         
-        existingPoNos.add(po.poNo.toLowerCase()); // Protect against duplicates within the same import list
+        // existingPoNos line removed
         operationsInBatch++;
         successCount++;
       }
@@ -1286,3 +1292,30 @@ export const importPurchaseOrdersBatch = async (
   }
 };
 
+export const updatePurchaseOrder = async (
+  id: string,
+  updates: Partial<PurchaseOrder>,
+  user: string
+) => {
+  try {
+    const poRef = doc(db, 'purchaseOrders', id);
+    await updateDoc(poRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+      updatedBy: user
+    });
+    
+    await logActivity({
+      user,
+      action: `Updated Purchase Order: ${updates.poNo || id}`,
+      entity: 'purchaseOrders',
+      referenceId: id,
+      timestamp: serverTimestamp()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating purchase order:', error);
+    throw error;
+  }
+};

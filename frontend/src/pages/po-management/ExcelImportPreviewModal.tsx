@@ -191,19 +191,22 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
           errorMsgs.push('Warning: ITEM NOT FOUND IN MASTER DATA');
         }
 
-        if (excelPoSet.has(poNo.toLowerCase())) {
+        const uniqueKey = (poNo + '_' + itemName).toLowerCase();
+        if (excelPoSet.has(uniqueKey)) {
           status = 'DUPLICATE IN EXCEL';
-          errorMsgs.push(`PO NO ${poNo} appears multiple times in this file`);
+          errorMsgs.push(`PO NO ${poNo} with Item ${itemName} appears multiple times in this file`);
         } else {
-          excelPoSet.add(poNo.toLowerCase());
+          excelPoSet.add(uniqueKey);
         }
 
         if (status === 'READY TO IMPORT') { 
-          const existingPo = existingPOs.find(p => p.poNo?.toLowerCase() === poNo.toLowerCase());
+          const existingPo = existingPOs.find(p => 
+            p.poNo?.toLowerCase() === poNo.toLowerCase() && 
+            p.productName?.toLowerCase() === itemName.toLowerCase()
+          );
           if (existingPo) {
             const isMatch = 
               existingPo.customerName?.toLowerCase() === customerName.toLowerCase() &&
-              existingPo.productName?.toLowerCase() === itemName.toLowerCase() && 
               existingPo.poDate === poDate;
 
             if (isMatch) {
@@ -211,7 +214,7 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
               errorMsgs.push('Exactly matches an existing PO in database');
             } else {
               status = 'CONFLICT - NEEDS REVIEW';
-              errorMsgs.push(`PO NO exists but identity conflicts (Cust: ${existingPo.customerName}, Item: ${existingPo.productName})`);
+              errorMsgs.push(`PO NO + Item exists but identity conflicts (Cust: ${existingPo.customerName}, Date: ${existingPo.poDate})`);
             }
           }
         }
@@ -273,7 +276,7 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
     const runId = `PO-IMPORT-${dateStr}-${Math.floor(Math.random() * 1000)}`;
 
     try {
-      const rowsToImport = previewData.filter(r => r._status === 'READY TO IMPORT');
+      const rowsToImport = previewData.filter(r => r._status === 'READY TO IMPORT' || r._status === 'CONFLICT - NEEDS REVIEW');
       
       const posToCreate: Omit<PurchaseOrder, 'id'>[] = rowsToImport.map(row => ({
         poNo: row.poNo,
@@ -330,12 +333,12 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
             <div className="bg-card border border-border p-8 rounded-2xl shadow-2xl max-w-lg w-full flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
               <AlertTriangle className="w-16 h-16 text-orange-500 mb-4" />
               <h2 className="text-2xl font-black mb-2 uppercase">Confirm Import</h2>
-              <p className="text-muted-foreground mb-6 font-semibold">YOU ARE ABOUT TO IMPORT {stats.ready} NEW PO RECORDS.</p>
+              <p className="text-muted-foreground mb-6 font-semibold">YOU ARE ABOUT TO IMPORT {stats.ready + stats.conflict} NEW PO RECORDS.</p>
               
               <div className="w-full bg-muted/50 rounded-xl p-4 mb-6 text-left border border-border">
                 <div className="flex justify-between py-1 border-b border-border/50">
                   <span className="text-muted-foreground font-semibold">Records to CREATE:</span>
-                  <span className="font-black text-green-600">{stats.ready}</span>
+                  <span className="font-black text-green-600">{stats.ready + stats.conflict}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-border/50">
                   <span className="text-muted-foreground font-semibold">Records to UPDATE:</span>
@@ -426,9 +429,9 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsConfirming(true)}
-              disabled={stats.ready === 0 || isImporting}
+              disabled={(stats.ready === 0 && stats.conflict === 0) || isImporting}
               className={cn("px-5 py-2.5 rounded-lg font-black text-sm uppercase tracking-wider transition-all shadow-md flex items-center", 
-                stats.ready > 0 
+                (stats.ready > 0 || stats.conflict > 0)
                   ? "bg-green-600 hover:bg-green-700 text-white shadow-green-600/20 hover:-translate-y-0.5" 
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}

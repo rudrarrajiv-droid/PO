@@ -8,7 +8,9 @@ import POInModal from './po-management/POInModal';
 import POHistoryModal from './po-management/POHistoryModal';
 import LinkedJobCardsModal from './po-management/LinkedJobCardsModal';
 import ExcelImportPreviewModal from './po-management/ExcelImportPreviewModal';
+import EditPOModal from './po-management/EditPOModal';
 import { cn } from '../lib/utils';
+import { Edit2 } from 'lucide-react';
 
 type SortField = 'poNo' | 'poDate' | 'deliveryDate' | 'customerName' | 'orderQty' | 'inQty' | 'outQty' | 'closingBal' | 'value';
 type SortDir = 'asc' | 'desc';
@@ -44,6 +46,7 @@ export default function PurchaseOrders() {
   const [inActionPo, setInActionPo] = useState<PurchaseOrder | null>(null);
   const [historyPo, setHistoryPo] = useState<PurchaseOrder | null>(null);
   const [linkedPo, setLinkedPo] = useState<PurchaseOrder | null>(null);
+  const [editPo, setEditPo] = useState<PurchaseOrder | null>(null);
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
@@ -768,6 +771,13 @@ export default function PurchaseOrders() {
                             IN
                           </button>
                           <button
+                            onClick={() => setEditPo(po)}
+                            className="p-1 hover:bg-orange-100 text-orange-600 rounded transition-colors"
+                            title="Edit Purchase Order"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => setHistoryPo(po)}
                             className="p-1 hover:bg-blue-100 text-blue-600 rounded transition-colors"
                             title="View Transaction History"
@@ -925,6 +935,17 @@ export default function PurchaseOrders() {
           existingPOs={purchaseOrders}
           onSuccess={() => {
             setIsImportModalOpen(false);
+            refetch();
+          }}
+        />
+      )}
+
+      {editPo && (
+        <EditPOModal
+          po={editPo}
+          onClose={() => setEditPo(null)}
+          onSuccess={() => {
+            setEditPo(null);
             refetch();
           }}
         />
