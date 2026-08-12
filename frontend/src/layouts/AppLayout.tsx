@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Database, PackageSearch, PackageCheck, Truck, Activity, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Database, PackageSearch, PackageCheck, Truck, Activity, Settings, LogOut, ShoppingCart, Users, FileSpreadsheet, Box, Archive } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 
@@ -17,19 +17,24 @@ export default function AppLayout() {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'PO Management', path: '/purchase-orders', icon: ShoppingCart },
     { name: 'Job Cards', path: '/job-cards', icon: FileText },
     { name: 'Master Data', path: '/master-data', icon: Database },
     { name: 'Reel Inventory', path: '/inventory', icon: PackageSearch },
     { name: 'Finish Goods', path: '/finish-goods', icon: PackageCheck },
     { name: 'Freight Charges', path: '/freight', icon: Truck },
     { name: 'Production', path: '/production', icon: Activity },
+    { name: 'Salary & Wages', path: '/salary', icon: Users },
+    { name: 'Conversion Report', path: '/dc', icon: FileSpreadsheet },
+    { name: 'MR', path: '/mr', icon: Box },
+    { name: 'RM', path: '/rm', icon: Archive },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background print:h-auto print:overflow-visible print:block">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#1e3a8a] border-r border-blue-800 hidden md:flex flex-col text-blue-100">
+      <aside className="w-64 bg-[#1e3a8a] border-r border-blue-800 hidden md:flex flex-col text-blue-100 print:hidden">
         <div className="w-full flex flex-col border-b border-blue-800 bg-[#0a0f1c]">
           <img src="/logo.gif" alt="Packwell India Logo" className="w-full block" />
         </div>
@@ -59,9 +64,9 @@ export default function AppLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden print:overflow-visible print:block print:h-auto">
         {/* Top Header */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-8">
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-8 print:hidden">
           <h2 className="text-lg font-semibold text-foreground">
             {navItems.find(i => location.pathname.startsWith(i.path))?.name || 'Packwell India'}
           </h2>
@@ -90,7 +95,7 @@ export default function AppLayout() {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto bg-background p-6">
+        <div className="flex-1 overflow-auto bg-background p-6 print:p-0 print:overflow-visible print:block print:h-auto">
           <Outlet />
         </div>
       </main>

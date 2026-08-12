@@ -90,7 +90,7 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
         return;
       }
 
-      const consumed = reel.currentBalance - (input as number);
+      const consumed = Math.round(reel.currentBalance - Math.round(input as number));
       if (consumed <= 0) {
         alert(`Reel ${reel.reelNumber} has no consumed amount (Remaining = Current Balance).`);
         return;
@@ -257,7 +257,7 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
                           <label className="text-xs font-semibold text-primary">Physical Remaining (Kg)</label>
                           <input 
                             id={`outward-weight-${r.id}`}
-                            type="number" step="0.1" 
+                            type="number" step="1" 
                             className={inputCls + " border-primary/50 focus:border-primary font-bold text-lg h-10 outward-weight-input"} 
                             value={remaining}
                             onChange={(e) => handleRemainingChange(r.id, e.target.value)}
@@ -276,11 +276,11 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
                         </div>
                         <div className="bg-red-500/10 border border-red-500/20 rounded-md p-2 h-10 flex flex-col justify-center">
                           <div className="text-[10px] uppercase text-red-600 font-bold leading-none mb-1">Consumed</div>
-                          <div className="text-red-700 font-bold leading-none">{consumed > 0 ? consumed.toFixed(1) : '0'} Kg</div>
+                          <div className="text-red-700 font-bold leading-none">{consumed > 0 ? Math.round(consumed) : '0'} Kg</div>
                         </div>
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-2 text-right">
-                        Original Balance: {r.currentBalance} Kg
+                        Original Balance: {Math.round(r.currentBalance)} Kg
                       </div>
                     </div>
                   );
@@ -294,10 +294,10 @@ export default function OutwardModal({ reels, onClose, onSuccess }: OutwardModal
         <div className="p-6 border-t border-border flex items-center justify-between bg-card shrink-0 rounded-b-xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 relative">
           <div className="text-sm text-muted-foreground">
             Total Consumed: <span className="font-bold text-red-600 ml-1">
-              {selectedReelsList.reduce((acc, r) => {
+              {Math.round(selectedReelsList.reduce((acc, r) => {
                 const rem = selected[r.id].remainingWeight;
                 return acc + (rem !== '' ? r.currentBalance - rem : 0);
-              }, 0).toFixed(1)} Kg
+              }, 0))} Kg
             </span>
           </div>
           <div className="flex gap-3">

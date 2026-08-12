@@ -173,23 +173,31 @@ export default function MasterData() {
                   'flute': 'Flute'
                 }}
               />
-              <RoleGuard requireRole="ADMIN">
-                <button
-                  onClick={() => {
-                    if (tab === 'customers') {
+              {tab === 'customers' ? (
+                <RoleGuard requireRole="ADMIN">
+                  <button
+                    onClick={() => {
                       setEditingCustomer(null);
                       setShowCustomerModal(true);
-                    } else {
-                      setEditingProduct(null);
-                      setShowProductModal(true);
-                    }
+                    }}
+                    className="bg-primary text-primary-foreground px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Customer
+                  </button>
+                </RoleGuard>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setShowProductModal(true);
                   }}
                   className="bg-primary text-primary-foreground px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-primary/90 transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  {tab === 'customers' ? 'Add Customer' : 'Add Product'}
+                  Add Product
                 </button>
-              </RoleGuard>
+              )}
             </div>
           </div>
           

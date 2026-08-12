@@ -119,7 +119,42 @@ export const softDeleteDocument = async (
   }
 };
 
-export const deleteJobCardAndRecycleNo = async (id: string, user: string = 'System') => {
+export interface PurchaseOrder {
+  id?: string;
+  poNo: string;
+  poDate: string;
+  deliveryDate: string;
+  customerId: string;
+  customerName: string;
+  consignee: string; // Phase 2: Free text for now
+  productId: string;
+  productName: string;
+  artworkNo: string;
+  size: string; // Extracted from Product
+  rate: number;
+  orderQty: number; // Opening Qty
+  inQty: number;
+  outQty: number;
+  status: 'OPEN' | 'PARTIAL' | 'CLOSED' | 'CANCELLED';
+  createdAt?: any;
+  updatedAt?: any;
+  createdBy?: string;
+  updatedBy?: string;
+  isArchived: boolean;
+}
+
+export interface POTransaction {
+  id?: string;
+  poId: string;
+  type: 'IN' | 'OUT';
+  quantity: number;
+  date: string;
+  referenceId?: string; // e.g. the Finish Good Tx ID or Job Card ID
+  performedBy: string;
+  createdAt?: any;
+}
+
+export const deleteJobCardSoft = async (id: string, user: string = 'System') => {
   try {
     const docRef = doc(db, 'jobCards', id);
     const docSnap = await getDoc(docRef);
@@ -129,26 +164,39 @@ export const deleteJobCardAndRecycleNo = async (id: string, user: string = 'Syst
     }
     
     const jobCardNo = docSnap.data().jobCardNo;
-    
-    // Hard delete the job card
-    await deleteDoc(docRef);
-    
-    // Add job card number to recycled array in metadata
-    const metadataRef = doc(db, 'metadata', 'jobCardsConfig');
-    await setDoc(metadataRef, { recycledNumbers: arrayUnion(jobCardNo) }, { merge: true });
+
+    // Soft-delete: mark status as DELETED, set isArchived so it doesn't appear in normal queries
+    // The number is NEVER added to recycledNumbers — it is permanently retired
+    await updateDoc(docRef, {
+      status: 'DELETED',
+      isArchived: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: user,
+      updatedAt: serverTimestamp(),
+      updatedBy: user
+    });
+
+    // Also unfreeze any reels this JC had reserved
+    const reelQuery = query(collection(db, 'reels'), where('reservedForJC', '==', id));
+    const reelSnap = await getDocs(reelQuery);
+    const batch = writeBatch(db);
+    reelSnap.docs.forEach(reelDoc => {
+      batch.update(reelDoc.ref, { reservedForJC: null, updatedAt: serverTimestamp() });
+    });
+    if (!reelSnap.empty) await batch.commit();
     
     await logActivity({
       user,
-      action: 'Deleted & Recycled',
+      action: 'Deleted (Soft)',
       entity: 'jobCards',
       referenceId: id,
-      details: `Deleted job card ${jobCardNo}`,
+      details: `Deleted job card ${jobCardNo} — number permanently retired`,
       timestamp: serverTimestamp()
     });
     
     return true;
   } catch (error) {
-    console.error('Error deleting and recycling job card:', error);
+    console.error('Error soft-deleting job card:', error);
     throw error;
   }
 };
@@ -355,7 +403,13 @@ export const executeJobCardTransaction = async (
         const reelRef = doc(reelsCol, reelId);
         const reelSnap = await transaction.get(reelRef);
         if (!reelSnap.exists()) {
-          throw new Error(`Reel ${reelNumber} does not exist.`);
+          if (resDelta < 0) {
+            // If we are un-reserving (resDelta < 0), and the reel doesn't exist anymore, 
+            // it's fine. It might have been deleted or used completely.
+            continue;
+          } else {
+            throw new Error(`Reel ${reelNumber} does not exist.`);
+          }
         }
         
         const data = reelSnap.data();
@@ -934,3 +988,301 @@ export const deleteReelTransaction = async (transactionId: string, reelId: strin
     throw error;
   }
 };
+
+export const executeProductionCompletionTransaction = async (
+  jobId: string,
+  newJobCardPayload: any,
+  oldJobCard: any,
+  fgPayload: FinishGoodInwardPayload,
+  user: string
+) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const timestamp = serverTimestamp();
+      
+      // --- 1. Job Card Update Logic ---
+      const jcCol = collection(db, 'jobCards');
+      const jcRef = doc(jcCol, jobId);
+      
+      // Determine if we need to unfreeze reels (only if status is becoming COMPLETED)
+      const finalNewState = { ...oldJobCard, ...newJobCardPayload };
+      const shouldFreeze = ['PENDING', 'PENDING APPROVAL', 'IN_PROCESS'].includes(finalNewState.status);
+      
+      const getReelIds = (jc: any) => {
+        const ids = new Set<string>();
+        if (jc?.productSnapshot?.layers) {
+          jc.productSnapshot.layers.forEach((l: any) => {
+            if (l.allocatedReels && Array.isArray(l.allocatedReels)) {
+              l.allocatedReels.forEach((r: any) => {
+                if (r.reelId) ids.add(r.reelId);
+              });
+            }
+          });
+        }
+        return Array.from(ids);
+      };
+
+      const oldReelIds = getReelIds(oldJobCard);
+      const newReelIds = getReelIds(finalNewState);
+      const allAffectedIds = Array.from(new Set([...oldReelIds, ...newReelIds]));
+      
+      // Read reels
+      const reelsCol = collection(db, 'reels');
+      const reelDocs = [];
+      for (const reelId of allAffectedIds) {
+        const reelRef = doc(reelsCol, reelId);
+        const reelSnap = await transaction.get(reelRef);
+        if (reelSnap.exists()) {
+          reelDocs.push({ ref: reelRef, id: reelId, data: reelSnap.data() });
+        }
+      }
+
+      // Read Finish Good
+      const fgRef = doc(db, 'finishGoods', fgPayload.productId);
+      const fgSnap = await transaction.get(fgRef);
+
+      // --- 2. Write Job Card & Reels ---
+      for (const item of reelDocs) {
+        const isNowUsed = newReelIds.includes(item.id);
+        const wasUsed = oldReelIds.includes(item.id);
+
+        if (shouldFreeze && isNowUsed) {
+          if (item.data.reservedForJC && item.data.reservedForJC !== jobId) {
+            throw new Error(`Reel ${item.data.reelNumber} is already reserved by another Job Card!`);
+          }
+          transaction.update(item.ref, {
+            reservedForJC: jobId,
+            activeReservedWeight: 0,
+            updatedAt: timestamp,
+            updatedBy: user
+          });
+        } else if (wasUsed || (!shouldFreeze && isNowUsed)) {
+          if (item.data.reservedForJC === jobId) {
+            transaction.update(item.ref, {
+              reservedForJC: null,
+              activeReservedWeight: 0,
+              updatedAt: timestamp,
+              updatedBy: user
+            });
+          }
+        }
+      }
+
+      const safePayload = Object.fromEntries(Object.entries(newJobCardPayload).filter(([_, v]) => v !== undefined));
+      transaction.update(jcRef, {
+        ...safePayload,
+        updatedAt: timestamp,
+        updatedBy: user
+      });
+
+      // --- 3. Write Finish Good & FG Transaction ---
+      let newInQty = fgPayload.quantity;
+      let newClosingBalance = fgPayload.quantity;
+      
+      if (fgSnap.exists()) {
+        const existing = fgSnap.data();
+        newInQty = (existing.inQty || 0) + fgPayload.quantity;
+        newClosingBalance = (existing.closingBalance || 0) + fgPayload.quantity;
+      }
+      
+      const fgData = {
+        productId: fgPayload.productId,
+        productName: fgPayload.productName,
+        customerId: fgPayload.customerId,
+        customerName: fgPayload.customerName,
+        openingQty: fgSnap.exists() ? fgSnap.data().openingQty : 0,
+        inQty: newInQty,
+        outQty: fgSnap.exists() ? (fgSnap.data().outQty || 0) : 0,
+        closingBalance: newClosingBalance,
+        nonMovingBalance: fgSnap.exists() ? (fgSnap.data().nonMovingBalance || 0) : 0,
+        updatedAt: timestamp,
+        updatedBy: user
+      };
+      
+      if (fgSnap.exists()) {
+        transaction.update(fgRef, fgData);
+      } else {
+        transaction.set(fgRef, {
+          ...fgData,
+          createdAt: timestamp,
+          createdBy: user
+        });
+      }
+
+      // Transaction log
+      const fgTxCol = collection(db, 'finishGoodTransactions');
+      const fgTxRef = doc(fgTxCol);
+      transaction.set(fgTxRef, {
+        finishGoodId: fgPayload.productId,
+        type: 'IN',
+        quantity: fgPayload.quantity,
+        date: fgPayload.date,
+        referenceId: jobId, // Linking to the Job Card
+        referenceNo: oldJobCard.jobCardNo,
+        category: fgPayload.category,
+        rate: fgPayload.rate,
+        createdAt: timestamp,
+        createdBy: user
+      });
+    });
+
+    await logActivity({
+      user,
+      action: 'Production Completed (Atomic)',
+      entity: 'jobCards',
+      referenceId: jobId,
+      timestamp: serverTimestamp()
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error executing atomic production completion:', error);
+    throw error;
+  }
+};
+
+export const executePOInTransaction = async (
+  poId: string,
+  quantity: number,
+  date: string,
+  remarks: string,
+  user: string
+) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const poRef = doc(db, 'purchaseOrders', poId);
+      const poSnap = await transaction.get(poRef);
+
+      if (!poSnap.exists()) {
+        throw new Error('Purchase Order not found');
+      }
+
+      const poData = poSnap.data() as PurchaseOrder;
+      
+      const newInQty = (poData.inQty || 0) + quantity;
+      const currentOutQty = poData.outQty || 0;
+
+      let newStatus = poData.status;
+      if (newStatus !== 'CANCELLED' && newStatus !== 'CLOSED') {
+        if (currentOutQty >= poData.orderQty) {
+          newStatus = 'CLOSED';
+        } else if (currentOutQty > 0 || newInQty > 0) {
+          newStatus = 'PARTIAL';
+        } else {
+          newStatus = 'OPEN';
+        }
+      }
+
+      // 1. Update PO
+      transaction.update(poRef, {
+        inQty: newInQty,
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+        updatedBy: user
+      });
+
+      // 2. Insert Transaction Record
+      const txRef = doc(collection(db, 'poTransactions'));
+      transaction.set(txRef, {
+        poId,
+        type: 'IN',
+        quantity,
+        date,
+        remarks: remarks || '',
+        performedBy: user,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    await logActivity({
+      user,
+      action: `PO IN Transaction Recorded`,
+      entity: 'purchaseOrders',
+      referenceId: poId,
+      timestamp: serverTimestamp()
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error executing PO IN transaction:', error);
+    throw error;
+  }
+};
+
+/**
+ * Phase 17: Controlled Excel to Database Import for Purchase Orders
+ * Creates new PO records in batches of 500. Strictly CREATE-ONLY.
+ */
+export const importPurchaseOrdersBatch = async (
+  posToCreate: Omit<PurchaseOrder, 'id'>[],
+  runId: string,
+  user: string = 'System'
+) => {
+  try {
+    // 1. Fetch all existing PO numbers to prevent duplicates (Step 13)
+    const existingSnap = await getDocs(collection(db, 'purchaseOrders'));
+    const existingPoNos = new Set<string>();
+    existingSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.poNo) existingPoNos.add(data.poNo.toLowerCase());
+    });
+
+    let successCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    // 2. Chunk into sizes of 500 (Firestore limit)
+    const chunkSize = 500;
+    for (let i = 0; i < posToCreate.length; i += chunkSize) {
+      const chunk = posToCreate.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+      let operationsInBatch = 0;
+
+      for (const po of chunk) {
+        if (!po.poNo) continue;
+        
+        // Final Duplicate Protection
+        if (existingPoNos.has(po.poNo.toLowerCase())) {
+          skippedCount++;
+          continue;
+        }
+
+        const newRef = doc(collection(db, 'purchaseOrders'));
+        batch.set(newRef, {
+          ...po,
+          importRunId: runId, // Step 10: Import Identifier
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          createdBy: user,
+          updatedBy: user,
+          isArchived: false,
+        });
+        
+        existingPoNos.add(po.poNo.toLowerCase()); // Protect against duplicates within the same import list
+        operationsInBatch++;
+        successCount++;
+      }
+
+      if (operationsInBatch > 0) {
+        await batch.commit();
+      }
+    }
+
+    // 3. Log Audit Activity (Step 11)
+    if (successCount > 0) {
+      await logActivity({
+        user,
+        action: `Bulk Imported ${successCount} POs (Run: ${runId})`,
+        entity: 'purchaseOrders',
+        referenceId: runId,
+        timestamp: serverTimestamp()
+      });
+    }
+
+    return { successCount, skippedCount, errors };
+  } catch (error: any) {
+    console.error('Error in batch import:', error);
+    throw new Error('Batch import failed: ' + error.message);
+  }
+};
+

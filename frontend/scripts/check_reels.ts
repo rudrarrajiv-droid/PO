@@ -16,28 +16,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function run() {
-  const collections = ['finishGoods', 'reels', 'jobCards', 'finishGoodTransactions', 'reelTransactions', 'products', 'customers'];
-  const stats: Record<string, any> = {};
-
-  for (const col of collections) {
-    const snap = await getDocs(collection(db, col));
-    let dummyCount = 0;
-    let migrationCount = 0;
-    
-    snap.forEach(doc => {
-      const data = doc.data();
-      if (data.createdBy === 'MigrationScript') {
-        migrationCount++;
-      } else {
-        dummyCount++;
-      }
-    });
-
-    stats[col] = { dummyCount, migrationCount };
+  const reelsSnap = await getDocs(collection(db, 'reels'));
+  console.log(`Total reels in DB: ${reelsSnap.size}`);
+  if (reelsSnap.size > 0) {
+    console.log('Sample reel data:');
+    console.log(reelsSnap.docs[0].data());
   }
-
-  console.log(JSON.stringify(stats, null, 2));
-  process.exit(0);
 }
-
 run().catch(console.error);

@@ -7,15 +7,19 @@ import BulkInwardModal from './inventory/BulkInwardModal';
 import OutwardModal from './inventory/OutwardModal';
 import ReelHistoryModal from './inventory/ReelHistoryModal';
 import ExportButtons from '../components/ExportButtons';
+import JobFinderTab from './inventory/JobFinderTab';
+import ReverseCalculatorTab from './inventory/ReverseCalculatorTab';
 
 export default function Inventory() {
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'EMPTY' | 'ISSUED_REPORT'>('ACTIVE');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'EMPTY' | 'ISSUED_REPORT' | 'PURCHASE_REPORT' | 'MONTHLY_SUMMARY' | 'JOB_FINDER' | 'REVERSE_CALC'>('ACTIVE');
   const [isBulkInwardOpen, setIsBulkInwardOpen] = useState(false);
   const [isOutwardOpen, setIsOutwardOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [paperTypeFilter, setPaperTypeFilter] = useState('ALL');
   const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [metricFilter, setMetricFilter] = useState<'CLOSING' | 'OPENING' | 'IN' | 'OUT'>('CLOSING');
+  const [metricMonth, setMetricMonth] = useState<string>(new Date().toISOString().substring(0, 7));
 
   const { data: reels = [], isLoading: loadingReels, refetch } = useQuery({
     queryKey: ['reels'],
@@ -25,7 +29,7 @@ export default function Inventory() {
   const { data: transactions = [], isLoading: loadingTx } = useQuery({
     queryKey: ['reelTransactions'],
     queryFn: () => queryDocuments('reelTransactions', []) as Promise<any[]>,
-    enabled: activeTab === 'ISSUED_REPORT'
+    enabled: activeTab === 'ISSUED_REPORT' || activeTab === 'PURCHASE_REPORT' || activeTab === 'MONTHLY_SUMMARY' || metricFilter !== 'CLOSING'
   });
 
   const sortedAndFilteredReels = useMemo(() => {
@@ -81,24 +85,80 @@ export default function Inventory() {
   }, [reels, search, paperTypeFilter, activeTab]);
 
   const { totalReels, totalWeight, totalValue } = useMemo(() => {
-    return sortedAndFilteredReels.reduce((acc, r) => {
-      const bal = Number(r.currentBalance) || 0;
-      if (bal > 0) {
-        acc.totalReels += 1;
-        acc.totalWeight += bal;
-        acc.totalValue += bal * (Number(r.rate) || 0);
-      }
-      return acc;
-    }, { totalReels: 0, totalWeight: 0, totalValue: 0 });
-  }, [sortedAndFilteredReels]);
+    let tr = 0, tw = 0, tv = 0;
+
+    if (metricFilter === 'CLOSING' || activeTab !== 'ACTIVE') {
+      sortedAndFilteredReels.forEach(r => {
+        const bal = Number(r.currentBalance) || 0;
+        tr++;
+        tw += bal;
+        tv += bal * (Number(r.rate) || 0);
+      });
+    } else {
+      // Include all reels (active + empty) that match the search/type filter
+      // because historical metrics should include reels that became empty in this month.
+      const baseFilteredReels = reels.filter(r => {
+        const matchesSearch = (r.reelNumber?.toLowerCase() || '').includes(search.toLowerCase()) ||
+          (r.paperType?.toLowerCase() || '').includes(search.toLowerCase()) ||
+          (r.bf?.toLowerCase() || '').includes(search.toLowerCase());
+          
+        if (!matchesSearch) return false;
+        
+        const pt = (r.paperType || '').toUpperCase();
+        if (paperTypeFilter === 'ALL') return true;
+        if (paperTypeFilter === 'OTHERS') return !['SK', 'VK', 'DUPLEX', 'HWC'].includes(pt);
+        return pt === paperTypeFilter;
+      });
+
+      baseFilteredReels.forEach(r => {
+          if (metricFilter === 'OPENING') {
+              let currentBal = Number(r.currentBalance) || 0;
+              const futureTxs = transactions.filter(tx => tx.reelId === r.id && tx.date && tx.date >= `${metricMonth}-01`);
+              let openingBal = currentBal;
+              futureTxs.forEach(tx => {
+                 if (tx.type === 'INWARD') openingBal -= (Number(tx.quantity) || 0);
+                 else if (tx.type === 'OUTWARD') openingBal += (Number(tx.quantity) || 0);
+              });
+              if (Math.round(openingBal) > 0) {
+                 tr++;
+                 tw += openingBal;
+                 tv += openingBal * (Number(r.rate) || 0);
+              }
+          } else if (metricFilter === 'IN') {
+              const monthTxs = transactions.filter(tx => tx.reelId === r.id && tx.type === 'INWARD' && tx.date && tx.date.startsWith(metricMonth));
+              let inW = monthTxs.reduce((sum, tx) => sum + (Number(tx.quantity) || 0), 0);
+              if (inW > 0) {
+                 tr++; 
+                 tw += inW;
+                 tv += inW * (Number(r.rate) || 0);
+              }
+          } else if (metricFilter === 'OUT') {
+              const monthTxs = transactions.filter(tx => tx.reelId === r.id && tx.type === 'OUTWARD' && tx.date && tx.date.startsWith(metricMonth));
+              let outW = monthTxs.reduce((sum, tx) => sum + (Number(tx.quantity) || 0), 0);
+              if (outW > 0) {
+                 tr++; 
+                 tw += outW;
+                 tv += outW * (Number(r.rate) || 0);
+              }
+          }
+      });
+    }
+
+    return { totalReels: tr, totalWeight: Math.round(tw), totalValue: Math.round(tv) };
+  }, [reels, search, paperTypeFilter, sortedAndFilteredReels, metricFilter, metricMonth, transactions, activeTab]);
 
   // Generate Issued Report
   const issuedReportData = useMemo(() => {
-    if (activeTab !== 'ISSUED_REPORT') return [];
+    if (activeTab !== 'ISSUED_REPORT' && activeTab !== 'PURCHASE_REPORT') return [];
     
-    // Filter outward tx for the specific date
+    const isPurchase = activeTab === 'PURCHASE_REPORT';
+
     const txForDate = transactions.filter(tx => {
-      if (tx.type !== 'OUTWARD') return false;
+      if (isPurchase) {
+        if (tx.type !== 'INWARD') return false;
+      } else {
+        if (tx.type !== 'OUTWARD') return false;
+      }
       if (!tx.date) return false;
       return tx.date.startsWith(reportDate);
     });
@@ -147,6 +207,70 @@ export default function Inventory() {
     });
 
     return report;
+  }, [transactions, reels, reportDate, activeTab]);
+
+  const monthlySummaryData = useMemo(() => {
+    if (activeTab !== 'MONTHLY_SUMMARY') return null;
+    const yearMonth = reportDate.substring(0, 7); // e.g. "2026-08"
+    
+    const [year, month] = yearMonth.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    let openingReelsCount = 0;
+    let openingWeight = 0;
+
+    reels.forEach(reel => {
+      let currentBal = Number(reel.currentBalance) || 0;
+      const futureTxs = transactions.filter(tx => tx.reelId === reel.id && tx.date && tx.date >= `${yearMonth}-01`);
+      
+      let openingBal = currentBal;
+      futureTxs.forEach(tx => {
+         if (tx.type === 'INWARD') openingBal -= (Number(tx.quantity) || 0);
+         else if (tx.type === 'OUTWARD') openingBal += (Number(tx.quantity) || 0);
+      });
+      
+      if (Math.round(openingBal) > 0) {
+         openingReelsCount++;
+         openingWeight += openingBal;
+      }
+    });
+
+    const summary = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = `${yearMonth}-${i.toString().padStart(2, '0')}`;
+      const dayTxs = transactions.filter(tx => tx.date && tx.date.startsWith(dateStr));
+      
+      let inWeight = 0;
+      let outWeight = 0;
+      const inReelIds = new Set<string>();
+      const outReelIds = new Set<string>();
+
+      dayTxs.forEach(tx => {
+        if (tx.type === 'INWARD') {
+          inReelIds.add(tx.reelId);
+          inWeight += Number(tx.quantity) || 0;
+        } else if (tx.type === 'OUTWARD') {
+          outReelIds.add(tx.reelId);
+          outWeight += Number(tx.quantity) || 0;
+        }
+      });
+
+      if (inReelIds.size > 0 || outReelIds.size > 0) {
+        summary.push({
+          date: dateStr,
+          day: i,
+          inReels: inReelIds.size,
+          inWeight: Math.round(inWeight),
+          outReels: outReelIds.size,
+          outWeight: Math.round(outWeight)
+        });
+      }
+    }
+    return {
+      openingReels: openingReelsCount,
+      openingWeight: Math.round(openingWeight),
+      rows: summary
+    };
   }, [transactions, reels, reportDate, activeTab]);
 
   return (
@@ -229,11 +353,58 @@ export default function Inventory() {
         >
           Issue Date Report
         </button>
+        <button
+          onClick={() => setActiveTab('PURCHASE_REPORT')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2",
+            activeTab === 'PURCHASE_REPORT' ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Purchase Date Report
+        </button>
+        <button
+          onClick={() => setActiveTab('MONTHLY_SUMMARY')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2",
+            activeTab === 'MONTHLY_SUMMARY' ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Monthly Summary
+        </button>
+        <button
+          onClick={() => setActiveTab('JOB_FINDER')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2 flex items-center gap-1",
+            activeTab === 'JOB_FINDER' ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          🔍 Job Finder
+        </button>
+        <button
+          onClick={() => setActiveTab('REVERSE_CALC')}
+          className={cn(
+            "pb-2 px-1 font-medium text-sm transition-colors border-b-2 flex items-center gap-1",
+            activeTab === 'REVERSE_CALC' ? "border-amber-600 text-amber-600" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          🧮 Reverse Calculator
+        </button>
       </div>
 
       <div className="flex-1 bg-card border border-border shadow-sm rounded-lg overflow-hidden flex flex-col">
+        {/* Job Finder Tab — no toolbar, rendered directly */}
+        {activeTab === 'JOB_FINDER' ? (
+          <div className="flex-1 overflow-y-auto">
+            <JobFinderTab />
+          </div>
+        ) : activeTab === 'REVERSE_CALC' ? (
+          <div className="flex-1 overflow-y-auto bg-amber-50/10">
+            <ReverseCalculatorTab />
+          </div>
+        ) : (
+        <>
         <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/20">
-          {activeTab !== 'ISSUED_REPORT' ? (
+          {(activeTab !== 'ISSUED_REPORT' && activeTab !== 'PURCHASE_REPORT' && activeTab !== 'MONTHLY_SUMMARY') ? (
             <>
               <div className="flex gap-4 items-center">
                 <div className="relative w-72">
@@ -258,6 +429,30 @@ export default function Inventory() {
                   <option value="DUPLEX">DUPLEX</option>
                   <option value="OTHERS">Others</option>
                 </select>
+
+                {activeTab === 'ACTIVE' && (
+                  <>
+                    <select
+                      value={metricFilter}
+                      onChange={e => setMetricFilter(e.target.value as any)}
+                      className="px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring font-medium text-blue-700"
+                    >
+                      <option value="CLOSING">Closing (Current Bal)</option>
+                      <option value="OPENING">Opening</option>
+                      <option value="IN">Inward (IN)</option>
+                      <option value="OUT">Outward (OUT)</option>
+                    </select>
+
+                    {metricFilter !== 'CLOSING' && (
+                      <input 
+                        type="month"
+                        value={metricMonth}
+                        onChange={e => setMetricMonth(e.target.value)}
+                        className="px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring font-medium"
+                      />
+                    )}
+                  </>
+                )}
               </div>
               
               <div className="flex gap-4 text-sm">
@@ -268,7 +463,7 @@ export default function Inventory() {
                   Total Weight: <span className="font-bold">{totalWeight.toLocaleString()} kg</span>
                 </div>
                 <div className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md font-medium border border-green-200 shadow-sm">
-                  Total Value: <span className="font-bold">Rs. {totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  Total Value: <span className="font-bold">Rs. {totalValue.toLocaleString()}</span>
                 </div>
               </div>
             </>
@@ -276,12 +471,12 @@ export default function Inventory() {
             <div className="flex gap-4 items-center">
                <label className="font-medium text-sm flex items-center">
                  <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                 Select Issue Date:
+                 {activeTab === 'MONTHLY_SUMMARY' ? 'Select Month:' : 'Select Date:'}
                </label>
                <input 
-                 type="date"
-                 value={reportDate}
-                 onChange={e => setReportDate(e.target.value)}
+                 type={activeTab === 'MONTHLY_SUMMARY' ? 'month' : 'date'}
+                 value={activeTab === 'MONTHLY_SUMMARY' ? reportDate.substring(0, 7) : reportDate}
+                 onChange={e => setReportDate(activeTab === 'MONTHLY_SUMMARY' ? `${e.target.value}-01` : e.target.value)}
                  className="px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring font-medium"
                />
             </div>
@@ -289,17 +484,71 @@ export default function Inventory() {
         </div>
 
         <div className="flex-1 overflow-auto">
-          {(loadingReels || (activeTab === 'ISSUED_REPORT' && loadingTx)) ? (
+          {(loadingReels || ((activeTab === 'ISSUED_REPORT' || activeTab === 'PURCHASE_REPORT' || activeTab === 'MONTHLY_SUMMARY') && loadingTx)) ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
-          ) : activeTab === 'ISSUED_REPORT' ? (
+          ) : activeTab === 'MONTHLY_SUMMARY' ? (
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 font-medium">Date</th>
+                  <th className="px-6 py-3 font-medium text-blue-600 bg-blue-50/30">IN (Reels)</th>
+                  <th className="px-6 py-3 font-medium text-blue-600 bg-blue-50/30">IN (Weight)</th>
+                  <th className="px-6 py-3 font-medium text-red-600 bg-red-50/30">OUT (Reels)</th>
+                  <th className="px-6 py-3 font-medium text-red-600 bg-red-50/30">OUT (Weight)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {monthlySummaryData && (
+                  <tr className="bg-amber-50/50 hover:bg-amber-50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-amber-800">
+                      Opening Balance (1st {new Date(reportDate).toLocaleString('en-US', { month: 'short' })})
+                    </td>
+                    <td className="px-6 py-4 font-bold text-amber-700" colSpan={4}>
+                      {monthlySummaryData.openingReels} Reels | {monthlySummaryData.openingWeight.toLocaleString()} Kg
+                    </td>
+                  </tr>
+                )}
+                {monthlySummaryData?.rows.map((row: any) => (
+                  <tr key={row.date} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-foreground">
+                      {new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-blue-600 bg-blue-50/10">{row.inReels || '-'}</td>
+                    <td className="px-6 py-4 font-bold text-blue-600 bg-blue-50/10">{row.inWeight ? `${row.inWeight.toLocaleString()} Kg` : '-'}</td>
+                    <td className="px-6 py-4 font-bold text-red-600 bg-red-50/10">{row.outReels || '-'}</td>
+                    <td className="px-6 py-4 font-bold text-red-600 bg-red-50/10">{row.outWeight ? `${row.outWeight.toLocaleString()} Kg` : '-'}</td>
+                  </tr>
+                ))}
+                {monthlySummaryData?.rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                      <Package className="w-12 h-12 mx-auto text-muted mb-3" />
+                      <p>No IN or OUT transactions found for {reportDate.substring(0, 7)}.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {(monthlySummaryData?.rows.length ?? 0) > 0 && (
+                <tfoot className="bg-secondary/80 font-bold border-t-2 border-border sticky bottom-0">
+                  <tr>
+                    <td className="px-6 py-4 text-right text-foreground uppercase tracking-wider text-xs">Monthly Total:</td>
+                    <td className="px-6 py-4 text-blue-700 text-base bg-blue-100/50">{monthlySummaryData?.rows.reduce((sum: number, r: any) => sum + r.inReels, 0)}</td>
+                    <td className="px-6 py-4 text-blue-700 text-base bg-blue-100/50">{monthlySummaryData?.rows.reduce((sum: number, r: any) => sum + r.inWeight, 0).toLocaleString()} Kg</td>
+                    <td className="px-6 py-4 text-red-700 text-base bg-red-100/50">{monthlySummaryData?.rows.reduce((sum: number, r: any) => sum + r.outReels, 0)}</td>
+                    <td className="px-6 py-4 text-red-700 text-base bg-red-100/50">{monthlySummaryData?.rows.reduce((sum: number, r: any) => sum + r.outWeight, 0).toLocaleString()} Kg</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          ) : (activeTab === 'ISSUED_REPORT' || activeTab === 'PURCHASE_REPORT') ? (
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-3 font-medium">Paper Type</th>
                   <th className="px-6 py-3 font-medium">Reel Size</th>
                   <th className="px-6 py-3 font-medium">BF</th>
-                  <th className="px-6 py-3 font-medium text-blue-600">No. of Reels Issued</th>
-                  <th className="px-6 py-3 font-medium text-red-600">Total Weight Issued</th>
+                  <th className="px-6 py-3 font-medium text-blue-600">No. of Reels {activeTab === 'PURCHASE_REPORT' ? 'Purchased' : 'Issued'}</th>
+                  <th className="px-6 py-3 font-medium text-red-600">Total Weight {activeTab === 'PURCHASE_REPORT' ? 'Purchased' : 'Issued'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -309,18 +558,27 @@ export default function Inventory() {
                     <td className="px-6 py-4 font-medium">{row.size}"</td>
                     <td className="px-6 py-4 font-medium">{row.bf}</td>
                     <td className="px-6 py-4 text-blue-600 font-bold">{row.count}</td>
-                    <td className="px-6 py-4 text-red-600 font-bold">{row.totalWeight.toFixed(1)} Kg</td>
+                    <td className="px-6 py-4 text-red-600 font-bold">{Math.round(row.totalWeight)} Kg</td>
                   </tr>
                 ))}
                 {issuedReportData.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                       <Package className="w-12 h-12 mx-auto text-muted mb-3" />
-                      <p>No outward transactions found for {new Date(reportDate).toLocaleDateString('en-IN')}.</p>
+                      <p>No {activeTab === 'PURCHASE_REPORT' ? 'inward' : 'outward'} transactions found for {new Date(reportDate).toLocaleDateString('en-IN')}.</p>
                     </td>
                   </tr>
                 )}
               </tbody>
+              {issuedReportData.length > 0 && (
+                <tfoot className="bg-secondary/80 font-bold border-t-2 border-border sticky bottom-0">
+                  <tr>
+                    <td colSpan={3} className="px-6 py-4 text-right text-foreground uppercase tracking-wider text-xs">Total for Date:</td>
+                    <td className="px-6 py-4 text-blue-700 text-base">{issuedReportData.reduce((sum: number, r: any) => sum + r.count, 0)}</td>
+                    <td className="px-6 py-4 text-red-700 text-base">{Math.round(issuedReportData.reduce((sum: number, r: any) => sum + r.totalWeight, 0))} Kg</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           ) : (
             <table className="w-full text-sm text-left">
@@ -329,10 +587,11 @@ export default function Inventory() {
                   <th className="px-6 py-3 font-medium">Reel No</th>
                   <th className="px-6 py-3 font-medium">Specs (Type/Size/BF/GSM)</th>
                   <th className="px-6 py-3 font-medium">Supplier</th>
+                  <th className="px-6 py-3 font-medium">Rate</th>
                   <th className="px-6 py-3 font-medium text-blue-600">Initial Wt</th>
                   <th className="px-6 py-3 font-medium text-red-600">Consumed</th>
                   <th className="px-6 py-3 font-medium text-green-600">Balance</th>
-                  <th className="px-6 py-3 font-medium">Inward Date</th>
+                  <th className="px-6 py-3 font-medium">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -346,14 +605,17 @@ export default function Inventory() {
                         {reel.paperType} | {reel.reelSize}" | {reel.bf} BF | {reel.gsm} GSM
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        <div className="text-foreground">{reel.supplierName}</div>
-                        {reel.manufacturerName !== reel.supplierName && (
+                        <div className="text-foreground">{reel.supplierName || '-'}</div>
+                        {reel.manufacturerName && reel.manufacturerName !== reel.supplierName && (
                           <div className="text-xs">Mfr: {reel.manufacturerName}</div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-blue-600">{reel.weight} Kg</td>
-                      <td className="px-6 py-4 text-red-600">{consumed > 0 ? `${consumed.toFixed(1)} Kg` : '-'}</td>
-                      <td className="px-6 py-4 font-bold text-green-600">{reel.currentBalance} Kg</td>
+                      <td className="px-6 py-4 font-semibold text-gray-700">
+                        {reel.rate ? `₹${Number(reel.rate).toFixed(2)}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-blue-600">{Math.round(reel.weight)} Kg</td>
+                      <td className="px-6 py-4 text-red-600">{consumed > 0 ? `${Math.round(consumed)} Kg` : '-'}</td>
+                      <td className="px-6 py-4 font-bold text-green-600">{Math.round(reel.currentBalance)} Kg</td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {reel.inwardDate ? new Date(reel.inwardDate).toLocaleDateString('en-IN') : '-'}
                       </td>
@@ -372,6 +634,8 @@ export default function Inventory() {
             </table>
           )}
         </div>
+        </>
+        )}
       </div>
 
       {isBulkInwardOpen && (

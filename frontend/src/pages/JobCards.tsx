@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, AlertTriangle, Layers, Play, Trash2 } from 'lucide-react';
+import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, AlertTriangle, Layers, Play, Trash2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { cn } from '../lib/utils';
-import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction, deleteJobCardAndRecycleNo } from '../lib/firebase/services';
+import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction, deleteJobCardSoft } from '../lib/firebase/services';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
@@ -67,6 +67,8 @@ export default function JobCards() {
   const [allocatingJobCard, setAllocatingJobCard] = useState<any>(null);
   const [issuingJobCard, setIssuingJobCard] = useState<any>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
+  // Admin-only: Show deleted job cards toggle
+  const [showDeleted, setShowDeleted] = useState(false);
 
   // 3-way smart search state (Inputs)
   const [searchCustomer, setSearchCustomer] = useState('');
@@ -81,7 +83,10 @@ export default function JobCards() {
   const { data: jobCards = [], isLoading: loadingCards, refetch: refetchCards } = useQuery({
     queryKey: ['jobcards'],
     queryFn: async () => {
-      const data = await queryDocuments('jobCards', []) as any[];
+      // Fetch directly to bypass the 'isArchived == false' filter in queryDocuments
+      const q = query(collection(db, 'jobCards'));
+      const snap = await getDocs(q);
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
       return data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     },
   });
@@ -89,6 +94,8 @@ export default function JobCards() {
   // Smart Relational Filtering + Status Ordering
   const filteredCards = useMemo(() => {
     let list = jobCards.filter(jc => {
+      // Only show DELETED records if admin has toggled it on
+      if (jc.status === 'DELETED') return showDeleted && hasRole('ADMIN');
       const matchC = (jc.customerName || '').toLowerCase().includes(appliedSearchCustomer.toLowerCase());
       const matchP = (jc.productName || '').toLowerCase().includes(appliedSearchProduct.toLowerCase());
       const matchJ = (jc.jobCardNo || '').toLowerCase().includes(appliedSearchJC.toLowerCase());
@@ -114,7 +121,7 @@ export default function JobCards() {
     });
 
     return list;
-  }, [jobCards, appliedSearchCustomer, appliedSearchProduct, appliedSearchJC]);
+  }, [jobCards, appliedSearchCustomer, appliedSearchProduct, appliedSearchJC, showDeleted, hasRole]);
 
   // Dynamic Datalists (Narrowed based on other filters)
   const uniqueCustomers = useMemo(() => {
@@ -246,6 +253,20 @@ export default function JobCards() {
                 'expectedDeliveryAt': 'Delivery Deadline'
               }}
             />
+            {hasRole('ADMIN') && (
+              <button
+                onClick={() => setShowDeleted(v => !v)}
+                className={cn(
+                  "px-4 py-2 flex items-center text-sm font-medium rounded-md border transition-colors",
+                  showDeleted
+                    ? "bg-red-600 text-white border-red-600 hover:bg-red-700"
+                    : "bg-background text-red-600 border-red-200 hover:bg-red-50"
+                )}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+              </button>
+            )}
             <button 
               onClick={() => { setEditingJobCard(null); setIsFormOpen(true); }}
               className="bg-primary text-primary-foreground px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-primary/90 transition-colors"
@@ -346,8 +367,18 @@ export default function JobCards() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredCards.map((jc: any) => (
-                    <tr key={jc.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-foreground">{jc.jobCardNo}</td>
+                    <tr key={jc.id} className={cn(
+                      "hover:bg-muted/50 transition-colors",
+                      jc.status === 'DELETED' && "bg-red-50/40 opacity-70"
+                    )}>
+                      <td className="px-6 py-4 font-bold text-foreground">
+                        {jc.jobCardNo}
+                        {jc.poNo && (
+                          <div className="text-[10px] text-purple-700 font-bold bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded-sm inline-block ml-2 align-middle">
+                            PO: {jc.poNo}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-6 py-4">{jc.customerName}</td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-foreground">{jc.productName}</div>
@@ -367,12 +398,17 @@ export default function JobCards() {
                           jc.status === 'COMPLETED' ? "bg-green-100 text-green-800 border-green-200" :
                           jc.status === 'IN_PROCESS' ? "bg-blue-100 text-blue-800 border-blue-200" :
                           jc.status === 'DELAYED' ? "bg-red-100 text-red-800 border-red-200" :
+                          jc.status === 'DELETED' ? "bg-gray-200 text-gray-600 border-gray-300" :
+                          jc.status === 'PENDING APPROVAL' ? "bg-orange-100 text-orange-700 border-orange-200" :
                           "bg-yellow-100 text-yellow-800 border-yellow-200"
                         )}>
-                          {jc.status}
+                          {jc.status === 'DELETED' ? '🗑 DELETED' : jc.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
+                        {jc.status === 'DELETED' ? (
+                          <span className="text-xs text-gray-400 italic">Number Retired</span>
+                        ) : (
                         <div className="flex justify-end gap-2">
                           {jc.status === 'PENDING' && (
                             <button 
@@ -419,9 +455,9 @@ export default function JobCards() {
                           {hasRole('ADMIN') && (
                             <button 
                               onClick={async () => {
-                                if (window.confirm(`Are you sure you want to permanently delete Job Card ${jc.jobCardNo}? Its number will be reused.`)) {
+                                if (window.confirm(`Are you sure you want to delete Job Card ${jc.jobCardNo}?\n\nThis will permanently mark it as DELETED. The job card number will NOT be reused. This action cannot be undone.`)) {
                                   try {
-                                    await deleteJobCardAndRecycleNo(jc.id, user?.name);
+                                    await deleteJobCardSoft(jc.id, user?.name);
                                     refetchCards();
                                   } catch (err: any) {
                                     alert('Failed to delete Job Card: ' + err.message);
@@ -429,12 +465,13 @@ export default function JobCards() {
                                 }
                               }}
                               className="p-1.5 text-red-600 hover:bg-red-50 rounded-md border border-transparent hover:border-red-200 transition-colors"
-                              title="Delete Job Card"
+                              title="Delete Job Card (Permanent)"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -472,15 +509,27 @@ export default function JobCards() {
             jobCard={allocatingJobCard}
             isAdmin={hasRole('ADMIN')}
             onBack={() => setAllocatingJobCard(null)}
-            onConfirm={async (layers) => {
+            onConfirm={async (layers, isPendingApproval, approvalReason) => {
               try {
-                await updateDocument('jobCards', allocatingJobCard.id, {
+                const payload: any = {
                   productSnapshot: {
                     ...allocatingJobCard.productSnapshot,
                     layers
                   },
                   reelAllocationSkipped: false
-                });
+                };
+
+                // Phase 3: Inject approval metadata if needed
+                if (isPendingApproval) {
+                  payload.status = 'PENDING APPROVAL';
+                  payload.approvalStatus = 'PENDING';
+                  payload.approvalReason = approvalReason;
+                  payload.approvalRequestedBy = user?.name;
+                  payload.approvalRequestedAt = new Date().toISOString();
+                  payload.approvalExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+                }
+
+                await executeJobCardTransaction(allocatingJobCard.id, payload, allocatingJobCard, user?.name);
                 setAllocatingJobCard(null);
                 refetchCards();
               } catch (err: any) {
@@ -541,6 +590,14 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
     },
   });
 
+  const { data: purchaseOrders = [], isLoading: loadingPos } = useQuery({
+    queryKey: ['purchaseOrders'],
+    queryFn: async () => {
+      const data = await queryDocuments('purchaseOrders', []) as any[];
+      return data;
+    },
+  });
+
   const [loadingNextNo, setLoadingNextNo] = useState(!isEditMode);
   const [productSearchText, setProductSearchText] = useState(() => {
     if (isEditMode && initialData) {
@@ -549,6 +606,19 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
     return '';
   });
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+
+  // PO State
+  const [poSearchText, setPoSearchText] = useState(() => {
+    if (isEditMode && initialData?.poNo) return initialData.poNo;
+    return '';
+  });
+  const [showPoDropdown, setShowPoDropdown] = useState(false);
+  const [selectedPo, setSelectedPo] = useState<any>(() => {
+    if (isEditMode && initialData?.poId) {
+       return { id: initialData.poId, poNo: initialData.poNo };
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (isEditMode) return;
@@ -560,32 +630,20 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
     // Fetch next job card number natively from Firestore
     const fetchNextNo = async () => {
       try {
-        // First check for recycled numbers
-        const metadataRef = doc(db, 'metadata', 'jobCardsConfig');
-        const metaSnap = await getDoc(metadataRef);
-        if (metaSnap.exists() && metaSnap.data().recycledNumbers && metaSnap.data().recycledNumbers.length > 0) {
-          // Get the smallest recycled number to keep order
-          const recycled = metaSnap.data().recycledNumbers.sort((a: string, b: string) => {
-            const numA = parseInt(a.split('/').pop() || '0', 10);
-            const numB = parseInt(b.split('/').pop() || '0', 10);
-            return numA - numB;
-          });
-          setValue('jobCardNo', recycled[0]);
+        // Fetch the absolute last job card number generated to increment from it
+        const q = query(collection(db, 'jobCards'), orderBy('jobCardNo', 'desc'), limit(1));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          setValue('jobCardNo', 'PI/JC/1001');
         } else {
-          const q = query(collection(db, 'jobCards'), orderBy('jobCardNo', 'desc'), limit(1));
-          const snap = await getDocs(q);
-          if (snap.empty) {
-            setValue('jobCardNo', 'PI/JC/1001');
+          const lastDoc = snap.docs[0].data();
+          const lastNo = lastDoc.jobCardNo;
+          const parts = lastNo.split('/');
+          const num = parseInt(parts[parts.length - 1], 10);
+          if (!isNaN(num)) {
+            setValue('jobCardNo', `PI/JC/${num + 1}`);
           } else {
-            const lastDoc = snap.docs[0].data();
-            const lastNo = lastDoc.jobCardNo;
-            const parts = lastNo.split('/');
-            const num = parseInt(parts[parts.length - 1], 10);
-            if (!isNaN(num)) {
-              setValue('jobCardNo', `PI/JC/${num + 1}`);
-            } else {
-              setValue('jobCardNo', 'PI/JC/1001');
-            }
+            setValue('jobCardNo', 'PI/JC/1001');
           }
         }
       } catch (err) {
@@ -618,6 +676,22 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
   const activeProductData = (!isEditMode || isProductChanged) 
     ? products.find((p: any) => p.id === selectedProductId) 
     : initialData?.productSnapshot;
+
+  const poMismatchWarning = useMemo(() => {
+    if (!selectedPo || !activeProductData || selectedPo.dummy) return null;
+    const fullPo = purchaseOrders.find(p => p.id === selectedPo.id);
+    if (!fullPo) return null;
+
+    if (fullPo.customerId !== activeProductData.customerId) {
+       return `Selected PO belongs to Customer: ${fullPo.customerName}, but this Job Card is for Customer: ${activeProductData.customerName}.`;
+    }
+    const poProductId = fullPo.productId || '';
+    const jcProductId = activeProductData.id || activeProductData.productId || '';
+    if (poProductId && jcProductId && poProductId !== jcProductId) {
+       return `Selected PO is for product: ${fullPo.productName}, but this Job Card is for product: ${activeProductData.itemName || activeProductData.productName}.`;
+    }
+    return null;
+  }, [selectedPo, activeProductData, purchaseOrders]);
 
   const orderQtyVal = Number(watch('orderQty')) || 0;
 
@@ -672,6 +746,9 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
       jobCardNo: data.jobCardNo,
       targetDate: data.targetDate,
       
+      poId: selectedPo ? selectedPo.id : null,
+      poNo: selectedPo ? selectedPo.poNo : null,
+      
       customerId: activeProductData.customerId,
       customerName: activeProductData.customerName,
       productId: activeProductData.id || activeProductData.productId,
@@ -696,18 +773,40 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
     setStep(2);
   };
 
-  const handleFinalSave = async (allocatedLayers: any[] | null) => {
+  const handleFinalSave = async (allocatedLayers: any[] | null, requiresApproval?: boolean, approvalReason?: string) => {
     try {
       if (!draftPayload) return;
-      
+
+      // Phase 3: Set status based on whether approval is needed
+      const status = requiresApproval ? 'PENDING APPROVAL' : 'PENDING';
+
+      // 2-day expiry: if PENDING APPROVAL, set expiry timestamp
+      const approvalExpiresAt = requiresApproval
+        ? new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
       const finalPayload = {
         ...draftPayload,
         productSnapshot: {
           ...draftPayload.productSnapshot,
           layers: allocatedLayers || draftPayload.productSnapshot.layers
         },
-        status: 'PENDING',
-        reelAllocationSkipped: allocatedLayers === null ? true : false
+        status,
+        reelAllocationSkipped: allocatedLayers === null ? true : false,
+        ...(requiresApproval && {
+          approvalReason,
+          approvalRequestedBy: user?.name,
+          approvalRequestedAt: new Date().toISOString(),
+          approvalExpiresAt,
+          approvalStatus: 'PENDING'
+        }),
+        ...(!requiresApproval && {
+          approvalReason: null,
+          approvalRequestedBy: null,
+          approvalRequestedAt: null,
+          approvalExpiresAt: null,
+          approvalStatus: null
+        })
       };
 
       let jobId = initialData?.id;
@@ -733,7 +832,7 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
         <ReelAllocationWizard 
           jobCard={draftPayload} 
           onBack={() => setStep(1)} 
-          onConfirm={(layers) => handleFinalSave(layers)} 
+          onConfirm={(layers, requiresApproval, approvalReason) => handleFinalSave(layers, requiresApproval, approvalReason)} 
           isAdmin={hasRole('ADMIN')}
           onSkip={() => handleFinalSave(null)}
         />
@@ -779,6 +878,102 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
                   {watch('targetDate') ? new Date(watch('targetDate')).toLocaleDateString() : '...'}
                 </div>
               </div>
+            </div>
+
+            {/* Row 1.5: PO Selection (Optional) */}
+            <div className="bg-purple-50/50 p-5 rounded-lg border border-purple-100/50 space-y-4">
+              <label className="text-sm font-semibold text-purple-900 flex items-center">
+                <FileText className="w-4 h-4 mr-2" />
+                Select PO (Optional)
+              </label>
+              
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by PO No, Customer, Artwork, Item..."
+                  className={inputCls + " font-medium text-base h-11 w-full border-purple-200 focus:ring-purple-200 bg-white"}
+                  disabled={loadingPos}
+                  value={poSearchText}
+                  onChange={(e) => {
+                    setPoSearchText(e.target.value);
+                    setShowPoDropdown(true);
+                    if (e.target.value === '') setSelectedPo(null);
+                  }}
+                  onFocus={() => setShowPoDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
+                />
+                
+                {showPoDropdown && poSearchText.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-xl max-h-60 overflow-y-auto">
+                    {purchaseOrders
+                      .filter((p: any) => 
+                        (p.poNo || '').toLowerCase().includes(poSearchText.toLowerCase()) ||
+                        (p.customerName || '').toLowerCase().includes(poSearchText.toLowerCase()) ||
+                        (p.artworkNo || '').toLowerCase().includes(poSearchText.toLowerCase()) ||
+                        (p.productName || '').toLowerCase().includes(poSearchText.toLowerCase())
+                      )
+                      .map((p: any) => (
+                        <div 
+                          key={p.id}
+                          className="px-4 py-3 hover:bg-muted cursor-pointer border-b border-border last:border-0"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedPo(p);
+                            setPoSearchText(p.poNo);
+                            setShowPoDropdown(false);
+                          }}
+                        >
+                          <div className="font-bold text-foreground">{p.poNo} <span className="font-normal text-muted-foreground text-xs ml-2">({p.customerName})</span></div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{p.productName} | OPN: {p.orderQty} | BAL: {p.orderQty + (p.inQty || 0) - (p.outQty || 0)}</div>
+                        </div>
+                      ))}
+                    {purchaseOrders.filter((p: any) => 
+                        (p.poNo || '').toLowerCase().includes(poSearchText.toLowerCase()) ||
+                        (p.customerName || '').toLowerCase().includes(poSearchText.toLowerCase()) ||
+                        (p.artworkNo || '').toLowerCase().includes(poSearchText.toLowerCase()) ||
+                        (p.productName || '').toLowerCase().includes(poSearchText.toLowerCase())
+                    ).length === 0 && (
+                      <div className="px-4 py-4 text-sm text-gray-500 italic text-center">
+                        No matching POs found.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {selectedPo && (() => {
+                const fullPo = purchaseOrders.find(p => p.id === selectedPo.id);
+                if (!fullPo) return null;
+                const closingBal = fullPo.orderQty + (fullPo.inQty || 0) - (fullPo.outQty || 0);
+                return (
+                  <div className="bg-white border border-purple-100 rounded-md p-4 mt-4 shadow-sm text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Customer</span>
+                        <span className="font-semibold">{fullPo.customerName}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Item Name</span>
+                        <span className="font-semibold truncate block" title={fullPo.productName}>{fullPo.productName}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Delivery Date</span>
+                        <span className="font-semibold">{new Date(fullPo.deliveryDate).toLocaleDateString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">PO Balance</span>
+                        <span className="font-bold text-foreground">{closingBal}</span>
+                      </div>
+                    </div>
+                    {poMismatchWarning && (
+                      <div className="mt-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md flex items-start text-xs font-semibold">
+                        <AlertCircle className="w-4 h-4 mr-2 shrink-0 mt-0.5" />
+                        <div>{poMismatchWarning}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Row 2: Manual Inputs (Product & Quantity) */}
@@ -974,7 +1169,7 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
             <button 
               type="submit" 
               form="jc-form"
-              disabled={isSubmitting || !activeProductData}
+              disabled={isSubmitting || !activeProductData || !!poMismatchWarning}
               className={cn("px-8 py-2 text-sm font-medium rounded-md text-white transition-colors shadow-lg flex items-center disabled:opacity-50",
                 isEditMode ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20" : "bg-primary hover:bg-primary/90 shadow-primary/20"
               )}

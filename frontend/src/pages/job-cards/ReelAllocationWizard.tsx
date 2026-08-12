@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { queryDocuments } from '../../lib/firebase/services';
-import { Zap, CircleDashed, CheckCircle2, AlertTriangle, Search, X, Plus } from 'lucide-react';
+import { Zap, CircleDashed, CheckCircle2, AlertTriangle, Search, X, Plus, Trash2, ShieldAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { isJobCardAllocationComplete } from '../JobCards';
 
 interface ReelAllocationWizardProps {
   jobCard: any;
   onBack: () => void;
-  onConfirm: (layers: any[]) => void;
+  onConfirm: (layers: any[], requiresApproval?: boolean, approvalReason?: string) => void;
   isAdmin: boolean;
   onSkip?: () => void;
 }
@@ -36,6 +36,10 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
     reelNumber: ''
   });
 
+  // Phase 3: Oversize Approval State
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalReason, setApprovalReason] = useState('');
+
   const { data: rawReels = [], isLoading: loadingReels } = useQuery({
     queryKey: ['reels-available'],
     queryFn: async () => {
@@ -47,7 +51,8 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
   // Refund this specific Job Card's old reservations so the UI doesn't double-penalize it
   const selfReservedWeights = useMemo(() => {
     const reserved: Record<string, number> = {};
-    if (jobCard && !['COMPLETED', 'CANCELLED'].includes(jobCard.status) && jobCard.productSnapshot?.layers) {
+    // Only PENDING job cards hold active reservations in the backend
+    if (jobCard && jobCard.status === 'PENDING' && jobCard.productSnapshot?.layers) {
       jobCard.productSnapshot.layers.forEach((layer: any) => {
         if (layer.allocatedReels && Array.isArray(layer.allocatedReels)) {
           layer.allocatedReels.forEach((allocReel: any) => {
@@ -93,15 +98,14 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
     if (loadingReels || rawReels.length === 0 || allocations.length > 0) return;
 
     let virtualReels = rawReels.map(r => {
-      const globalReserved = r.activeReservedWeight || 0;
-      const selfReserved = selfReservedWeights[r.id] || 0;
-      // Actual Available = Current Balance - Global Reserved + What we already own
-      const availableAllocationWeight = Math.max(0, r.currentBalance - globalReserved + selfReserved);
+      // Calculate true available weight: Current Balance - Reserved (by other JCs) + Reserved (by THIS JC)
+      const availableAllocationWeight = Math.max(0, (r.currentBalance || 0) - (r.activeReservedWeight || 0) + (selfReservedWeights[r.id] || 0));
       return { ...r, availableAllocationWeight, virtualBalance: availableAllocationWeight };
-    }).filter(r => r.currentBalance > 0 || selfReservedWeights[r.id] > 0);
+    }).filter(r => r.availableAllocationWeight > 0);
 
     let initialAllocations: any[] = [];
-    const offsets = [0, 0.5, 1.0, 1.5, 2.0];
+    // Phase 2: Max auto-allocation offset is +1.0 inch
+    const offsets = [0, 0.5, 1.0];
 
     layerRequirements.forEach((layer: any) => {
       let remainingWeight = layer.requiredWeight;
@@ -112,18 +116,34 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
       const reqGSM = Number(layer.gsm);
       const reqType = (layer.paperType || '').toLowerCase();
 
-      for (const offset of offsets) {
-        if (remainingWeight <= 0.1) break; 
-        const targetSize = reqSize + offset;
+      // Define match passes: First Exact, then Replacements
+      let matchPasses = [{ bf: reqBF, gsm: reqGSM }];
+      if (reqBF === 16 && reqGSM === 100) matchPasses.push({ bf: 18, gsm: 120 });
+      else if (reqBF === 18 && reqGSM === 120) matchPasses.push({ bf: 16, gsm: 100 });
+      else if (reqBF === 25 && reqGSM === 230) matchPasses.push({ bf: 28, gsm: 220 });
+      else if (reqBF === 28 && reqGSM === 220) matchPasses.push({ bf: 25, gsm: 230 });
 
-        let candidates = virtualReels.filter(r => {
-          if (r.virtualBalance <= 0) return false;
-          if ((r.paperType || '').toLowerCase() !== reqType) return false;
-          if (Number(r.bf) !== reqBF) return false;
-          if (Number(r.gsm) !== reqGSM) return false;
-          if (Number(r.reelSize) !== targetSize) return false;
-          return true;
-        });
+      for (const pass of matchPasses) {
+        if (remainingWeight <= 0.1) break;
+
+        for (const offset of offsets) {
+          if (remainingWeight <= 0.1) break; 
+          const targetSize = reqSize + offset;
+
+          let candidates = virtualReels.filter(r => {
+            if (r.virtualBalance <= 0) return false;
+            if ((r.paperType || '').toLowerCase() !== reqType) return false;
+            if (Number(r.bf) !== pass.bf) return false;
+            // GSM Interchangeability (220 & 230 are identical)
+            const rGSM = Number(r.gsm);
+            if (rGSM !== pass.gsm) {
+               if (!((pass.gsm === 220 && rGSM === 230) || (pass.gsm === 230 && rGSM === 220))) {
+                 return false;
+               }
+            }
+            if (Number(r.reelSize) !== targetSize) return false;
+            return true;
+          });
 
         candidates.sort((a, b) => {
           const ageA = parseReelDate(a.reelNumber);
@@ -150,8 +170,10 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
           });
           
           remainingWeight -= allocWeight;
-          candidate.virtualBalance -= allocWeight; 
+          // As per requirement, completely freeze reel for other layers once selected
+          candidate.virtualBalance = 0; 
         }
+      }
       }
 
       initialAllocations.push({
@@ -171,17 +193,60 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
     return totalAlloc >= (req.requiredWeight - 0.1);
   });
 
+  // Phase 3: Detect if any allocated reel is oversize (>0 excess)
+  const hasOversizeReel = useMemo(() => {
+    return allocations.some(alloc =>
+      alloc.reels.some((r: any) => (r.sizeExcess ?? 0) > 0)
+    );
+  }, [allocations]);
+
   const handleConfirm = () => {
-    setIsSubmitting(true);
-    const updatedLayers = [...(jobCard.productSnapshot.layers || [])];
-    
-    allocations.forEach(alloc => {
-      updatedLayers[alloc.layerIndex] = {
-        ...updatedLayers[alloc.layerIndex],
-        allocatedReels: alloc.reels
+    const updatedLayers = (jobCard.productSnapshot.layers || []).map((layer: any, idx: number) => {
+      const alloc = allocations.find(a => a.layerIndex === idx);
+      if (alloc) {
+        return {
+          ...layer,
+          allocatedReels: alloc.reels
+        };
+      }
+      return {
+        ...layer,
+        allocatedReels: []
       };
     });
-    onConfirm(updatedLayers);
+
+    // Phase 3: If oversize reels selected and NOT admin, require approval
+    if (hasOversizeReel && !isAdmin) {
+      setShowApprovalModal(true);
+      return;
+    }
+
+    // If admin, can proceed directly even with oversize
+    setIsSubmitting(true);
+    onConfirm(updatedLayers, false, undefined);
+  };
+
+  const handleApprovalSubmit = () => {
+    if (!approvalReason.trim() || approvalReason.trim().length < 10) {
+      alert('Kripya valid reason dein (minimum 10 characters).');
+      return;
+    }
+    const updatedLayers = (jobCard.productSnapshot.layers || []).map((layer: any, idx: number) => {
+      const alloc = allocations.find(a => a.layerIndex === idx);
+      if (alloc) {
+        return {
+          ...layer,
+          allocatedReels: alloc.reels
+        };
+      }
+      return {
+        ...layer,
+        allocatedReels: []
+      };
+    });
+    setIsSubmitting(true);
+    setShowApprovalModal(false);
+    onConfirm(updatedLayers, true, approvalReason.trim());
   };
 
   const openManualMatch = (layerIndex: number) => {
@@ -204,28 +269,8 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
     const rawReel = rawReels.find(r => r.id === reelId);
     if (!rawReel) return;
 
-    // 2. Check reserved weight globally minus what this job card already owns
-    const globalRes = rawReel.activeReservedWeight || 0;
-    const selfRes = selfReservedWeights[reelId] || 0;
-    const effectiveGlobalRes = globalRes - selfRes;
-    
-    // 3. Check reserved weight by other allocations in the UI
-    let usedInUIByOthers = 0;
-    allocations.forEach(a => {
-      a.reels.forEach((r: any) => {
-        if (r.reelId === reelId) {
-          usedInUIByOthers += r.allocatedWeight;
-        }
-      });
-    });
-
-    const allocList = allocations.find(a => a.layerIndex === layerIndex);
-    const oldReelAlloc = allocList?.reels.find((r: any) => r.reelId === reelId);
-    const oldWeight = oldReelAlloc ? oldReelAlloc.allocatedWeight : 0;
-    
-    usedInUIByOthers -= oldWeight; // Exclude its own old weight
-
-    const maxAvailable = Math.max(0, rawReel.currentBalance - effectiveGlobalRes - usedInUIByOthers);
+    // Calculate true available weight for the reel
+    const maxAvailable = Math.max(0, (rawReel.currentBalance || 0) - (rawReel.activeReservedWeight || 0) + (selfReservedWeights[rawReel.id] || 0));
 
     if (newWeight > maxAvailable) {
       alert("Invalid Allocation\n\nAllocated weight exceeds available reel weight.\nPlease reduce allocation or select another reel.");
@@ -268,10 +313,9 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
       });
     });
 
-    const globalRes = reel.activeReservedWeight || 0;
-    const selfRes = selfReservedWeights[reel.id] || 0;
-    const effectiveGlobalRes = globalRes - selfRes;
-    const actualAvailable = Math.max(0, reel.currentBalance - effectiveGlobalRes - usedInUI);
+    // Use the already-computed available weight from manualReelsList (which correctly handles strict freezing)
+    // reel.availableAllocationWeight = reel.currentBalance (if visible, it's fully available — strict freeze means it's either 100% ours or hidden)
+    const actualAvailable = Math.max(0, reel.availableAllocationWeight ?? reel.currentBalance);
 
     if (actualAvailable <= 0) {
       alert("This reel has no available weight left.");
@@ -323,26 +367,32 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
     });
 
     let results = rawReels
+      .map(r => {
+        const avail = Math.max(0, (r.currentBalance || 0) - (r.activeReservedWeight || 0) + (selfReservedWeights[r.id] || 0));
+        return { ...r, availableAllocationWeight: avail };
+      })
       .filter(r => {
-         // Hide zero balance reels from manual search unless explicitly searching by reel number
+         // 1. If already selected by ANY layer in the current UI, hide it completely (Strict Freezing)
+         if (uiReserved[r.id] && uiReserved[r.id] > 0) return false;
+
+         // 2. Hide zero balance reels from manual search unless explicitly searching by reel number
          if (manualSearch.reelNumber && String(r.reelNumber).toLowerCase().includes(manualSearch.reelNumber.toLowerCase())) return true;
-         return r.currentBalance > 0;
+         return r.availableAllocationWeight > 0;
       })
       .map(r => {
-      const globalRes = r.activeReservedWeight || 0;
-      const selfRes = selfReservedWeights[r.id] || 0;
-      const effectiveGlobalRes = globalRes - selfRes;
-      
-      const uiRes = uiReserved[r.id] || 0;
-      const avail = Math.max(0, r.currentBalance - effectiveGlobalRes - uiRes);
+      const avail = r.availableAllocationWeight;
       
       const reelSize = Number(r.reelSize);
       const reelBF = Number(r.bf);
       const reelGSM = Number(r.gsm);
       
-      const sizeDiff = Math.abs(reelSize - reqSize);
+      const sizeDiff = reelSize >= reqSize ? reelSize - reqSize : Infinity;
       const bfDiff = Math.abs(reelBF - reqBF);
-      const gsmDiff = Math.abs(reelGSM - reqGSM);
+      let gsmDiff = Math.abs(reelGSM - reqGSM);
+      // GSM Interchangeability
+      if ((reqGSM === 220 && reelGSM === 230) || (reqGSM === 230 && reelGSM === 220)) {
+        gsmDiff = 0;
+      }
       const isTypeMatch = (r.paperType || '').toLowerCase() === reqType;
       
       let matchScore = 100;
@@ -375,7 +425,7 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
         matchType,
         matchColor
       };
-    }).filter(r => r.availableAllocationWeight > 0);
+    }).filter(r => r.availableAllocationWeight > 0 && r.sizeDiff !== Infinity);
 
     // Apply Live Filters (partial matching)
     if (manualSearch.reelNumber) {
@@ -385,7 +435,7 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
       results = results.filter(r => String(r.paperType).toLowerCase().includes(manualSearch.paperType.toLowerCase()));
     }
     if (manualSearch.reelSize) {
-      results = results.filter(r => String(r.reelSize).includes(manualSearch.reelSize));
+      results = results.filter(r => String(r.reelSize).startsWith(manualSearch.reelSize));
     }
     if (manualSearch.bf) {
       results = results.filter(r => String(r.bf).includes(manualSearch.bf));
@@ -407,7 +457,15 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
 
   const isLoading = loadingReels;
 
+  // Pre-compute manual search modal weights
+  const manualReqLayer = manualLayerIndex !== null ? layerRequirements.find((l:any) => l.originalIndex === manualLayerIndex) : null;
+  const manualCurrentAlloc = manualLayerIndex !== null ? allocations.find(a => a.layerIndex === manualLayerIndex) : null;
+  const manualTotalAlloc = manualCurrentAlloc ? manualCurrentAlloc.reels.reduce((sum: number, r: any) => sum + (Number(r.allocatedWeight) || 0), 0) : 0;
+  const manualReqWt = manualReqLayer ? (Number(manualReqLayer.requiredWeight) || 0) : 0;
+  const manualBalWt = Math.max(0, manualReqWt - manualTotalAlloc);
+
   return (
+    <>
     <div className="flex flex-col h-full bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-auto overflow-hidden relative">
       <div className="flex items-center justify-between p-5 border-b border-border shrink-0 bg-blue-900 text-white">
         <div>
@@ -541,18 +599,33 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
         {/* Smart Manual Search Modal */}
         {showManualModal && manualLayerIndex !== null && (
           <div className="absolute inset-0 bg-white z-10 flex flex-col p-6 animate-in slide-in-from-bottom-10">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-2xl font-bold text-gray-900">Smart Manual Search</h3>
-                <p className="text-gray-500 mt-1">
-                  Layer: <span className="font-bold text-gray-700">{layerRequirements.find((l:any) => l.originalIndex === manualLayerIndex)?.layerName}</span> | 
-                  Required: <span className="font-bold text-gray-700">{layerRequirements.find((l:any) => l.originalIndex === manualLayerIndex)?.paperType} {layerRequirements.find((l:any) => l.originalIndex === manualLayerIndex)?.reqSize}" BF{layerRequirements.find((l:any) => l.originalIndex === manualLayerIndex)?.bf} GSM{layerRequirements.find((l:any) => l.originalIndex === manualLayerIndex)?.gsm}</span>
-                </p>
+                <div className="flex flex-col gap-1 mt-2">
+                  <p className="text-gray-600 text-sm">
+                    Layer: <span className="font-bold text-gray-800">{manualReqLayer?.layerName}</span> | 
+                    Required Specs: <span className="font-bold text-gray-800">{manualReqLayer?.paperType} {manualReqLayer?.reqSize}" BF{manualReqLayer?.bf} GSM{manualReqLayer?.gsm}</span>
+                  </p>
+                  <div className="flex gap-4 items-center bg-blue-50/50 border border-blue-100 rounded-lg p-2.5 mt-1 w-max">
+                    <div className="text-xs font-bold uppercase text-gray-500">
+                      Total Req: <span className="text-gray-900 text-sm ml-1">{manualReqWt.toFixed(1)} Kg</span>
+                    </div>
+                    <div className="w-px h-4 bg-blue-200"></div>
+                    <div className="text-xs font-bold uppercase text-gray-500">
+                      Allocated: <span className="text-green-700 text-sm ml-1">{manualTotalAlloc.toFixed(1)} Kg</span>
+                    </div>
+                    <div className="w-px h-4 bg-blue-200"></div>
+                    <div className="text-xs font-bold uppercase text-gray-500">
+                      Balance: <span className="text-orange-600 text-sm ml-1">{manualBalWt.toFixed(1)} Kg</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <button onClick={() => setShowManualModal(false)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+                <button onClick={() => setShowManualModal(false)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
             <div className="grid grid-cols-5 gap-4 mb-6">
               <div>
@@ -615,7 +688,7 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Size / BF / GSM</th>
                     <th className="px-4 py-3">Available Wt</th>
-                    <th className="px-4 py-3">Inward Rate</th>
+                    <th className="px-4 py-3">Rate</th>
                     <th className="px-4 py-3">Match %</th>
                     <th className="px-4 py-3 text-right">Action</th>
                   </tr>
@@ -656,27 +729,100 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
         )}
       </div>
 
-      <div className="p-4 border-t border-border flex justify-between bg-card shrink-0">
-        <button type="button" onClick={onBack} className="px-4 py-2 text-sm font-medium rounded-md border border-input bg-background hover:bg-secondary">
-          Cancel & Back
-        </button>
-        <div className="flex gap-3">
-          {isAdmin && onSkip && (
-            <button type="button" onClick={onSkip} className="px-4 py-2 text-sm font-medium rounded-md border border-red-200 text-red-600 hover:bg-red-50">
-              Admin: Skip Allocation
-            </button>
-          )}
-          <button 
-            type="button" 
-            onClick={handleConfirm}
-            disabled={isSubmitting || (!isFullyAllocated && !isAdmin)}
-            className="px-6 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 flex items-center shadow-lg shadow-green-600/20 transition-all"
-          >
-            {isSubmitting ? <CircleDashed className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-            Confirm & Save Job Card
+      <div className="p-4 border-t border-border flex flex-col gap-3 bg-card shrink-0">
+        {/* Phase 3: Oversize Warning Banner */}
+        {hasOversizeReel && !isAdmin && (
+          <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-4 py-2.5 text-sm text-orange-800">
+            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+            <span>Oversize reel selected. Saving will require <strong>Admin Approval</strong> before production can proceed.</span>
+          </div>
+        )}
+        {hasOversizeReel && isAdmin && (
+          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-sm text-blue-800">
+            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+            <span>Oversize reel selected. Admin override — you can save directly without approval.</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <button type="button" onClick={onBack} className="px-4 py-2 text-sm font-medium rounded-md border border-input bg-background hover:bg-secondary">
+            Cancel & Back
           </button>
+          <div className="flex gap-3">
+            {isAdmin && onSkip && (
+              <button type="button" onClick={onSkip} className="px-4 py-2 text-sm font-medium rounded-md border border-red-200 text-red-600 hover:bg-red-50">
+                Admin: Skip Allocation
+              </button>
+            )}
+            <button 
+              type="button" 
+              onClick={handleConfirm}
+              disabled={isSubmitting || (!isFullyAllocated && !isAdmin)}
+              className={cn(
+                "px-6 py-2 text-sm font-medium rounded-md text-white disabled:opacity-50 flex items-center shadow-lg transition-all",
+                hasOversizeReel && !isAdmin
+                  ? "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
+                  : "bg-green-600 hover:bg-green-700 shadow-green-600/20"
+              )}
+            >
+              {isSubmitting ? <CircleDashed className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+              {hasOversizeReel && !isAdmin ? 'Request Approval & Save' : 'Confirm & Save Job Card'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    {/* Phase 3: Approval Reason Modal */}
+    {showApprovalModal && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="bg-card rounded-2xl shadow-2xl border border-border w-full max-w-md animate-in zoom-in-95">
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 rounded-xl bg-orange-100">
+                <ShieldAlert className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Approval Required</h3>
+                <p className="text-sm text-muted-foreground">Oversize reel selected — Admin approval needed</p>
+              </div>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-5">
+              <p className="text-sm text-orange-800">
+                Aapne <strong>required size se badi</strong> ek ya adhik reels select ki hain. Isko save karne ke liye aapko Admin se approval leni hogi.
+                Approval milne tak yeh Job Card <strong>"Pending Approval"</strong> state me rahega.
+              </p>
+            </div>
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-foreground mb-2">Oversize Select Karne Ka Karan *</label>
+              <textarea
+                value={approvalReason}
+                onChange={(e) => setApprovalReason(e.target.value)}
+                placeholder="Explain the reason for selecting an oversize reel... (e.g. Correct size not available in stock)"
+                rows={4}
+                className="w-full text-sm rounded-lg border border-input px-3 py-2.5 bg-background focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">{approvalReason.trim().length}/10 min characters</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowApprovalModal(false); setIsSubmitting(false); }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-input bg-background hover:bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApprovalSubmit}
+                disabled={approvalReason.trim().length < 10}
+                className="flex-1 px-4 py-2.5 text-sm font-bold rounded-lg bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                Submit for Approval
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }

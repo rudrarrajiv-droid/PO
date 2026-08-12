@@ -1,7 +1,7 @@
 import xlsx from 'xlsx';
 
 const workbook = xlsx.readFile('../Storage_file/Inventory July 2026.xlsx');
-const groupStats = {};
+const groupStats: Record<string, { weight: number; count: number; sheets: Set<string> }> = {};
 
 for (const sheetName of workbook.SheetNames) {
   const sheet = workbook.Sheets[sheetName];
@@ -34,5 +34,6 @@ for (const sheetName of workbook.SheetNames) {
 }
 
 for (const [pt, stats] of Object.entries(groupStats)) {
-  console.log(`Type: ${pt.padEnd(10)} | Weight: ${String(stats.weight).padEnd(8)} | Reels: ${stats.count} | Sheets: ${Array.from(stats.sheets).join(', ')}`);
+  const s = stats as { weight: number; count: number; sheets: Set<string> };
+  console.log(`Type: ${pt.padEnd(10)} | Weight: ${String(s.weight).padEnd(8)} | Reels: ${s.count} | Sheets: ${Array.from(s.sheets).join(', ')}`);
 }

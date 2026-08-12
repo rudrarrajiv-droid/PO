@@ -11,6 +11,11 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import FinishGoods from './pages/FinishGoods';
 import FreightCharge from './pages/FreightCharge';
+import PurchaseOrders from './pages/PurchaseOrders';
+import Salary from './pages/Salary';
+import DC from './pages/DC';
+import MR from './pages/MR';
+import RM from './pages/RM';
 import AppLayout from './layouts/AppLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -37,11 +42,16 @@ function App() {
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="job-cards" element={<JobCards />} />
+                <Route path="purchase-orders" element={<PurchaseOrders />} />
                 <Route path="master-data" element={<MasterData />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="production" element={<ProductionTracker />} />
                 <Route path="finish-goods" element={<FinishGoods />} />
                 <Route path="freight" element={<FreightCharge />} />
+                <Route path="salary" element={<Salary />} />
+                <Route path="dc" element={<DC />} />
+                <Route path="mr" element={<MR />} />
+                <Route path="rm" element={<RM />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
             </Route>

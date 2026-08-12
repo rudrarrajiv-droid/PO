@@ -327,10 +327,16 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
       <div className="grid grid-cols-3 gap-8 mt-6 pt-4 text-center text-gray-800 font-bold uppercase text-[10px] break-inside-avoid relative bottom-0">
         <div className="border-t border-black pt-1">
           Prepared By<br/>
-          <span className="font-normal text-[11px] uppercase">{loggedInUser}</span>
+          <span className="font-normal text-[11px] uppercase">MR. SHUBHAM CHAUHAN</span>
         </div>
-        <div className="border-t border-black pt-1">Checked By</div>
-        <div className="border-t border-black pt-1">Production Head</div>
+        <div className="border-t border-black pt-1">
+          Checked By<br/>
+          <span className="font-normal text-[11px] uppercase">MR. JITENDER BALHARA</span>
+        </div>
+        <div className="border-t border-black pt-1">
+          Production Head<br/>
+          <span className="font-normal text-[11px] uppercase">MR. RAJ KUMAR</span>
+        </div>
       </div>
       
     </div>

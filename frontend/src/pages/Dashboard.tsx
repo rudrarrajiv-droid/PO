@@ -1,16 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Layers, Clock, Activity, CheckCircle2, AlertCircle } from 'lucide-react';
-import { queryDocuments } from '../lib/firebase/services';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Layers, Clock, Activity, CheckCircle2, AlertCircle, Snowflake, Unlock, ShieldAlert, ShieldCheck, ShieldX, Printer, X } from 'lucide-react';
+import { queryDocuments, updateDocument } from '../lib/firebase/services';
+import { useAuth } from '../contexts/AuthContext';
 import DashboardListModal from './dashboard/DashboardListModal';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import PrintableJobCard from './job-cards/PrintableJobCard';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
-
-import { collection, getDocs } from 'firebase/firestore';
+import { getAttendanceByMonth } from '../lib/firebase/salaryServices';
+import { getOutwardReelTransactionsByMonth } from '../lib/firebase/dcServices';
+import { collection, getDocs, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
 
 export default function Dashboard() {
+  const { hasRole } = useAuth();
+  const queryClient = useQueryClient();
+  const [unfreezingId, setUnfreezingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [viewingJobCard, setViewingJobCard] = useState<any | null>(null);
   const [modalState, setModalState] = useState<{ isOpen: boolean; title: string; filterKey: string }>({
     isOpen: false,
     title: '',
@@ -37,6 +45,89 @@ export default function Dashboard() {
     },
     refetchInterval: 10000
   });
+
+  const currentMonth = new Date().toISOString().substring(0, 7);
+  const { data: attendance = [] } = useQuery({
+    queryKey: ['dashboard-attendance', currentMonth],
+    queryFn: () => getAttendanceByMonth(currentMonth)
+  });
+  const { data: outwardReels = [] } = useQuery({
+    queryKey: ['dashboard-outward', currentMonth],
+    queryFn: () => getOutwardReelTransactionsByMonth(currentMonth)
+  });
+
+  const { data: frozenReels = [], isLoading: loadingFrozen, refetch: refetchFrozen } = useQuery({
+    queryKey: ['dashboard-frozen-reels'],
+    queryFn: async () => {
+      const q = query(collection(db, 'reels'), where('reservedForJC', '!=', null));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    refetchInterval: 10000,
+    enabled: hasRole('ADMIN')
+  });
+
+  // Phase 3: Pending Approvals query
+  const { data: pendingApprovals = [], refetch: refetchApprovals } = useQuery({
+    queryKey: ['dashboard-pending-approvals'],
+    queryFn: async () => {
+      const q = query(collection(db, 'jobCards'), where('status', '==', 'PENDING APPROVAL'));
+      const snap = await getDocs(q);
+      const now = Date.now();
+      return snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(jc => {
+          // Auto-expire check: skip expired ones
+          if (jc.approvalExpiresAt && new Date(jc.approvalExpiresAt).getTime() < now) {
+            // Fire-and-forget auto-expiry
+            updateDoc(doc(db, 'jobCards', jc.id), {
+              status: 'CANCELLED',
+              approvalStatus: 'EXPIRED',
+              updatedAt: serverTimestamp()
+            });
+            return false;
+          }
+          return true;
+        });
+    },
+    refetchInterval: 10000,
+    enabled: hasRole('ADMIN')
+  });
+
+  const handleUnfreeze = async (reelId: string) => {
+    try {
+      setUnfreezingId(reelId);
+      await updateDoc(doc(db, 'reels', reelId), {
+        reservedForJC: null,
+        updatedAt: serverTimestamp()
+      });
+      refetchFrozen();
+    } catch (err: any) {
+      alert('Failed to unfreeze: ' + err.message);
+    } finally {
+      setUnfreezingId(null);
+    }
+  };
+
+  // Phase 3: Approve or Reject oversize approval request
+  const handleApprovalAction = async (jcId: string, action: 'APPROVED' | 'REJECTED') => {
+    try {
+      setApprovingId(jcId + action);
+      const newStatus = action === 'APPROVED' ? 'PENDING' : 'CANCELLED';
+      await updateDoc(doc(db, 'jobCards', jcId), {
+        status: newStatus,
+        approvalStatus: action,
+        approvalReviewedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp()
+      });
+      refetchApprovals();
+      queryClient.invalidateQueries({ queryKey: ['dashboard-jobcards'] });
+    } catch (err: any) {
+      alert('Failed to process: ' + err.message);
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const stats = useMemo(() => {
     const total = jobCards.length;
@@ -69,8 +160,8 @@ export default function Dashboard() {
     }
   };
 
-  // Chart 1: Production Output Trend
-  const productionTrendData = useMemo(() => {
+  // Chart 1: Conversion Cost Trend
+  const conversionTrendData = useMemo(() => {
     const days = trendMode === 'weekly' ? 7 : 30;
     const pastDays = Array.from({ length: days }, (_, i) => {
       const d = new Date();
@@ -79,23 +170,24 @@ export default function Dashboard() {
     }).reverse();
 
     return pastDays.map(dateStr => {
-      const completedOnDate = stats.completed.filter(jc => {
-        if (!jc.completedAt) return false;
-        return jc.completedAt.startsWith(dateStr);
-      }).length;
+      const dailyAtt = attendance.filter(a => a.date === dateStr);
+      const dailyTx = outwardReels.filter(tx => tx.date && tx.date.startsWith(dateStr));
       
-      const createdOnDate = jobCards.filter(jc => {
-        const createdAt = jc.createdAt?.toDate?.()?.toISOString() || new Date(jc.date).toISOString();
-        return createdAt.startsWith(dateStr);
-      }).length;
-
+      const manpower = dailyAtt.reduce((acc, rec) => acc + (rec.perDayAmount || 0) + (rec.otAmount || 0) + (rec.refreshment || 0), 0);
+      const weight = dailyTx.reduce((acc, tx) => acc + (tx.quantity || 0), 0);
+      
       return {
-        name: dateStr.substring(5), // e.g. "08-01"
-        Completed: completedOnDate,
-        Created: createdOnDate
+        name: dateStr.substring(5), // MM-DD
+        Cost: weight > 0 ? Number((manpower / weight).toFixed(2)) : 0
       };
     });
-  }, [stats.completed, jobCards, trendMode]);
+  }, [attendance, outwardReels, trendMode]);
+
+  const currentConversionCost = useMemo(() => {
+    const totalManpowerCost = attendance.reduce((acc, rec) => acc + (rec.perDayAmount || 0) + (rec.otAmount || 0) + (rec.refreshment || 0), 0);
+    const totalWeight = outwardReels.reduce((acc, tx) => acc + (tx.quantity || 0), 0);
+    return totalWeight > 0 ? (totalManpowerCost / totalWeight).toFixed(2) : '0.00';
+  }, [attendance, outwardReels]);
 
   // Chart 2: On-Time vs Delayed
   const performanceData = useMemo(() => {
@@ -195,6 +287,113 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {hasRole('ADMIN') && frozenReels.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center">
+            <Snowflake className="w-5 h-5 mr-2 text-blue-500" />
+            Frozen Reels (Reserved for Active/Pending Job Cards)
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {frozenReels.map((reel: any) => (
+              <div key={reel.id} className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl flex flex-col justify-between shadow-sm relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 text-blue-100/50 pointer-events-none">
+                   <Snowflake className="w-24 h-24" />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Reel No</p>
+                      <p className="font-bold text-blue-900">{reel.reelNumber}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Weight</p>
+                      <p className="font-bold text-foreground">{reel.currentBalance} Kg</p>
+                    </div>
+                  </div>
+                  <p className="text-xs mb-3">
+                    Reserved For JC: <span className="font-semibold text-primary">{jobCards.find((jc: any) => jc.id === reel.reservedForJC)?.jobCardNo || reel.reservedForJC}</span>
+                  </p>
+                  <button 
+                    onClick={() => handleUnfreeze(reel.id)}
+                    disabled={unfreezingId === reel.id}
+                    className="w-full flex items-center justify-center text-xs font-bold bg-white border border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white transition-colors py-2 rounded-md"
+                  >
+                    {unfreezingId === reel.id ? 'Unfreezing...' : <><Unlock className="w-3 h-3 mr-1.5" /> Force Unfreeze</>}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Phase 3: Pending Approvals Widget (Admin Only) */}
+      {hasRole('ADMIN') && pendingApprovals.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center">
+            <ShieldAlert className="w-5 h-5 mr-2 text-orange-500" />
+            Pending Approvals — Oversize Reel Requests
+            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700">{pendingApprovals.length}</span>
+          </h2>
+          <div className="flex flex-col gap-3">
+            {pendingApprovals.map((jc: any) => {
+              const requestedAt = jc.approvalRequestedAt ? new Date(jc.approvalRequestedAt) : null;
+              const expiresAt = jc.approvalExpiresAt ? new Date(jc.approvalExpiresAt) : null;
+              const hoursLeft = expiresAt ? Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / 3600000)) : null;
+              return (
+                <div key={jc.id} className="bg-orange-50/60 border border-orange-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-foreground text-sm">JC #{jc.jobCardNo}</span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700">Oversize</span>
+                    </div>
+                    <p className="text-sm text-foreground font-medium truncate">{jc.productSnapshot?.productName || 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Requested by: <span className="font-semibold text-foreground">{jc.approvalRequestedBy || 'Unknown'}</span>
+                      {requestedAt && <> · {formatDistanceToNow(requestedAt, { addSuffix: true })}</>}
+                    </p>
+                    <div className="mt-2 bg-white border border-orange-100 rounded-lg p-2.5">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Reason Given:</p>
+                      <p className="text-sm text-foreground">{jc.approvalReason}</p>
+                    </div>
+                    {hoursLeft !== null && (
+                      <p className={cn("text-xs mt-2 font-semibold", hoursLeft < 6 ? "text-red-600" : "text-orange-600")}>
+                        ⏱ Expires in: {hoursLeft}h
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => setViewingJobCard(jc)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
+                    >
+                      <Printer className="w-4 h-4" />
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleApprovalAction(jc.id, 'REJECTED')}
+                      disabled={approvingId === jc.id + 'REJECTED'}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold bg-white border border-red-200 text-red-700 hover:bg-red-600 hover:text-white transition-colors"
+                    >
+                      <ShieldX className="w-4 h-4" />
+                      {approvingId === jc.id + 'REJECTED' ? '...' : 'Reject'}
+                    </button>
+                    <button
+                      onClick={() => handleApprovalAction(jc.id, 'APPROVED')}
+                      disabled={approvingId === jc.id + 'APPROVED'}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      {approvingId === jc.id + 'APPROVED' ? '...' : 'Approve'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       
       {/* Charts & Activity Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[400px]">
@@ -202,7 +401,10 @@ export default function Dashboard() {
         {/* Main Chart */}
         <div className="bg-card border border-border shadow-sm rounded-xl p-6 flex flex-col lg:col-span-2">
            <div className="flex justify-between items-center mb-6">
-             <h3 className="font-semibold text-foreground">Production Output Trend</h3>
+             <div>
+               <h3 className="font-semibold text-foreground">Conversion Cost Trend</h3>
+               <p className="text-xs text-muted-foreground mt-1">Current MTD Avg: <span className="font-bold text-red-600">₹{currentConversionCost} / kg</span></p>
+             </div>
              <div className="flex bg-muted/50 p-1 rounded-lg border border-border">
                <button 
                  onClick={() => setTrendMode('weekly')}
@@ -220,15 +422,23 @@ export default function Dashboard() {
            </div>
            <div className="flex-1 w-full min-h-[250px]">
              <ResponsiveContainer width="100%" height="100%">
-               <BarChart data={productionTrendData}>
+               <AreaChart data={conversionTrendData}>
+                 <defs>
+                   <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                   </linearGradient>
+                 </defs>
                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
-                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-                 <Tooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                 <Bar dataKey="Created" fill="#93c5fd" radius={[4, 4, 0, 0]} />
-                 <Bar dataKey="Completed" fill="#22c55e" radius={[4, 4, 0, 0]} />
-               </BarChart>
+                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `₹${val}`} />
+                 <Tooltip 
+                   cursor={{ stroke: '#ef4444', strokeWidth: 1, strokeDasharray: '3 3' }} 
+                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                   formatter={(value: any) => [`₹${value}`, 'Cost/Kg']}
+                 />
+                 <Area type="monotone" dataKey="Cost" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorCost)" />
+               </AreaChart>
              </ResponsiveContainer>
            </div>
         </div>
@@ -313,6 +523,59 @@ export default function Dashboard() {
           jobCards={getFilteredJobs()}
           onClose={() => setModalState({ isOpen: false, title: '', filterKey: '' })}
         />
+      )}
+
+      {viewingJobCard && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col h-[90vh]">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">View Job Card</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const printContent = document.getElementById('print-job-card');
+                    if (printContent) {
+                      const printWindow = window.open('', '', 'width=900,height=600');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Print Job Card - ${viewingJobCard.jobCardNo}</title>
+                              <script src="https://cdn.tailwindcss.com"></script>
+                            </head>
+                            <body class="bg-white p-8">
+                              ${printContent.innerHTML}
+                              <script>
+                                setTimeout(() => {
+                                  window.print();
+                                  window.close();
+                                }, 500);
+                              </script>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                      }
+                    }
+                  }}
+                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print
+                </button>
+                <button
+                  onClick={() => setViewingJobCard(null)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-100" id="print-job-card">
+              <PrintableJobCard jobCard={viewingJobCard} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

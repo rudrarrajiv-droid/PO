@@ -160,8 +160,8 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
           reelNumber: row.reelNo.toUpperCase(),
           supplierName: data.supplierName,
           manufacturerName: data.manufacturerName,
-          weight: Number(row.weight),
-          currentBalance: Number(row.weight),
+          weight: Math.round(Number(row.weight)),
+          currentBalance: Math.round(Number(row.weight)),
           paperType: row.paperType,
           reelSize: Number(row.size),
           bf: row.bf,
@@ -181,8 +181,8 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
           reelId: reelDoc.id,
           reelNumber: row.reelNo.toUpperCase(),
           type: 'INWARD',
-          quantity: Number(row.weight),
-          remainingBalance: Number(row.weight),
+          quantity: Math.round(Number(row.weight)),
+          remainingBalance: Math.round(Number(row.weight)),
           performedBy: user?.name || 'System',
           date: new Date().toISOString(),
           createdAt: timestamp,
@@ -301,7 +301,7 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
                 />
 
                 <input 
-                  type="number" step="0.1" 
+                  type="number" step="0.01" 
                   {...register(`rows.${idx}.rate` as const)} 
                   defaultValue={field.rate}
                   className={inputCls} 
@@ -310,7 +310,7 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
 
                 <input 
                   id={`weight-${idx}`}
-                  type="number" step="0.1" 
+                  type="number" step="1" 
                   {...register(`rows.${idx}.weight` as const)} 
                   defaultValue={field.weight}
                   className={inputCls + " font-bold border-primary/30"} 
@@ -340,11 +340,11 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
             </div>
             <div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Weight</div>
-              <div className="text-xl font-bold text-primary">{totalWeight.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">Kg</span></div>
+              <div className="text-xl font-bold text-primary">{Math.round(totalWeight)} <span className="text-sm font-normal text-muted-foreground">Kg</span></div>
             </div>
             <div className="pl-8 border-l border-border/50">
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Value</div>
-              <div className="text-xl font-bold text-green-600">₹{totalValue.toFixed(2)}</div>
+              <div className="text-xl font-bold text-green-600">₹{Math.round(totalValue)}</div>
             </div>
           </div>
 

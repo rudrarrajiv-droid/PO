@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Box, Lock, Mail } from 'lucide-react';
 import { authenticate } from '../lib/auth/users';
+import { createSession } from '../lib/firebase/authSessionServices';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -24,8 +25,16 @@ export default function Login() {
     const user = authenticate(email, password);
     
     if (user) {
-      login(user);
-      navigate('/dashboard');
+      try {
+        const sessionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+        const deviceInfo = navigator.userAgent;
+        await createSession(user.id, sessionId, deviceInfo);
+        login(user, sessionId);
+        navigate('/dashboard');
+      } catch (err) {
+        console.error("Failed to create session:", err);
+        setError('Failed to establish a secure session.');
+      }
     } else {
       setError('Invalid email or password');
     }

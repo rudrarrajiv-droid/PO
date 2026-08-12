@@ -1,12 +1,53 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Download, Database, PackageSearch, AlertCircle } from 'lucide-react';
-import { queryDocuments, createDocument } from '../lib/firebase/services';
+import React, { useState, useRef, useEffect } from 'react';
+import { Settings as SettingsIcon, Download, Database, PackageSearch, AlertCircle, Upload, MonitorSmartphone, LogOut, Loader2 } from 'lucide-react';
+import { queryDocuments, createDocument, updateDocument } from '../lib/firebase/services';
+import { useAuth } from '../contexts/AuthContext';
+import { getActiveSessions, deleteAllOtherSessions, type UserSession } from '../lib/firebase/authSessionServices';
+import * as xlsx from 'xlsx';
 import seedData from '../data/seedData.json';
 
 export default function Settings() {
+  const { hasRole, user, sessionId } = useAuth();
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [importTarget, setImportTarget] = useState('products');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  
+  const [activeSessions, setActiveSessions] = useState<UserSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      loadSessions();
+    }
+  }, [user]);
+
+  const loadSessions = async () => {
+    try {
+      if (user) {
+        const sessions = await getActiveSessions(user.id);
+        setActiveSessions(sessions);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const handleLogoutOtherDevices = async () => {
+    if (!user || !sessionId) return;
+    if (!confirm('Are you sure you want to log out from all other devices?')) return;
+    
+    try {
+      await deleteAllOtherSessions(user.id, sessionId);
+      alert('Successfully logged out from all other devices.');
+      loadSessions();
+    } catch (err) {
+      alert('Failed to log out other devices.');
+    }
+  };
 
   const handleImportLegacyData = async () => {
     if (!confirm('Are you sure you want to import legacy master data? This will add hundreds of records.')) return;
@@ -134,6 +175,80 @@ export default function Settings() {
     }
   };
 
+  // Unflatten nested objects (e.g. 'layers_0_gsm' -> layers: [{gsm: ...}])
+  const unflattenObject = (data: any) => {
+    const result: any = {};
+    for (const key in data) {
+      if (!data.hasOwnProperty(key)) continue;
+      const keys = key.split('_');
+      let current = result;
+      for (let i = 0; i < keys.length; i++) {
+        let k = keys[i];
+        const isArrayIndex = !isNaN(Number(keys[i + 1]));
+        if (i === keys.length - 1) {
+          current[k] = data[key];
+        } else {
+          current[k] = current[k] || (isArrayIndex ? [] : {});
+          current = current[k];
+        }
+      }
+    }
+    return result;
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!confirm(`Are you sure you want to upload and sync ${file.name} to ${importTarget === 'products' ? 'Master Data' : 'Reel Inventory'}? This may overwrite existing data.`)) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+    setImportProgress(0);
+    
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = xlsx.read(buffer, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData: any[] = xlsx.utils.sheet_to_json(firstSheet);
+
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        const unflattened = unflattenObject(row);
+        
+        // Remove any undefined or empty strings if necessary, or just rely on Firebase to store them
+        const docId = unflattened.id;
+        
+        if (docId) {
+          // Exists, update it
+          // Avoid overwriting the ID itself inside the document
+          const { id, ...updateData } = unflattened;
+          try {
+            await updateDocument(importTarget, docId, updateData, 'System/CSV-Import');
+          } catch (err: any) {
+             // If update fails because doc doesn't exist, create it
+             await createDocument(importTarget, updateData, 'System/CSV-Import');
+          }
+        } else {
+          // No ID provided, create new
+          await createDocument(importTarget, unflattened, 'System/CSV-Import');
+        }
+        
+        setImportProgress(Math.round(((i + 1) / jsonData.length) * 100));
+      }
+      
+      alert('CSV Import Complete! Successfully synced data.');
+    } catch (err: any) {
+      alert('Import failed: ' + err.message);
+    } finally {
+      setIsImporting(false);
+      setImportProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="h-full flex flex-col p-6 max-w-5xl mx-auto w-full gap-8">
       <div>
@@ -146,7 +261,62 @@ export default function Settings() {
 
       <div className="grid gap-6">
         
+        {/* Active Sessions Section */}
+        <section className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
+          <div className="p-5 border-b border-border bg-secondary/30 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold flex items-center">
+                <MonitorSmartphone className="w-5 h-5 mr-2 text-primary" />
+                Active Sessions
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">Manage devices where your account is currently logged in.</p>
+            </div>
+            {activeSessions.length > 1 && (
+              <button
+                onClick={handleLogoutOtherDevices}
+                className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 font-medium rounded-md text-sm flex items-center transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout Other Devices
+              </button>
+            )}
+          </div>
+          
+          <div className="p-6">
+            {isLoadingSessions ? (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeSessions.map((session) => {
+                  const isCurrent = session.id === sessionId;
+                  const lastActiveDate = session.lastActive?.toDate ? session.lastActive.toDate() : new Date();
+                  
+                  return (
+                    <div key={session.id} className={`flex items-center justify-between p-4 rounded-lg border ${isCurrent ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-foreground">
+                            {session.deviceInfo.includes('Mobile') ? 'Mobile Device' : 'Desktop / Laptop'}
+                          </h3>
+                          {isCurrent && (
+                            <span className="px-2 py-0.5 bg-primary text-primary-foreground text-xs rounded-full font-medium">This Device</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{session.deviceInfo}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Last active: {lastActiveDate.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Data Management Section */}
+        {hasRole('ADMIN') && (
         <section className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
           <div className="p-5 border-b border-border bg-secondary/30">
             <h2 className="text-lg font-bold flex items-center">
@@ -214,6 +384,50 @@ export default function Settings() {
             <p><strong>Note:</strong> These backups are raw CSV extracts suitable for offline viewing in Excel. Do not manually edit and re-upload these files unless instructed.</p>
           </div>
         </section>
+        )}
+
+        {hasRole('ADMIN') && (
+        <section className="bg-card border border-border shadow-sm rounded-xl overflow-hidden mt-6">
+          <div className="p-5 border-b border-border bg-secondary/30">
+            <h2 className="text-lg font-bold flex items-center">
+              <Upload className="w-5 h-5 mr-2 text-primary" />
+              Upload & Sync CSV Data
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">Upload a modified CSV to create or update existing records. Keep the <strong>id</strong> column intact to update.</p>
+          </div>
+          <div className="p-6 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <select 
+                value={importTarget}
+                onChange={(e) => setImportTarget(e.target.value)}
+                className="flex-1 px-3 py-2 border border-input bg-background rounded-md"
+              >
+                <option value="products">Master Data (Products)</option>
+                <option value="reels">Reel Inventory</option>
+              </select>
+              <input 
+                type="file"
+                accept=".csv"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isImporting ? `Uploading... ${importProgress}%` : 'Select & Upload CSV'}
+              </button>
+            </div>
+            {isImporting && (
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${importProgress}%` }}></div>
+              </div>
+            )}
+          </div>
+        </section>
+        )}
 
         {/* Developer / Admin Section */}
         <section className="bg-card border border-border shadow-sm rounded-xl overflow-hidden mt-6">
