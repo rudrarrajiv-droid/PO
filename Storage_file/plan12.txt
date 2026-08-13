@@ -1,0 +1,563 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 3 — DATABASE FOUNDATION ONLY
+
+PHASE 1 AND PHASE 2 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 3.
+
+============================================================
+🚨 CRITICAL DATA SAFETY
+============================================================
+
+EXISTING APPLICATION DATA MUST REMAIN 100% SAFE.
+
+DO NOT:
+
+- Delete any existing collection
+- Delete any existing document
+- Rename any existing collection
+- Rename any existing field
+- Reset Firestore
+- Clear Firestore
+- Run cleanup scripts
+- Run destructive migrations
+- Modify existing Job Card records
+- Modify existing Master Data records
+- Modify existing Reel Inventory records
+- Modify existing Finish Goods records
+- Modify existing Tracker records
+- Modify existing Freight records
+- Modify existing Dashboard data
+- Modify authentication data
+- Import the Excel file
+- Deploy
+
+The new PO database structure must be COMPLETELY ISOLATED from
+existing business data.
+
+If there is any risk of affecting existing data:
+
+STOP immediately.
+
+============================================================
+PHASE 3 OBJECTIVE
+============================================================
+
+Create ONLY the database foundation required for PO Management.
+
+This phase must establish the structure required to store:
+
+PO MASTER DATA
+
+and
+
+PO IN/OUT TRANSACTIONS.
+
+DO NOT implement:
+
+- PO creation UI logic
+- Search
+- Filters
+- Dashboard integration
+- Excel import
+- Excel export
+- PDF export
+- Job Card integration
+- Monthly reports
+
+Those belong to later phases.
+
+============================================================
+STEP 1 — INSPECT EXISTING FIRESTORE ARCHITECTURE
+============================================================
+
+Before creating anything:
+
+Inspect the existing Firebase/Firestore implementation.
+
+Understand:
+
+- Firebase initialization
+- Firestore initialization
+- Existing service/repository pattern
+- Existing collection naming convention
+- Existing document ID strategy
+- Existing timestamp handling
+- Existing user/audit fields
+
+Reuse the existing architecture where appropriate.
+
+Do NOT redesign the database layer.
+
+============================================================
+STEP 2 — PO MASTER COLLECTION
+============================================================
+
+Create ONE isolated collection for PO master records.
+
+Use the project's existing collection naming convention.
+
+Recommended logical name:
+
+purchaseOrders
+
+If the project already has an established naming convention,
+follow that convention instead.
+
+Each PO record must support these EXACT business fields:
+
+1. PO NO.
+2. PO DT
+3. DELIVERY DATE
+4. CUSTOMER NAME
+5. CONSIGNEE
+6. ARTWORK NO.
+7. ITEM NAME
+8. SIZE
+9. RATE
+10. OPN QTY
+11. IN QTY
+12. OUT QTY
+13. CLOSING BAL
+14. VALUE
+
+Do not add unnecessary business fields.
+
+Technical metadata may be stored if the existing application requires it,
+for example:
+
+createdAt
+updatedAt
+createdBy
+updatedBy
+
+These technical fields must not appear as unnecessary columns in the
+main PO table.
+
+============================================================
+STEP 3 — FIELD MEANING
+============================================================
+
+PO NO.
+
+String.
+
+PO DT
+
+Date/Timestamp.
+
+DELIVERY DATE
+
+Date/Timestamp.
+
+CUSTOMER NAME
+
+String.
+
+CONSIGNEE
+
+String.
+
+ARTWORK NO.
+
+String.
+
+ITEM NAME
+
+String.
+
+SIZE
+
+String.
+
+RATE
+
+Numeric.
+
+OPN QTY
+
+Numeric.
+
+IN QTY
+
+Numeric.
+
+OUT QTY
+
+Numeric.
+
+CLOSING BAL
+
+Numeric.
+
+VALUE
+
+Numeric.
+
+Do NOT store numeric quantities as strings.
+
+Do NOT store Rate as formatted currency text.
+
+============================================================
+STEP 4 — TRANSACTION COLLECTION
+============================================================
+
+Create a separate isolated collection for PO transactions.
+
+Logical name:
+
+poTransactions
+
+Follow existing project naming conventions if different.
+
+Every transaction must support:
+
+Transaction Type
+
+PO Reference
+
+Date
+
+Quantity
+
+Customer
+
+Item
+
+User
+
+Remarks
+
+Transaction Type must support:
+
+IN
+
+OUT
+
+Do not create separate collections for every customer.
+
+Do not create separate collections for every PO.
+
+============================================================
+STEP 5 — PO ↔ TRANSACTION RELATION
+============================================================
+
+Every transaction must reference the related PO.
+
+Preferred relationship:
+
+poId / PO document reference
+
+Do not rely only on PO Number as the internal relationship if the
+existing architecture supports document IDs.
+
+PO Number can still be stored as a searchable/display value if appropriate.
+
+The important rule is:
+
+Every IN/OUT transaction must be traceable back to exactly one PO.
+
+============================================================
+STEP 6 — DATA ISOLATION
+============================================================
+
+The new PO collections must not overwrite or reuse collections belonging
+to:
+
+Job Cards
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+Users
+
+Dashboard
+
+Do NOT store PO transactions inside an unrelated existing collection
+just to avoid creating a new collection.
+
+============================================================
+STEP 7 — BALANCE LOGIC FOUNDATION
+============================================================
+
+Do NOT build the UI calculation yet.
+
+However, establish the correct business rule for future implementation:
+
+CLOSING BAL
+=
+OPN QTY + TOTAL IN - TOTAL OUT
+
+Important:
+
+IN QTY and OUT QTY are transaction-derived values.
+
+They must NOT become manually editable numbers that can contradict
+transaction history.
+
+The future system must be able to calculate:
+
+Total IN
+Total OUT
+Closing Balance
+
+from transaction records.
+
+Do not duplicate conflicting sources of truth.
+
+============================================================
+STEP 8 — VALUE LOGIC
+============================================================
+
+Do NOT invent a new Value formula.
+
+The final VALUE calculation must follow the actual PO business logic
+from the supplied workbook.
+
+For this phase:
+
+Store the Rate and quantities correctly.
+
+If the existing Excel workbook clearly establishes the VALUE formula,
+document it for the next phase.
+
+If it is unclear:
+
+REPORT IT.
+
+Do NOT silently invent a formula.
+
+============================================================
+STEP 9 — VALIDATION FOUNDATION
+============================================================
+
+Prepare validation rules for the PO data model.
+
+At minimum:
+
+PO NO. → required
+
+PO DT → required
+
+DELIVERY DATE → supported date
+
+CUSTOMER NAME → required
+
+CONSIGNEE → supported
+
+ARTWORK NO. → supported
+
+ITEM NAME → required
+
+SIZE → supported
+
+RATE → numeric
+
+OPN QTY → numeric
+
+IN QTY → numeric
+
+OUT QTY → numeric
+
+CLOSING BAL → system calculated
+
+VALUE → system calculated
+
+Do NOT build the Add PO form yet.
+
+============================================================
+STEP 10 — DO NOT CREATE TEST BUSINESS DATA
+============================================================
+
+Do NOT insert fake PO records.
+
+Do NOT insert fake customers.
+
+Do NOT insert fake transactions.
+
+Do NOT copy data from PO JULY 2026.xlsx.
+
+The database should contain ZERO new business records after this phase.
+
+Only the required schema/structure should exist.
+
+============================================================
+STEP 11 — SECURITY / ACCESS
+============================================================
+
+Inspect the existing Firestore security architecture.
+
+If new rules are required for the PO collections:
+
+DO NOT blindly overwrite existing rules.
+
+Prepare the minimum required change.
+
+If changing production security rules is risky:
+
+STOP and report the exact change required.
+
+Do not weaken existing security.
+
+Do not make PO data publicly readable.
+
+============================================================
+STEP 12 — BUILD / TYPE CHECK
+============================================================
+
+Run the project's existing build/type-check process.
+
+Fix ONLY errors directly caused by Phase 3.
+
+Do NOT fix unrelated existing issues.
+
+Do NOT perform refactoring.
+
+============================================================
+STEP 13 — REGRESSION TEST
+============================================================
+
+Verify that existing modules still work:
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+Especially verify:
+
+Existing Firestore collections are untouched.
+
+============================================================
+DATA SAFETY VERIFICATION
+============================================================
+
+Before completing this phase confirm:
+
+Existing collections deleted: NO
+
+Existing documents deleted: NO
+
+Existing collections renamed: NO
+
+Existing fields renamed: NO
+
+Existing business data modified: NO
+
+Existing Job Card data modified: NO
+
+Existing Reel Inventory modified: NO
+
+Existing Finish Goods modified: NO
+
+Existing Master Data modified: NO
+
+Existing Tracker modified: NO
+
+Existing Freight data modified: NO
+
+Existing Dashboard data modified: NO
+
+Excel imported: NO
+
+Fake business records created: NO
+
+Deployment performed: NO
+
+============================================================
+PHASE 3 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 3 — PO Database Foundation
+
+NEW COLLECTIONS CREATED:
+
+FIELDS CREATED:
+
+TRANSACTION STRUCTURE:
+
+DATABASE RULES CHANGED:
+YES / NO
+
+EXISTING COLLECTIONS TOUCHED:
+YES / NO
+
+EXISTING DATA MODIFIED:
+YES / NO
+
+FAKE DATA CREATED:
+YES / NO
+
+BUILD:
+
+TEST:
+
+REGRESSION:
+
+DATA SAFETY:
+
+ISSUES / RISKS:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 3 ENDS HERE.
+
+DO NOT START:
+
+PO CREATE FORM
+
+PO SAVE LOGIC
+
+PO SEARCH
+
+PO FILTER
+
+IN
+
+OUT
+
+DASHBOARD
+
+EXCEL IMPORT
+
+EXPORT
+
+JOB CARD INTEGRATION
+
+MONTHLY REPORTING
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 4"

@@ -1,0 +1,568 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 4 — CREATE NEW PO + SAVE
+
+PHASE 1, PHASE 2 AND PHASE 3 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 4.
+
+============================================================
+🚨 CRITICAL DATA SAFETY
+============================================================
+
+EXISTING APPLICATION DATA MUST REMAIN 100% SAFE.
+
+DO NOT MODIFY:
+
+- Existing Job Card data
+- Existing Master Data
+- Existing Reel Inventory
+- Existing Finish Goods
+- Existing Tracker
+- Existing Freight data
+- Existing Dashboard data
+- Existing Login/Auth data
+
+DO NOT DELETE ANYTHING.
+
+DO NOT RENAME ANYTHING.
+
+DO NOT RESET FIRESTORE.
+
+DO NOT RUN MIGRATIONS.
+
+DO NOT IMPORT THE EXCEL FILE.
+
+DO NOT DEPLOY.
+
+This phase may ONLY create NEW PO records when the user explicitly
+submits the Add PO form.
+
+If any implementation could affect existing data:
+
+STOP and report it.
+
+============================================================
+PHASE 4 OBJECTIVE
+============================================================
+
+Implement ONLY:
+
+ADD NEW PO
+
+The user must be able to:
+
+1. Open Add New PO.
+2. Enter PO information.
+3. Validate the information.
+4. Save one PO record.
+5. See the newly created PO in the existing PO page.
+
+Do NOT implement:
+
+- PO Search
+- PO Filters
+- IN
+- OUT
+- PO History
+- Dashboard integration
+- Excel Import
+- Excel Export
+- PDF
+- Job Card integration
+- Monthly reports
+
+Those belong to later phases.
+
+============================================================
+STEP 1 — ADD NEW PO UI
+============================================================
+
+Use the existing PO Management page and existing application UI
+components.
+
+The Add New PO form must contain ONLY these business fields:
+
+1. PO NO.
+2. PO DT
+3. DELIVERY DATE
+4. CUSTOMER NAME
+5. CONSIGNEE
+6. ARTWORK NO.
+7. ITEM NAME
+8. SIZE
+9. RATE
+10. OPN QTY
+
+Do NOT add unnecessary fields.
+
+IN QTY:
+
+Do NOT ask the user to manually enter it during PO creation.
+
+For a newly created PO:
+
+IN QTY starts at 0.
+
+OUT QTY starts at 0.
+
+CLOSING BAL is calculated by the system.
+
+VALUE is calculated by the approved PO business logic.
+
+============================================================
+STEP 2 — FIELD BEHAVIOUR
+============================================================
+
+PO NO.
+
+Required.
+
+Treat it as a business identifier.
+
+Do not automatically generate a random PO number unless the existing
+business workflow explicitly requires automatic generation.
+
+PO DT
+
+Required date.
+
+DELIVERY DATE
+
+Required date unless the existing source/business process clearly allows
+it to be blank.
+
+CUSTOMER NAME
+
+Required.
+
+CONSIGNEE
+
+Optional unless existing business rules require it.
+
+ARTWORK NO.
+
+Optional unless the source/business process requires it.
+
+ITEM NAME
+
+Required.
+
+SIZE
+
+Optional unless the source/business process requires it.
+
+RATE
+
+Numeric.
+
+Must not accept invalid text.
+
+OPN QTY
+
+Numeric.
+
+Must be greater than or equal to 0.
+
+============================================================
+STEP 3 — FORM VALIDATION
+============================================================
+
+Before saving:
+
+Validate required fields.
+
+If a required field is missing:
+
+Do NOT save.
+
+Show a clear field-level validation message.
+
+Do NOT use vague messages such as:
+
+"Something went wrong."
+
+Tell the user exactly what is missing.
+
+Examples:
+
+"PO No. is required."
+
+"PO Date is required."
+
+"Customer Name is required."
+
+"Item Name is required."
+
+"Opening Quantity must be a valid number."
+
+============================================================
+STEP 4 — NUMERIC SAFETY
+============================================================
+
+RATE must be stored as a numeric value.
+
+OPN QTY must be stored as a numeric value.
+
+Do NOT store them as formatted strings.
+
+Do NOT save:
+
+"₹500"
+
+as the numeric value.
+
+Store the appropriate numeric representation.
+
+Formatting should happen only in the UI.
+
+============================================================
+STEP 5 — INITIAL PO VALUES
+============================================================
+
+When a new PO is created:
+
+IN QTY = 0
+
+OUT QTY = 0
+
+CLOSING BAL must initially represent:
+
+OPN QTY + 0 - 0
+
+Therefore:
+
+CLOSING BAL = OPN QTY
+
+Do NOT ask the user to type Closing Balance.
+
+============================================================
+STEP 6 — VALUE
+============================================================
+
+Use the approved PO Value business logic identified during earlier
+inspection.
+
+Do NOT invent a different formula.
+
+If the previously inspected workbook/business logic clearly establishes:
+
+VALUE = CLOSING BAL × RATE
+
+then use that approved logic.
+
+If the earlier inspection found ambiguity about VALUE:
+
+STOP before implementing this calculation and report the ambiguity.
+
+Do NOT silently guess.
+
+============================================================
+STEP 7 — SAVE
+============================================================
+
+When the user clicks:
+
+SAVE PO
+
+perform validation first.
+
+If validation passes:
+
+Create ONE new PO document in the PO collection created in Phase 3.
+
+Do not create duplicate PO documents from a single click.
+
+Prevent accidental double submission if the user clicks Save multiple
+times quickly.
+
+Use the existing project's established Firestore service/repository
+pattern.
+
+Do NOT create a second database architecture.
+
+============================================================
+STEP 8 — SAVE METADATA
+============================================================
+
+If the existing project already uses audit metadata, follow that
+existing pattern.
+
+Where applicable:
+
+createdAt
+updatedAt
+createdBy
+updatedBy
+
+Do not expose technical metadata as visible business columns.
+
+Do not store credentials or secrets.
+
+============================================================
+STEP 9 — AFTER SUCCESSFUL SAVE
+============================================================
+
+After successful save:
+
+Show a clear success message.
+
+Close the Add PO form/modal if that matches the existing application
+pattern.
+
+Refresh/reload the PO table using the existing page architecture.
+
+The newly created PO should be visible.
+
+Do NOT implement search or filtering in this phase.
+
+============================================================
+STEP 10 — FAILURE HANDLING
+============================================================
+
+If Firestore save fails:
+
+DO NOT create partial data.
+
+Show a clear error.
+
+Do NOT pretend the PO was saved.
+
+Do NOT retry indefinitely.
+
+If the save result is uncertain:
+
+STOP and inspect the database state before attempting another save.
+
+This is important to prevent duplicate POs.
+
+============================================================
+STEP 11 — DUPLICATE PO PROTECTION
+============================================================
+
+Before saving, inspect the existing PO database structure and the
+business meaning of PO Number.
+
+If PO Number is intended to be unique:
+
+prevent duplicate PO Numbers according to the safest implementation
+supported by the existing architecture.
+
+Do NOT silently overwrite an existing PO.
+
+If duplicate behaviour is ambiguous:
+
+STOP and report it instead of guessing.
+
+============================================================
+STEP 12 — EXISTING PO TABLE
+============================================================
+
+Connect the existing Phase 2 PO table to display the newly saved PO.
+
+ONLY the minimum read required to confirm the newly created record may
+be implemented.
+
+Do NOT implement:
+
+Search
+
+Filters
+
+Pagination redesign
+
+IN
+
+OUT
+
+History
+
+Dashboard
+
+Import
+
+Export
+
+============================================================
+STEP 13 — TEST CASES
+============================================================
+
+Test Case 1:
+
+Enter valid PO data.
+
+Expected:
+
+PO saves successfully.
+
+Test Case 2:
+
+Leave PO No. blank.
+
+Expected:
+
+Save blocked.
+
+Test Case 3:
+
+Leave Customer blank.
+
+Expected:
+
+Save blocked.
+
+Test Case 4:
+
+Leave Item Name blank.
+
+Expected:
+
+Save blocked.
+
+Test Case 5:
+
+Enter invalid Rate.
+
+Expected:
+
+Save blocked.
+
+Test Case 6:
+
+Enter invalid Opening Quantity.
+
+Expected:
+
+Save blocked.
+
+Test Case 7:
+
+Click Save repeatedly/quickly.
+
+Expected:
+
+Only ONE PO record is created.
+
+Test Case 8:
+
+Create a valid PO.
+
+Expected initial values:
+
+IN QTY = 0
+
+OUT QTY = 0
+
+CLOSING BAL = OPN QTY
+
+VALUE = according to approved business formula.
+
+============================================================
+STEP 14 — DATA SAFETY TEST
+============================================================
+
+After testing, verify:
+
+Existing Job Cards unchanged.
+
+Existing Master Data unchanged.
+
+Existing Reel Inventory unchanged.
+
+Existing Finish Goods unchanged.
+
+Existing Tracker unchanged.
+
+Existing Freight unchanged.
+
+Existing Dashboard data unchanged.
+
+Existing Login/Auth unchanged.
+
+Existing PO records created before this phase unchanged.
+
+No collection deleted.
+
+No document deleted.
+
+No unrelated document overwritten.
+
+============================================================
+STEP 15 — BUILD
+============================================================
+
+Run the existing project's normal build/type-check.
+
+Fix ONLY errors introduced by Phase 4.
+
+Do NOT fix unrelated existing issues.
+
+Do NOT refactor unrelated code.
+
+============================================================
+PHASE 4 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 4 — Create New PO + Save
+
+FILES MODIFIED:
+
+COMPONENTS MODIFIED:
+
+DATABASE COLLECTION USED:
+
+FIELDS SAVED:
+
+PO CREATED SUCCESSFULLY:
+YES / NO
+
+VALIDATION TESTS:
+
+DUPLICATE PROTECTION:
+
+BUILD:
+
+REGRESSION:
+
+DATA SAFETY:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 4 ENDS HERE.
+
+DO NOT START:
+
+PO SEARCH
+
+PO FILTERS
+
+IN
+
+OUT
+
+PO HISTORY
+
+DASHBOARD INTEGRATION
+
+EXCEL IMPORT
+
+EXPORT
+
+JOB CARD INTEGRATION
+
+MONTHLY REPORTING
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 5"

@@ -1,0 +1,137 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 19 — NEW CHANGE REQUEST / CONTROLLED UPDATE
+
+IMPORTANT:
+
+PHASE 1 TO PHASE 18 HAVE ALREADY BEEN COMPLETED.
+
+PHASE 18 WAS THE FINAL REGRESSION PHASE.
+
+DO NOT ASSUME THAT ANY NEW FEATURE OR CHANGE IS REQUIRED.
+
+DO NOT MODIFY ANYTHING YET.
+
+============================================================
+🚨 EXTREME DATA SAFETY
+============================================================
+
+THE EXISTING APPLICATION IS CURRENTLY WORKING.
+
+ALL EXISTING DATA MUST REMAIN 100% SAFE.
+
+DO NOT:
+
+- Delete data
+- Modify existing PO data
+- Modify existing PO transactions
+- Modify Job Cards
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Dashboard
+- Modify Login/Auth
+- Change database structure
+- Change existing business logic
+- Change UI/design
+- Refactor existing code
+- Deploy
+
+unless the exact change is explicitly described in the user's
+Phase 19 requirement.
+
+============================================================
+PHASE 19 RULE
+============================================================
+
+DO NOT START CODING YET.
+
+FIRST:
+
+1. Read the complete Phase 19 requirement provided by the user.
+2. Identify ONLY the requested changes.
+3. Identify which existing files/components/modules will be affected.
+4. Identify whether database changes are required.
+5. Identify whether existing data could be affected.
+6. Identify any possible conflict with existing functionality.
+
+Then STOP.
+
+============================================================
+NO ASSUMPTIONS
+============================================================
+
+Do not guess missing requirements.
+
+Do not add "helpful" features.
+
+Do not redesign existing functionality.
+
+Do not change anything that is not explicitly requested.
+
+If any requirement is ambiguous:
+
+STOP and report the ambiguity.
+
+Do not resolve it by assumption.
+
+============================================================
+DATA PROTECTION
+============================================================
+
+Before making any modification:
+
+Create/use the project's existing safe backup/version-control mechanism
+if already available.
+
+DO NOT reset Firestore.
+
+DO NOT recreate collections.
+
+DO NOT migrate existing data automatically.
+
+DO NOT overwrite existing records.
+
+============================================================
+PHASE 19 EXECUTION RULE
+============================================================
+
+After analysis, provide:
+
+PHASE 19 IMPACT REPORT
+
+EXACT REQUIREMENTS IDENTIFIED:
+
+FILES/COMPONENTS THAT MAY BE MODIFIED:
+
+DATABASE IMPACT:
+
+EXISTING DATA IMPACT:
+
+EXISTING MODULES AT RISK:
+
+PROPOSED MINIMAL CHANGE:
+
+DATA SAFETY PLAN:
+
+TEST PLAN:
+
+Then STOP.
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+DO NOT WRITE CODE.
+
+DO NOT MODIFY FILES.
+
+DO NOT MODIFY DATABASE.
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL AFTER THE IMPACT REPORT.
+
+Only continue when I explicitly approve the Phase 19 plan.

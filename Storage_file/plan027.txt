@@ -1,0 +1,643 @@
+# PACKWELL ERP
+# PHASE 27 — MR / RM CROSS-MODULE INTEGRATION
+
+PHASE 1 TO PHASE 26 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 27.
+
+============================================================
+🚨 EXTREME DATA SAFETY — HIGHEST PRIORITY
+============================================================
+
+THIS PHASE MAY CONNECT MR/RM WITH OTHER MODULES ONLY WHERE THE
+RELATIONSHIP WAS EXPLICITLY CONFIRMED IN PHASE 23.
+
+DO NOT INVENT ANY CONNECTION.
+
+DO NOT ASSUME ANY STOCK MOVEMENT.
+
+DO NOT ASSUME ANY ACCOUNTING EFFECT.
+
+DO NOT ASSUME ANY PO EFFECT.
+
+DO NOT ASSUME ANY JOB CARD EFFECT.
+
+DO NOT MODIFY UNRELATED MODULES.
+
+DO NOT DELETE EXISTING DATA.
+
+DO NOT RESET FIRESTORE.
+
+DO NOT MIGRATE EXISTING DATA.
+
+DO NOT DEPLOY.
+
+============================================================
+SOURCE OF TRUTH
+============================================================
+
+USE ONLY:
+
+PHASE 23 — CONFIRMED MR/RM RELATIONSHIPS
+
+PHASE 24 — MR BUSINESS LOGIC
+
+PHASE 25 — RM BUSINESS LOGIC
+
+PHASE 26 — MR/RM WORKFLOW
+
+NO OTHER ASSUMPTION IS ALLOWED.
+
+If a relationship was not explicitly confirmed:
+
+DO NOT IMPLEMENT IT.
+
+============================================================
+PHASE 27 OBJECTIVE
+============================================================
+
+Implement ONLY the confirmed cross-module relationships for:
+
+MR
+
+RM
+
+Possible connected modules may include:
+
+PO
+
+CUSTOMER
+
+SUPPLIER
+
+JOB CARD
+
+MASTER DATA
+
+REEL INVENTORY
+
+FINISH GOODS
+
+DC
+
+SALARY & CONT.
+
+DASHBOARD
+
+But only if Phase 23 explicitly confirmed that relationship.
+
+============================================================
+STEP 1 — BUILD RELATIONSHIP MAP
+============================================================
+
+Before coding, create an internal relationship map:
+
+SOURCE
+→ TARGET
+→ REFERENCE FIELD
+→ TRIGGER
+→ DATA AFFECTED
+→ EXPECTED RESULT
+
+Example format:
+
+MR
+→ Supplier
+→ Supplier ID
+→ MR creation
+→ Supplier reference
+→ display supplier information
+
+DO NOT use this example as actual business logic.
+
+Only use relationships confirmed in Phase 23.
+
+============================================================
+STEP 2 — MR INTEGRATION
+============================================================
+
+For every confirmed MR relationship:
+
+Implement the minimum required integration.
+
+Verify:
+
+- Correct reference
+- Correct source record
+- Correct target record
+- Correct trigger
+- Correct data direction
+- No duplicate writes
+
+Do not modify unrelated fields.
+
+============================================================
+STEP 3 — RM INTEGRATION
+============================================================
+
+For every confirmed RM relationship:
+
+Implement the minimum required integration.
+
+Verify:
+
+- Correct reference
+- Correct source record
+- Correct target record
+- Correct trigger
+- Correct data direction
+- No duplicate writes
+
+Do not modify unrelated fields.
+
+============================================================
+STEP 4 — REFERENCE INTEGRITY
+============================================================
+
+If MR/RM stores a reference to another record:
+
+use the existing application's approved identifier/reference pattern.
+
+Do NOT use display names as identifiers if the application already has
+stable document IDs.
+
+Do not duplicate complete records unnecessarily.
+
+============================================================
+STEP 5 — CROSS-MODULE WRITE PROTECTION
+============================================================
+
+A MR/RM action must write to another module ONLY when explicitly
+confirmed.
+
+For every cross-module write verify:
+
+WHY
+
+WHEN
+
+WHAT FIELD
+
+WHAT VALUE
+
+WHICH RECORD
+
+If any answer is not clearly defined:
+
+DO NOT PERFORM THE WRITE.
+
+============================================================
+STEP 6 — STOCK / INVENTORY INTEGRATION
+============================================================
+
+CRITICAL:
+
+DO NOT modify:
+
+Reel Inventory
+
+Finish Goods
+
+RM inventory
+
+MR inventory
+
+or any stock quantity
+
+unless Phase 23 explicitly confirmed the exact stock movement.
+
+If stock movement was confirmed:
+
+implement ONLY:
+
+approved source
+
+approved target
+
+approved quantity
+
+approved trigger
+
+approved reversal/cancellation behaviour
+
+Do not change actual stock for preview-only actions.
+
+============================================================
+STEP 7 — PO INTEGRATION
+============================================================
+
+Connect MR/RM with PO ONLY if explicitly confirmed.
+
+If confirmed:
+
+verify the correct PO reference.
+
+Do not modify PO quantities automatically unless that exact behaviour
+was explicitly defined.
+
+Do not create fake PO transactions.
+
+Do not change PO balances through assumptions.
+
+============================================================
+STEP 8 — JOB CARD INTEGRATION
+============================================================
+
+Connect MR/RM with Job Card ONLY if explicitly confirmed.
+
+If confirmed:
+
+use the approved reference.
+
+Do not change Job Card quantities/status/reels unless explicitly
+defined.
+
+Do not create duplicate Job Cards.
+
+============================================================
+STEP 9 — MASTER DATA INTEGRATION
+============================================================
+
+If MR/RM uses Master Data:
+
+reference existing Master Data.
+
+Do NOT automatically create Master Data records unless that exact
+behaviour was explicitly approved.
+
+If a referenced Master Data record does not exist:
+
+show a clear validation error.
+
+Do not silently create one.
+
+============================================================
+STEP 10 — CUSTOMER / SUPPLIER INTEGRATION
+============================================================
+
+If explicitly confirmed:
+
+allow selection from existing approved master records.
+
+Do not duplicate customer/supplier records.
+
+Do not silently rename them.
+
+Do not create new master records from free text unless explicitly
+approved.
+
+============================================================
+STEP 11 — STATUS-BASED INTEGRATION
+============================================================
+
+Cross-module effects must happen ONLY at the exact workflow state
+confirmed in Phase 23/26.
+
+Do not perform external updates merely because:
+
+form opened
+
+form saved
+
+record viewed
+
+record edited
+
+preview displayed
+
+unless explicitly required.
+
+============================================================
+STEP 12 — CANCEL / REVERSAL
+============================================================
+
+If Phase 23 explicitly defined reversal behaviour:
+
+implement it exactly.
+
+Example structure:
+
+ACTION
+→ ORIGINAL EFFECT
+→ CANCEL
+→ REVERSAL
+
+Do NOT use this example as actual logic.
+
+If reversal behaviour was not defined:
+
+DO NOT invent automatic reversal.
+
+============================================================
+STEP 13 — DUPLICATE CROSS-MODULE ACTION PROTECTION
+============================================================
+
+Prevent:
+
+double-click
+
+refresh
+
+retry
+
+network retry
+
+duplicate submission
+
+from creating duplicate cross-module effects.
+
+Every confirmed integration must be idempotent where the architecture
+supports it.
+
+============================================================
+STEP 14 — ERROR / PARTIAL FAILURE
+============================================================
+
+If MR/RM operation succeeds but a required cross-module operation fails:
+
+DO NOT show false success.
+
+Do not leave the user believing the complete workflow succeeded.
+
+Use the safest existing transaction/batch mechanism available.
+
+If atomic rollback is supported:
+
+rollback only changes belonging to the current operation.
+
+If rollback is not safely possible:
+
+STOP and report the exact partial state.
+
+NEVER modify unrelated historical data to repair it.
+
+============================================================
+STEP 15 — MR INTEGRATION TEST
+============================================================
+
+For every confirmed MR integration test:
+
+1. Create/perform the approved MR action.
+2. Verify MR result.
+3. Verify target module result.
+4. Verify reference.
+5. Verify quantity/value if applicable.
+6. Verify no unrelated module changed.
+7. Refresh.
+8. Verify persistence.
+
+============================================================
+STEP 16 — RM INTEGRATION TEST
+============================================================
+
+For every confirmed RM integration test:
+
+1. Create/perform the approved RM action.
+2. Verify RM result.
+3. Verify target module result.
+4. Verify reference.
+5. Verify quantity/value if applicable.
+6. Verify no unrelated module changed.
+7. Refresh.
+8. Verify persistence.
+
+============================================================
+STEP 17 — NEGATIVE TEST
+============================================================
+
+Test invalid scenarios:
+
+Missing reference
+
+Invalid reference
+
+Deleted/nonexistent reference
+
+Invalid quantity
+
+Invalid status
+
+Duplicate action
+
+Cancelled record
+
+Completed record
+
+Use only scenarios relevant to confirmed Phase 23/26 rules.
+
+Expected:
+
+Operation is safely blocked.
+
+No partial unintended write.
+
+============================================================
+STEP 18 — EXISTING DATA PROTECTION
+============================================================
+
+Before integration testing, identify representative records from:
+
+PO
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+MR
+
+RM
+
+After testing verify that records not involved in the operation remain
+unchanged.
+
+============================================================
+STEP 19 — DASHBOARD PROTECTION
+============================================================
+
+Do NOT manually modify Dashboard data.
+
+If Phase 23 explicitly confirmed MR/RM Dashboard integration:
+
+implement ONLY that confirmed calculation.
+
+Otherwise:
+
+Dashboard remains unchanged.
+
+============================================================
+STEP 20 — CROSS-MODULE REGRESSION
+============================================================
+
+Verify:
+
+Dashboard
+
+PO Management
+
+PO History
+
+Customer Summary
+
+Monthly PO View
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+Salary & Cont.
+
+DC
+
+MR
+
+RM
+
+Settings
+
+Login
+
+Logout
+
+continue working.
+
+============================================================
+STEP 21 — DATABASE SAFETY AUDIT
+============================================================
+
+Report:
+
+MR records created:
+
+RM records created:
+
+Cross-module records created:
+
+Cross-module records updated:
+
+Cross-module records deleted:
+
+Unexpected writes:
+
+Expected result:
+
+Unexpected writes = 0
+
+Unexpected deletes = 0
+
+============================================================
+STEP 22 — BUILD
+============================================================
+
+Run:
+
+BUILD
+
+TYPE-CHECK
+
+LINT
+
+Fix ONLY Phase 27 issues.
+
+Do not refactor unrelated code.
+
+============================================================
+PHASE 27 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 27 — MR/RM Cross-Module Integration
+
+CONFIRMED RELATIONSHIPS:
+
+MR INTEGRATIONS IMPLEMENTED:
+
+RM INTEGRATIONS IMPLEMENTED:
+
+STOCK/INVENTORY EFFECT:
+
+PO EFFECT:
+
+JOB CARD EFFECT:
+
+MASTER DATA EFFECT:
+
+CUSTOMER/SUPPLIER EFFECT:
+
+DASHBOARD EFFECT:
+
+CROSS-MODULE WRITES:
+
+CROSS-MODULE UPDATES:
+
+CROSS-MODULE DELETES:
+
+DUPLICATE PROTECTION:
+
+REVERSAL/CANCELLATION:
+
+PARTIAL FAILURE HANDLING:
+
+TEST RESULTS:
+
+DATABASE SAFETY:
+
+EXISTING DATA MODIFIED:
+NO / DETAILS
+
+BUILD:
+
+REGRESSION:
+
+UNDEFINED RELATIONSHIPS NOT IMPLEMENTED:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 27 ENDS HERE.
+
+DO NOT IMPLEMENT:
+
+MR/RM REPORTS
+
+MR/RM DASHBOARD FEATURES
+
+NEW BUSINESS LOGIC
+
+NEW INTEGRATIONS
+
+UNDEFINED STOCK MOVEMENTS
+
+UNDEFINED ACCOUNTING
+
+UNDEFINED AUTOMATION
+
+DO NOT DEPLOY.
+
+STOP AFTER THE PHASE 27 REPORT.
+
+WAIT FOR EXPLICIT APPROVAL.
+
+Only continue when I say:
+
+"CONTINUE PHASE 28"

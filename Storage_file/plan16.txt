@@ -1,0 +1,621 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 7 — OUT TRANSACTION ONLY
+
+PHASE 1 TO PHASE 6 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 7.
+
+============================================================
+🚨 CRITICAL DATA SAFETY
+============================================================
+
+THIS PHASE MUST ONLY IMPLEMENT PO OUT TRANSACTION.
+
+DO NOT MODIFY:
+
+- Existing Job Card data
+- Master Data
+- Reel Inventory
+- Finish Goods
+- Tracker
+- Freight
+- Login/Auth
+- Existing unrelated Dashboard data
+
+DO NOT DELETE ANYTHING.
+
+DO NOT RENAME ANYTHING.
+
+DO NOT RESET FIRESTORE.
+
+DO NOT RUN MIGRATIONS.
+
+DO NOT IMPORT EXCEL.
+
+DO NOT EXPORT DATA.
+
+DO NOT DEPLOY.
+
+If any implementation creates a risk to existing data:
+
+STOP IMMEDIATELY.
+
+Explain the risk.
+
+WAIT FOR APPROVAL.
+
+============================================================
+PHASE 7 OBJECTIVE
+============================================================
+
+Implement ONLY:
+
+PO OUT TRANSACTION
+
+The user must be able to record material going OUT against an existing PO.
+
+When an OUT transaction is created:
+
+1. Create one OUT transaction.
+2. Update total OUT quantity.
+3. Recalculate Closing Balance.
+4. Update Value according to the already approved PO logic.
+
+Do NOT change the PO master information.
+
+============================================================
+STEP 1 — OUT ACTION
+============================================================
+
+Add an OUT action to the existing PO interface.
+
+The action must operate against a selected existing PO.
+
+Do NOT create a separate OUT module/page.
+
+Do NOT redesign the PO page.
+
+============================================================
+STEP 2 — OUT FORM
+============================================================
+
+The OUT form must contain:
+
+DATE
+
+QUANTITY
+
+REMARKS
+
+Date:
+
+Required.
+
+Quantity:
+
+Required.
+
+Remarks:
+
+Optional.
+
+The selected PO information must appear as READ-ONLY:
+
+PO NO.
+
+CUSTOMER NAME
+
+CONSIGNEE
+
+ARTWORK NO.
+
+ITEM NAME
+
+OPN QTY
+
+CURRENT IN QTY
+
+CURRENT OUT QTY
+
+CURRENT CLOSING BAL
+
+The user must NOT manually edit these fields.
+
+============================================================
+STEP 3 — OUT QUANTITY VALIDATION
+============================================================
+
+OUT quantity must:
+
+- Be numeric
+- Be greater than 0
+- Reject negative numbers
+- Reject invalid text
+- Reject empty quantity
+
+Do not save invalid data.
+
+============================================================
+STEP 4 — AVAILABLE BALANCE
+============================================================
+
+Before saving OUT:
+
+Calculate the currently available PO quantity.
+
+Use:
+
+AVAILABLE BALANCE
+=
+OPN QTY + TOTAL IN - TOTAL OUT
+
+Example:
+
+OPN QTY = 1000
+
+TOTAL IN = 200
+
+TOTAL OUT = 100
+
+AVAILABLE BALANCE = 1100
+
+If user enters:
+
+OUT = 300
+
+then:
+
+New TOTAL OUT = 400
+
+New CLOSING BAL = 800
+
+============================================================
+STEP 5 — INSUFFICIENT BALANCE PROTECTION
+============================================================
+
+NEVER allow OUT quantity greater than available balance.
+
+Example:
+
+Available Balance = 500
+
+User enters:
+
+OUT = 600
+
+BLOCK THE TRANSACTION.
+
+Show clearly:
+
+INSUFFICIENT PO BALANCE
+
+Available:
+500
+
+Requested:
+600
+
+Short:
+100
+
+Do NOT save the transaction.
+
+Do NOT allow negative Closing Balance.
+
+============================================================
+STEP 6 — SAVE OUT TRANSACTION
+============================================================
+
+When user clicks:
+
+SAVE OUT
+
+Create ONE transaction in:
+
+poTransactions
+
+with:
+
+transactionType = OUT
+
+and the selected PO reference.
+
+Store:
+
+PO reference
+
+Date
+
+Quantity
+
+Customer
+
+Item
+
+User
+
+Remarks if provided
+
+Follow the existing project's audit/timestamp pattern.
+
+============================================================
+STEP 7 — DUPLICATE SUBMISSION PROTECTION
+============================================================
+
+If the user clicks SAVE OUT multiple times quickly:
+
+Only ONE intended transaction must be created.
+
+Prevent duplicate submission.
+
+Do NOT create duplicates and then delete them.
+
+============================================================
+STEP 8 — RECALCULATE OUT QTY
+============================================================
+
+OUT QTY must represent:
+
+SUM(all valid OUT transactions for that PO)
+
+Do not allow the user to manually overwrite total OUT QTY.
+
+============================================================
+STEP 9 — RECALCULATE CLOSING BALANCE
+============================================================
+
+Use:
+
+CLOSING BAL
+=
+OPN QTY + TOTAL IN - TOTAL OUT
+
+Example:
+
+OPN QTY = 1000
+
+IN = 500
+
+OUT = 300
+
+Expected:
+
+CLOSING BAL = 1200
+
+============================================================
+STEP 10 — VALUE
+============================================================
+
+Use the already approved PO VALUE calculation.
+
+Do NOT invent a new formula.
+
+Do NOT change Rate.
+
+Do NOT modify OPN QTY.
+
+If the approved calculation is based on:
+
+CLOSING BAL × RATE
+
+use that logic.
+
+If another previously approved calculation exists, preserve it.
+
+============================================================
+STEP 11 — TRANSACTION SAFETY
+============================================================
+
+The OUT operation must not leave the database in an inconsistent state.
+
+If saving the transaction and updating the related PO state cannot be
+safely handled using the existing architecture:
+
+STOP and report the issue.
+
+Do NOT create a partial transaction.
+
+Do NOT show success when the operation was not completed successfully.
+
+============================================================
+STEP 12 — MAIN PO TABLE
+============================================================
+
+After successful OUT:
+
+Immediately reflect:
+
+OUT QTY
+
+CLOSING BAL
+
+VALUE
+
+in the existing PO table.
+
+Do NOT reload unrelated application modules unnecessarily.
+
+============================================================
+STEP 13 — TEST CASES
+============================================================
+
+TEST 1
+
+PO:
+
+OPN QTY = 1000
+
+IN = 500
+
+OUT = 200
+
+Available:
+
+1300
+
+Enter OUT:
+
+300
+
+Expected:
+
+TOTAL OUT = 500
+
+CLOSING BAL = 1000
+
+------------------------------------------------------------
+
+TEST 2
+
+Available:
+
+500
+
+Enter OUT:
+
+500
+
+Expected:
+
+Transaction succeeds.
+
+Closing Balance becomes 0.
+
+------------------------------------------------------------
+
+TEST 3
+
+Available:
+
+500
+
+Enter OUT:
+
+501
+
+Expected:
+
+BLOCK.
+
+No OUT transaction created.
+
+------------------------------------------------------------
+
+TEST 4
+
+Enter:
+
+0
+
+Expected:
+
+BLOCK.
+
+------------------------------------------------------------
+
+TEST 5
+
+Enter:
+
+-100
+
+Expected:
+
+BLOCK.
+
+------------------------------------------------------------
+
+TEST 6
+
+Enter:
+
+ABC
+
+Expected:
+
+BLOCK.
+
+------------------------------------------------------------
+
+TEST 7
+
+Click SAVE OUT repeatedly.
+
+Expected:
+
+Only ONE transaction created.
+
+------------------------------------------------------------
+
+TEST 8
+
+Refresh the application.
+
+Expected:
+
+OUT QTY remains correct.
+
+Closing Balance remains correct.
+
+This confirms data is persisted correctly.
+
+============================================================
+STEP 14 — DATA SAFETY TEST
+============================================================
+
+After testing verify:
+
+PO master fields remain unchanged.
+
+PO NO unchanged.
+
+PO DT unchanged.
+
+DELIVERY DATE unchanged.
+
+CUSTOMER unchanged.
+
+CONSIGNEE unchanged.
+
+ARTWORK unchanged.
+
+ITEM unchanged.
+
+SIZE unchanged.
+
+RATE unchanged.
+
+OPN QTY unchanged.
+
+Only OUT-related information changed.
+
+Also verify:
+
+Job Card unchanged.
+
+Master Data unchanged.
+
+Reel Inventory unchanged.
+
+Finish Goods unchanged.
+
+Tracker unchanged.
+
+Freight unchanged.
+
+Login/Auth unchanged.
+
+============================================================
+STEP 15 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY errors caused by Phase 7.
+
+Do not refactor unrelated code.
+
+Do not fix unrelated warnings.
+
+============================================================
+STEP 16 — REGRESSION
+============================================================
+
+Verify:
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+still work normally.
+
+============================================================
+PHASE 7 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 7 — PO OUT Transaction
+
+FILES MODIFIED:
+
+COMPONENTS MODIFIED:
+
+DATABASE COLLECTION USED:
+
+TRANSACTION TYPE:
+OUT
+
+INSUFFICIENT BALANCE PROTECTION:
+PASS / FAIL
+
+DUPLICATE SUBMISSION PROTECTION:
+PASS / FAIL
+
+CLOSING BALANCE:
+PASS / FAIL
+
+VALUE:
+PASS / FAIL
+
+TEST RESULTS:
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 7 ENDS HERE.
+
+DO NOT START:
+
+PO HISTORY
+
+CUSTOMER SUMMARY
+
+DELIVERY STATUS
+
+DASHBOARD INTEGRATION
+
+MONTHLY VIEW
+
+JOB CARD INTEGRATION
+
+EXPORT
+
+EXCEL IMPORT
+
+FINAL REGRESSION
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 8"

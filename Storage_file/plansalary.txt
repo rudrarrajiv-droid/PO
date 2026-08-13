@@ -1,0 +1,644 @@
+# PACKWELL ERP
+# PHASE 19 — ADDITIONAL MODULE OPTIONS & FIELD STRUCTURE
+
+PHASE 1 TO PHASE 18 ARE COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 19.
+
+============================================================
+🚨 EXTREME DATA SAFETY — HIGHEST PRIORITY
+============================================================
+
+THE EXISTING APPLICATION IS WORKING.
+
+DO NOT BREAK, REMOVE, RESET, REPLACE OR REDESIGN ANY EXISTING MODULE.
+
+ABSOLUTELY DO NOT:
+
+- Delete existing data
+- Modify existing PO data
+- Modify PO IN/OUT transactions
+- Modify PO History
+- Modify Dashboard calculations
+- Modify Job Cards
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Login/Auth
+- Change existing business calculations
+- Change existing PO logic
+- Change existing UI unnecessarily
+- Reset Firestore
+- Delete collections
+- Rename existing collections
+- Migrate existing data
+- Deploy
+
+If there is even a 0.000001% possibility of existing data being affected:
+
+STOP IMMEDIATELY.
+
+============================================================
+PHASE 19 OBJECTIVE
+============================================================
+
+ADD ONLY THE STRUCTURE/OPTIONS FOR THESE FOUR ADDITIONAL MODULES:
+
+1. SALARY & CONT.
+2. DC
+3. MR
+4. RM
+
+IMPORTANT:
+
+SALARY & CONT. AND DC:
+
+Their module options/fields should be prepared according to the
+previously approved requirements.
+
+MR AND RM:
+
+ONLY PREPARE THEIR:
+
+- Navigation/menu options
+- Page structure
+- Basic field structure
+- Database/module foundation if required
+- Empty state
+- Placeholder UI
+
+DO NOT IMPLEMENT MR BUSINESS LOGIC.
+
+DO NOT IMPLEMENT RM BUSINESS LOGIC.
+
+MR AND RM LOGIC WILL BE PROVIDED AND IMPLEMENTED IN A FUTURE PHASE.
+
+============================================================
+STEP 1 — INSPECT EXISTING APPLICATION
+============================================================
+
+Before making changes:
+
+Inspect:
+
+- Sidebar
+- Routing
+- Existing module structure
+- Existing page/component architecture
+- Existing database/service architecture
+- Existing permissions
+- Existing UI/design system
+
+DO NOT modify anything during inspection.
+
+Reuse the existing architecture.
+
+Do not create a completely separate design system.
+
+============================================================
+STEP 2 — SIDEBAR OPTIONS
+============================================================
+
+Add the following options to the existing application navigation:
+
+SALARY & CONT.
+
+DC
+
+MR
+
+RM
+
+Keep the existing sidebar design.
+
+Do not move existing menu items unnecessarily.
+
+Do not remove existing menu items.
+
+Do not change the logo.
+
+Do not change the existing sidebar theme.
+
+============================================================
+STEP 3 — SALARY & CONT. PAGE
+============================================================
+
+Create the Salary & Cont. page using the existing application's design
+language.
+
+Use the already approved Salary & Cont. fields/structure from the
+previous PO-sheet requirement.
+
+IMPORTANT:
+
+Do not invent additional business fields.
+
+Do not implement calculations that were not already specified.
+
+The page must be:
+
+- Clean
+- Compact
+- Searchable where already required
+- Database-ready
+- Consistent with the existing application
+
+============================================================
+STEP 4 — DC PAGE
+============================================================
+
+Create the DC page using the existing application's design.
+
+Use the previously approved DC requirements/fields.
+
+Do not invent additional DC business logic.
+
+Do not connect DC to Job Card, PO, Finish Goods or other modules unless
+that connection was explicitly approved earlier.
+
+Only prepare the approved structure.
+
+============================================================
+STEP 5 — MR PAGE
+============================================================
+
+Create the MR page.
+
+IMPORTANT:
+
+MR BUSINESS LOGIC IS NOT BEING IMPLEMENTED IN PHASE 19.
+
+Only prepare:
+
+- Sidebar option
+- Route
+- Page
+- Page heading
+- Basic table/form structure
+- Fields that are explicitly available from the MR source sheet
+- Empty state
+- Database-ready structure if required
+
+DO NOT implement:
+
+- MR calculations
+- MR workflow
+- MR approval logic
+- MR stock movement
+- MR accounting logic
+- MR automatic calculations
+- MR integration with other modules
+
+Those will be implemented only after the MR logic is provided.
+
+============================================================
+STEP 6 — RM PAGE
+============================================================
+
+Create the RM page.
+
+IMPORTANT:
+
+RM BUSINESS LOGIC IS NOT BEING IMPLEMENTED IN PHASE 19.
+
+Only prepare:
+
+- Sidebar option
+- Route
+- Page
+- Page heading
+- Basic table/form structure
+- Fields that are explicitly available from the RM source sheet
+- Empty state
+- Database-ready structure if required
+
+DO NOT implement:
+
+- RM calculations
+- RM workflow
+- RM approval logic
+- RM stock movement
+- RM accounting logic
+- RM automatic calculations
+- RM integration with other modules
+
+Those will be implemented later.
+
+============================================================
+STEP 7 — SOURCE SHEET PROTECTION
+============================================================
+
+If the MR/RM source workbook is available in the project/workspace:
+
+READ ONLY.
+
+Do NOT modify:
+
+- Workbook
+- Sheets
+- Rows
+- Columns
+- Formulas
+- Formatting
+
+Use the source only to identify the actual fields.
+
+IMPORTANT:
+
+DO NOT INVENT MR/RM FIELDS.
+
+If a field cannot be clearly identified from the source:
+
+mark it as:
+
+NOT YET DEFINED
+
+Do not guess.
+
+============================================================
+STEP 8 — DATABASE SAFETY
+============================================================
+
+Do NOT create unnecessary production collections.
+
+Before creating any database structure:
+
+inspect the existing architecture.
+
+If the module pages can safely operate as UI-only placeholders for now:
+
+prefer that approach.
+
+If database collections are required for the approved Salary & Cont.
+or DC structure:
+
+create ONLY the minimum required structure.
+
+For MR/RM:
+
+do NOT create production business data.
+
+No sample/fake records.
+
+No dummy customer data.
+
+No fake transactions.
+
+============================================================
+STEP 9 — EMPTY STATES
+============================================================
+
+MR and RM should clearly show an empty state such as:
+
+"No MR records available yet."
+
+"No RM records available yet."
+
+Do NOT populate fake data.
+
+Salary & Cont. and DC should also show a clean empty state if no data
+exists.
+
+============================================================
+STEP 10 — ACCESS PROTECTION
+============================================================
+
+Follow the existing authentication/authorization architecture.
+
+Do not change login logic.
+
+Do not expose new pages publicly if existing application pages are
+protected.
+
+Do not expose:
+
+Passwords
+
+Tokens
+
+API keys
+
+Secrets
+
+============================================================
+STEP 11 — EXISTING MODULE PROTECTION
+============================================================
+
+After adding the four options verify:
+
+Dashboard works.
+
+PO works.
+
+Job Card works.
+
+Master Data works.
+
+Reel Inventory works.
+
+Finish Goods works.
+
+Tracker works.
+
+Freight works.
+
+Settings works.
+
+Login works.
+
+Logout works.
+
+No existing route is broken.
+
+============================================================
+STEP 12 — UI REQUIREMENT
+============================================================
+
+The four new modules must visually belong to the existing application.
+
+Use:
+
+- Existing typography
+- Existing buttons
+- Existing tables
+- Existing forms
+- Existing spacing
+- Existing modal/dialog system
+- Existing responsive behaviour
+
+Do NOT introduce an unrelated visual theme.
+
+Do NOT redesign the whole application.
+
+============================================================
+STEP 13 — NO BUSINESS LOGIC EXPANSION
+============================================================
+
+THIS IS EXTREMELY IMPORTANT.
+
+Do NOT automatically connect:
+
+MR ↔ PO
+
+RM ↔ PO
+
+MR ↔ Job Card
+
+RM ↔ Job Card
+
+MR ↔ Inventory
+
+RM ↔ Inventory
+
+MR ↔ Finish Goods
+
+RM ↔ Finish Goods
+
+unless explicitly specified.
+
+Phase 19 is ONLY structural preparation.
+
+============================================================
+STEP 14 — TESTING
+============================================================
+
+TEST 1:
+
+Open Salary & Cont.
+
+Expected:
+
+Page opens correctly.
+
+------------------------------------------------------------
+
+TEST 2:
+
+Open DC.
+
+Expected:
+
+Page opens correctly.
+
+------------------------------------------------------------
+
+TEST 3:
+
+Open MR.
+
+Expected:
+
+Page opens correctly with prepared structure.
+
+No MR business calculation executes.
+
+------------------------------------------------------------
+
+TEST 4:
+
+Open RM.
+
+Expected:
+
+Page opens correctly with prepared structure.
+
+No RM business calculation executes.
+
+------------------------------------------------------------
+
+TEST 5:
+
+Refresh browser.
+
+Expected:
+
+All four routes remain available.
+
+------------------------------------------------------------
+
+TEST 6:
+
+Open existing PO page.
+
+Expected:
+
+No change/breakage.
+
+------------------------------------------------------------
+
+TEST 7:
+
+Open Job Card.
+
+Expected:
+
+No change/breakage.
+
+------------------------------------------------------------
+
+TEST 8:
+
+Open Reel Inventory.
+
+Expected:
+
+No change/breakage.
+
+------------------------------------------------------------
+
+TEST 9:
+
+Open Finish Goods.
+
+Expected:
+
+No change/breakage.
+
+============================================================
+STEP 15 — DATA SAFETY TEST
+============================================================
+
+Verify:
+
+Existing PO data unchanged.
+
+PO transactions unchanged.
+
+Job Card data unchanged.
+
+Master Data unchanged.
+
+Reel Inventory unchanged.
+
+Finish Goods unchanged.
+
+Tracker unchanged.
+
+Freight unchanged.
+
+Dashboard unchanged.
+
+Login/Auth unchanged.
+
+No existing records deleted.
+
+No existing records overwritten.
+
+No fake records created.
+
+============================================================
+STEP 16 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY errors caused by Phase 19.
+
+Do NOT refactor unrelated code.
+
+Do NOT modify unrelated warnings.
+
+============================================================
+STEP 17 — REGRESSION
+============================================================
+
+Verify:
+
+Dashboard
+
+PO Management
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+Salary & Cont.
+
+DC
+
+MR
+
+RM
+
+all open correctly.
+
+============================================================
+PHASE 19 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 19 — Salary & Cont. / DC / MR / RM Structure
+
+SALARY & CONT.:
+READY / NOT READY
+
+DC:
+READY / NOT READY
+
+MR:
+STRUCTURE READY / NOT READY
+
+RM:
+STRUCTURE READY / NOT READY
+
+MR BUSINESS LOGIC:
+NOT IMPLEMENTED
+
+RM BUSINESS LOGIC:
+NOT IMPLEMENTED
+
+DATABASE CHANGES:
+
+FILES MODIFIED:
+
+ROUTES ADDED:
+
+SIDEBAR OPTIONS ADDED:
+
+TEST RESULTS:
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 19 ENDS HERE.
+
+DO NOT IMPLEMENT MR BUSINESS LOGIC.
+
+DO NOT IMPLEMENT RM BUSINESS LOGIC.
+
+DO NOT ADD AUTOMATIC CALCULATIONS.
+
+DO NOT CONNECT MR/RM TO OTHER MODULES.
+
+DO NOT DEPLOY.
+
+STOP AFTER PHASE 19.
+
+WAIT FOR MY EXPLICIT APPROVAL FOR THE NEXT PHASE.

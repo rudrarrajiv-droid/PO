@@ -1,0 +1,817 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 17 — CONTROLLED EXCEL → DATABASE IMPORT
+
+PHASE 1 TO PHASE 16 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 17.
+
+============================================================
+🚨🚨🚨 EXTREME DATA SAFETY — HIGHEST PRIORITY 🚨🚨🚨
+============================================================
+
+THIS IS THE FIRST PHASE WHERE EXCEL DATA MAY BE WRITTEN TO THE
+PRODUCTION PO DATABASE.
+
+THEREFORE:
+
+NO DATA LOSS IS ACCEPTABLE.
+
+NO EXISTING DATA MAY BE OVERWRITTEN.
+
+NO EXISTING PO MAY BE DELETED.
+
+NO EXISTING PO MAY BE SILENTLY MODIFIED.
+
+NO EXISTING TRANSACTION MAY BE MODIFIED.
+
+NO DUPLICATE PO MAY BE CREATED.
+
+NO OTHER MODULE MAY BE TOUCHED.
+
+THE IMPORT MUST BE:
+
+CONTROLLED
+
+VALIDATED
+
+ATOMIC WHERE POSSIBLE
+
+TRACEABLE
+
+REVERSIBLE/ROLLBACK-SAFE
+
+============================================================
+ABSOLUTE SCOPE
+============================================================
+
+PHASE 17 MAY MODIFY ONLY:
+
+PO DATA REQUIRED FOR THE APPROVED EXCEL IMPORT.
+
+DO NOT MODIFY:
+
+- Job Cards
+- Master Data
+- Reel Inventory
+- Finish Goods
+- Tracker
+- Freight
+- Dashboard business data
+- Login/Auth
+- PO IN transactions
+- PO OUT transactions
+- PO History
+
+UNLESS A PREVIOUSLY APPROVED PO IMPORT ARCHITECTURE EXPLICITLY
+REQUIRES IT.
+
+DO NOT INVENT ANY CROSS-MODULE CONNECTION.
+
+============================================================
+STEP 1 — IMPORT SOURCE
+============================================================
+
+Use ONLY the workbook already validated through:
+
+PHASE 15 — IMPORT PREVIEW
+
+and
+
+PHASE 16 — IMPORT VALIDATION.
+
+DO NOT re-interpret the Excel structure differently during the final
+import.
+
+The final import must use the validated dataset produced by Phase 16.
+
+DO NOT allow the user to bypass Phase 15 or Phase 16 validation.
+
+============================================================
+STEP 2 — IMPORT ONLY "READY TO IMPORT"
+============================================================
+
+ONLY rows marked:
+
+READY TO IMPORT
+
+may be imported.
+
+NEVER import rows marked:
+
+ERROR
+
+MISSING REQUIRED DATA
+
+POSSIBLE DUPLICATE
+
+ALREADY EXISTS
+
+CONFLICT — NEEDS REVIEW
+
+NEEDS REVIEW
+
+If even ONE blocked row accidentally enters the production import list:
+
+STOP the import.
+
+============================================================
+STEP 3 — FINAL PRE-IMPORT SUMMARY
+============================================================
+
+Before the final import starts, show a confirmation screen:
+
+SOURCE FILE
+
+TOTAL ROWS
+
+READY TO IMPORT
+
+ERROR ROWS
+
+MISSING DATA
+
+POSSIBLE DUPLICATES
+
+ALREADY EXISTS
+
+CONFLICTS
+
+TOTAL RECORDS THAT WILL BE CREATED
+
+TOTAL RECORDS THAT WILL BE UPDATED
+
+TOTAL RECORDS THAT WILL BE DELETED
+
+Expected:
+
+UPDATED = 0
+
+DELETED = 0
+
+If the system intends to update or delete anything:
+
+STOP.
+
+DO NOT continue automatically.
+
+============================================================
+STEP 4 — CREATE ONLY NEW PO RECORDS
+============================================================
+
+For Phase 17:
+
+IMPORT MUST BE CREATE-ONLY.
+
+If PO NO. already exists:
+
+DO NOT update it.
+
+DO NOT overwrite it.
+
+DO NOT merge it.
+
+DO NOT delete it.
+
+It must remain excluded from import.
+
+Only genuinely new PO records may be created.
+
+============================================================
+STEP 5 — EXACT 14-COLUMN MAPPING
+============================================================
+
+Create PO records using exactly the validated mapping:
+
+1. PO NO.
+2. PO DT
+3. DELIVERY DATE
+4. CUSTOMER NAME
+5. CONSIGNEE
+6. ARTWORK NO.
+7. ITEM NAME
+8. SIZE
+9. RATE
+10. OPN QTY
+11. IN QTY
+12. OUT QTY
+13. CLOSING BAL
+14. VALUE
+
+Do not invent additional business values.
+
+Do not rename existing database fields unnecessarily.
+
+Follow the existing PO data model created in previous phases.
+
+============================================================
+STEP 6 — DO NOT CREATE FAKE TRANSACTIONS
+============================================================
+
+IMPORTANT:
+
+The imported:
+
+IN QTY
+
+and
+
+OUT QTY
+
+are historical values from the Excel source.
+
+DO NOT automatically create fake IN/OUT transaction records merely to
+make those totals appear.
+
+Unless the existing approved PO import architecture explicitly defines
+historical transaction creation:
+
+store the validated PO values according to the existing PO schema only.
+
+Do NOT manufacture transaction history.
+
+============================================================
+STEP 7 — CLOSING BALANCE
+============================================================
+
+Use the validated Closing Balance from Phase 16.
+
+Before saving each PO, verify:
+
+CLOSING BAL
+=
+OPN QTY + IN QTY - OUT QTY
+
+If it does not match:
+
+DO NOT import that row.
+
+Do NOT recalculate and silently replace the Excel value.
+
+That row must remain blocked.
+
+============================================================
+STEP 8 — VALUE
+============================================================
+
+Use the validated VALUE from Phase 16.
+
+Do NOT silently recalculate and replace the source value.
+
+If the value fails the approved business validation:
+
+DO NOT import the row.
+
+Keep it blocked.
+
+============================================================
+STEP 9 — BATCH IMPORT
+============================================================
+
+Do NOT blindly fire hundreds of uncontrolled writes simultaneously.
+
+Use a controlled batch/bulk-write mechanism compatible with the existing
+Firestore architecture.
+
+The implementation must:
+
+- Respect Firestore limits
+- Avoid duplicate writes
+- Handle failures
+- Track successfully created records
+- Track failed records
+
+============================================================
+STEP 10 — IMPORT IDENTIFIER
+============================================================
+
+Every import run must have a unique:
+
+IMPORT RUN ID
+
+Example:
+
+PO-IMPORT-2026-08-08-001
+
+Use the existing safe audit architecture if available.
+
+Do NOT create unnecessary business fields.
+
+The purpose is to know which records were created by this import run.
+
+============================================================
+STEP 11 — IMPORT AUDIT
+============================================================
+
+Record a safe import audit entry only if the existing architecture
+supports audit records without affecting business data.
+
+Audit information may include:
+
+Import Run ID
+
+Source File Name
+
+Date/Time
+
+Number of Rows
+
+Number of Successful Records
+
+Number of Failed Records
+
+User
+
+IMPORTANT:
+
+Do NOT store passwords, tokens, or sensitive authentication data.
+
+If creating an audit record would require changing unrelated architecture:
+
+STOP and report it.
+
+============================================================
+STEP 12 — FAILURE HANDLING
+============================================================
+
+If any individual PO fails during import:
+
+DO NOT silently continue and report the whole import as successful.
+
+Clearly identify:
+
+PO NO.
+
+Row
+
+Reason
+
+Status
+
+If safe rollback is supported by the architecture:
+
+rollback ONLY records created by the CURRENT IMPORT RUN.
+
+NEVER rollback pre-existing PO data.
+
+If atomic rollback cannot safely be guaranteed:
+
+STOP and report exactly what was successfully imported and what failed.
+
+============================================================
+STEP 13 — DUPLICATE PROTECTION
+============================================================
+
+Immediately before creating a PO:
+
+verify that the PO does not already exist.
+
+This is an additional safety check.
+
+Do NOT rely only on the Phase 16 preview because database data could have
+changed between validation and final import.
+
+If the PO now exists:
+
+SKIP IT.
+
+Mark:
+
+ALREADY EXISTS — SKIPPED
+
+Do NOT overwrite it.
+
+============================================================
+STEP 14 — USER CONFIRMATION
+============================================================
+
+Before the first production write, show:
+
+"YOU ARE ABOUT TO IMPORT X NEW PO RECORDS."
+
+Show:
+
+Records to CREATE: X
+
+Records to UPDATE: 0
+
+Records to DELETE: 0
+
+Blocked Records: X
+
+Existing Records: X
+
+Then require an explicit confirmation.
+
+Do NOT use an ambiguous button.
+
+Button:
+
+CONFIRM IMPORT
+
+Cancel button:
+
+CANCEL
+
+============================================================
+STEP 15 — CANCEL SAFETY
+============================================================
+
+If the user clicks:
+
+CANCEL
+
+then:
+
+NO database writes.
+
+Return to the validated preview.
+
+Do not lose the validated preview unnecessarily.
+
+============================================================
+STEP 16 — IMPORT PROGRESS
+============================================================
+
+During import show progress:
+
+Preparing...
+
+Importing 1 / 100
+
+Importing 2 / 100
+
+...
+
+Importing 100 / 100
+
+Do not allow the UI to falsely show success before the database
+operations are confirmed.
+
+============================================================
+STEP 17 — SUCCESS RESULT
+============================================================
+
+After successful import show:
+
+IMPORT COMPLETED
+
+Import Run ID
+
+Total validated rows
+
+Successfully created
+
+Skipped because already existed
+
+Failed
+
+Expected:
+
+UPDATED = 0
+
+DELETED = 0
+
+============================================================
+STEP 18 — POST-IMPORT VERIFICATION
+============================================================
+
+After import, independently read the newly created PO records.
+
+Verify:
+
+PO NO.
+
+PO DT
+
+DELIVERY DATE
+
+CUSTOMER
+
+CONSIGNEE
+
+ARTWORK
+
+ITEM
+
+SIZE
+
+RATE
+
+OPN QTY
+
+IN QTY
+
+OUT QTY
+
+CLOSING BAL
+
+VALUE
+
+against the validated import dataset.
+
+Do not modify data during verification.
+
+============================================================
+STEP 19 — COUNT VERIFICATION
+============================================================
+
+Verify:
+
+Expected new records
+
+=
+
+Actually created new records
+
+If:
+
+Expected = 100
+
+Created = 99
+
+then report:
+
+IMPORT INCOMPLETE
+
+Do NOT report success.
+
+============================================================
+STEP 20 — EXISTING DATA VERIFICATION
+============================================================
+
+Select several existing PO records that existed BEFORE the import.
+
+Verify they remain unchanged.
+
+At minimum check:
+
+PO NO.
+
+Customer
+
+Rate
+
+OPN QTY
+
+IN QTY
+
+OUT QTY
+
+Closing Balance
+
+Value
+
+============================================================
+STEP 21 — CROSS-MODULE SAFETY TEST
+============================================================
+
+Verify that the import did NOT change:
+
+Job Cards
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+Dashboard business records
+
+Login/Auth
+
+PO IN transactions
+
+PO OUT transactions
+
+PO History
+
+============================================================
+STEP 22 — REFRESH TEST
+============================================================
+
+Refresh the browser.
+
+Verify imported POs remain available.
+
+Verify existing POs remain available.
+
+Verify no duplicates were created after refresh.
+
+============================================================
+STEP 23 — SEARCH TEST
+============================================================
+
+Search for an imported PO using:
+
+PO NO.
+
+Customer
+
+Artwork
+
+Item
+
+Expected:
+
+The imported PO is found correctly.
+
+============================================================
+STEP 24 — SUMMARY TEST
+============================================================
+
+Verify Customer Summary reflects the newly imported POs.
+
+Do NOT modify the Customer Summary manually.
+
+It must update from the underlying PO data.
+
+============================================================
+STEP 25 — DASHBOARD TEST
+============================================================
+
+Verify the existing Dashboard PO metrics reflect the newly imported
+records.
+
+Do NOT manually modify Dashboard values.
+
+Dashboard must continue deriving information from PO data.
+
+============================================================
+STEP 26 — MONTHLY VIEW TEST
+============================================================
+
+Verify the imported POs appear correctly in the appropriate month based
+on their actual PO dates/transaction data.
+
+Do not change historical dates.
+
+============================================================
+STEP 27 — STATUS TEST
+============================================================
+
+Verify imported PO status is calculated using the existing Phase 10
+logic.
+
+Do not manually assign arbitrary status values.
+
+============================================================
+STEP 28 — NO UNRELATED CHANGES
+============================================================
+
+If the IDE discovers any unrelated issue during import:
+
+DO NOT fix it in Phase 17.
+
+Report it separately.
+
+Do not expand scope.
+
+============================================================
+STEP 29 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY issues caused by Phase 17.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 30 — REGRESSION
+============================================================
+
+Verify:
+
+PO Creation
+
+PO Search
+
+PO Filters
+
+PO IN
+
+PO OUT
+
+PO History
+
+Customer Summary
+
+Delivery/Status
+
+Monthly View
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+all continue working.
+
+============================================================
+🚨 FINAL DATA SAFETY REPORT
+============================================================
+
+Report EXACTLY:
+
+PHASE:
+Phase 17 — Controlled Production Import
+
+SOURCE FILE:
+
+IMPORT RUN ID:
+
+VALIDATED ROWS:
+
+RECORDS CREATED:
+
+RECORDS UPDATED:
+0
+
+RECORDS DELETED:
+0
+
+RECORDS SKIPPED:
+
+RECORDS FAILED:
+
+ROLLBACK PERFORMED:
+YES / NO
+
+POST-IMPORT VERIFICATION:
+PASS / FAIL
+
+EXISTING PO DATA CHANGED:
+NO
+
+EXISTING TRANSACTIONS CHANGED:
+NO
+
+JOB CARD DATA CHANGED:
+NO
+
+MASTER DATA CHANGED:
+NO
+
+REEL INVENTORY CHANGED:
+NO
+
+FINISH GOODS CHANGED:
+NO
+
+TRACKER CHANGED:
+NO
+
+FREIGHT CHANGED:
+NO
+
+DASHBOARD BUSINESS DATA CHANGED:
+NO
+
+DATA LOSS:
+NO
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 17 ENDS HERE.
+
+DO NOT START PHASE 18.
+
+DO NOT PERFORM ANY ADDITIONAL IMPORT.
+
+DO NOT IMPORT ANOTHER FILE.
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 18"

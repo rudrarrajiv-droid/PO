@@ -1,0 +1,620 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 12 — MONTHLY PO VIEW ONLY
+
+PHASE 1 TO PHASE 11 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 12.
+
+============================================================
+🚨 CRITICAL DATA SAFETY
+============================================================
+
+THIS PHASE IS ONLY FOR CREATING A READ-ONLY MONTHLY PO VIEW.
+
+DO NOT:
+
+- Delete any data
+- Modify any PO
+- Modify IN transactions
+- Modify OUT transactions
+- Modify PO history
+- Modify Customer Summary
+- Modify Dashboard calculations
+- Modify Job Card
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Login/Auth
+- Import Excel
+- Export data
+- Deploy
+
+The monthly view must be generated from existing PO data.
+
+DO NOT create duplicate monthly PO records.
+
+If any part of this phase requires modifying existing data:
+
+STOP immediately and report it.
+
+============================================================
+PHASE 12 OBJECTIVE
+============================================================
+
+Create a SMART MONTHLY PO VIEW.
+
+The purpose is to replace the manual monthly PO tracking concept from
+the Excel workflow with an online database-driven view.
+
+IMPORTANT:
+
+DO NOT copy the Excel sheet's large horizontal monthly structure.
+
+Create a compact online monthly view instead.
+
+============================================================
+STEP 1 — MONTHLY VIEW ACCESS
+============================================================
+
+Add a clear:
+
+MONTHLY VIEW
+
+option inside PO Management.
+
+Use the existing PO page design.
+
+Do NOT create an unrelated new application section.
+
+============================================================
+STEP 2 — MONTH / YEAR SELECTOR
+============================================================
+
+Provide:
+
+MONTH
+
+YEAR
+
+selectors.
+
+Example:
+
+July 2026
+
+August 2026
+
+September 2026
+
+The selected month/year controls the displayed PO activity.
+
+Default to the current month only if that follows the existing
+application convention.
+
+Do not hard-code July 2026.
+
+============================================================
+STEP 3 — MONTHLY FILTERS
+============================================================
+
+Provide optional filters:
+
+Customer
+
+PO No.
+
+Artwork No.
+
+Item Name
+
+Status
+
+These must work together with the selected Month/Year.
+
+Do NOT duplicate the existing main PO search system unnecessarily.
+
+Reuse existing search/filter components where possible.
+
+============================================================
+STEP 4 — MONTHLY PO TABLE
+============================================================
+
+Display the existing core PO information:
+
+PO NO.
+
+PO DT
+
+DELIVERY DATE
+
+CUSTOMER NAME
+
+CONSIGNEE
+
+ARTWORK NO.
+
+ITEM NAME
+
+SIZE
+
+RATE
+
+OPN QTY
+
+IN QTY
+
+OUT QTY
+
+CLOSING BAL
+
+VALUE
+
+Do NOT add unnecessary visible columns.
+
+============================================================
+STEP 5 — MONTHLY MOVEMENT
+============================================================
+
+The monthly view must clearly distinguish:
+
+PO MASTER INFORMATION
+
+from
+
+MONTHLY MOVEMENT.
+
+For the selected month, show the relevant:
+
+IN QTY
+
+OUT QTY
+
+Do NOT confuse monthly IN/OUT with the PO's lifetime total IN/OUT.
+
+Example:
+
+PO lifetime IN = 1000
+
+July IN = 300
+
+August IN = 700
+
+When July is selected:
+
+Monthly IN = 300
+
+Lifetime IN remains = 1000
+
+Do NOT overwrite lifetime totals.
+
+============================================================
+STEP 6 — OPENING POSITION FOR MONTH
+============================================================
+
+Where required for monthly movement, calculate the month's opening
+position from existing transaction history.
+
+Conceptually:
+
+MONTH OPENING BALANCE
+
+=
+
+PO quantity position immediately before the selected month.
+
+Do NOT create a separate stored monthly balance.
+
+Calculate it from existing PO and transaction data.
+
+Example:
+
+Opening PO = 1000
+
+June OUT = 200
+
+July OUT = 300
+
+For July:
+
+Opening Balance = 800
+
+July OUT = 300
+
+July Closing Position = 500
+
+Do not modify the underlying transactions.
+
+============================================================
+STEP 7 — MONTHLY IN
+============================================================
+
+For the selected month:
+
+MONTHLY IN QTY
+
+must equal the sum of IN transactions whose transaction date falls
+inside that selected month.
+
+Do not include transactions from other months.
+
+============================================================
+STEP 8 — MONTHLY OUT
+============================================================
+
+For the selected month:
+
+MONTHLY OUT QTY
+
+must equal the sum of OUT transactions whose transaction date falls
+inside that selected month.
+
+Do not include transactions from other months.
+
+============================================================
+STEP 9 — MONTHLY CLOSING POSITION
+============================================================
+
+Calculate the monthly closing position from the opening position and
+that month's movement.
+
+Conceptually:
+
+MONTHLY CLOSING
+=
+MONTH OPENING
++ MONTHLY IN
+- MONTHLY OUT
+
+Do NOT overwrite the PO's current Closing Balance.
+
+The monthly view is a reporting view only.
+
+============================================================
+STEP 10 — CUSTOMER-WISE MONTHLY VIEW
+============================================================
+
+Allow the user to filter the monthly view by Customer.
+
+Example:
+
+Customer = DBI
+
+Month = July 2026
+
+Show only DBI PO activity for July 2026.
+
+Do not create a separate customer database.
+
+============================================================
+STEP 11 — MONTHLY TOTALS
+============================================================
+
+At the bottom or top of the monthly table, show totals for the currently
+selected month/filter:
+
+TOTAL MONTHLY IN
+
+TOTAL MONTHLY OUT
+
+TOTAL MONTHLY MOVEMENT
+
+TOTAL RELEVANT PO VALUE
+
+Use actual database calculations.
+
+No hard-coded values.
+
+============================================================
+STEP 12 — MONTHLY VALUE
+============================================================
+
+Do NOT invent a new Value formula.
+
+Use the already approved PO Value/business logic.
+
+If the monthly value cannot be correctly derived from the existing
+business rules:
+
+STOP and report the ambiguity.
+
+Do not silently guess.
+
+============================================================
+STEP 13 — PO STATUS
+============================================================
+
+The monthly view may display the existing PO Status from Phase 10.
+
+Use the existing:
+
+PENDING
+
+PARTIALLY COMPLETED
+
+COMPLETED
+
+OVERDUE / DELAYED
+
+logic.
+
+Do NOT create another status system.
+
+============================================================
+STEP 14 — DATE HANDLING
+============================================================
+
+Use actual transaction dates.
+
+The selected Month/Year must be interpreted consistently with the
+application's business timezone.
+
+Do not shift transactions into another month because of an incorrect
+timezone conversion.
+
+============================================================
+STEP 15 — READ-ONLY REQUIREMENT
+============================================================
+
+Opening Monthly View must NOT:
+
+- Create PO
+- Create IN
+- Create OUT
+- Modify PO
+- Modify transaction
+- Modify balance
+- Modify status
+- Update timestamps
+
+It is strictly a reporting/read operation.
+
+============================================================
+STEP 16 — SOURCE DATA CONSISTENCY TEST
+============================================================
+
+Choose one PO with multiple transactions across different months.
+
+Example:
+
+Opening = 1000
+
+June IN = 200
+
+July OUT = 300
+
+August IN = 100
+
+Verify:
+
+June view only includes June activity.
+
+July view only includes July activity.
+
+August view only includes August activity.
+
+Lifetime PO totals remain unchanged.
+
+============================================================
+STEP 17 — CUSTOMER TEST
+============================================================
+
+Select:
+
+Customer
+
++
+
+Month
+
+Verify only matching customer/month records appear.
+
+Then clear Customer.
+
+Verify all customers for the selected month return.
+
+============================================================
+STEP 18 — RESET
+============================================================
+
+Provide:
+
+RESET
+
+or
+
+CLEAR
+
+action.
+
+It must clear:
+
+Month/year-specific filters where applicable
+
+Customer
+
+PO No.
+
+Artwork
+
+Item
+
+Status
+
+and return to the normal monthly view.
+
+Do not reload the entire application unnecessarily.
+
+============================================================
+STEP 19 — PERFORMANCE
+============================================================
+
+Use the existing database architecture.
+
+Do not introduce a new external reporting database.
+
+Do not duplicate every transaction into monthly documents.
+
+Do not create one collection per month.
+
+Do not create one collection per customer.
+
+Use the existing PO and transaction data.
+
+============================================================
+STEP 20 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY issues introduced by Phase 12.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 21 — REGRESSION
+============================================================
+
+Verify:
+
+PO Creation
+
+PO Search
+
+PO Filters
+
+PO IN
+
+PO OUT
+
+PO History
+
+Customer Summary
+
+Delivery/Status
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+all still work.
+
+============================================================
+DATA SAFETY CONFIRMATION
+============================================================
+
+Confirm:
+
+PO master data modified: NO
+
+IN transactions modified: NO
+
+OUT transactions modified: NO
+
+PO history modified: NO
+
+Customer Summary modified: NO
+
+Dashboard data modified: NO
+
+Job Card data modified: NO
+
+Master Data modified: NO
+
+Reel Inventory modified: NO
+
+Finish Goods modified: NO
+
+Tracker modified: NO
+
+Freight modified: NO
+
+Data deleted: NO
+
+Duplicate monthly records created: NO
+
+Excel imported: NO
+
+Deployment: NO
+
+============================================================
+PHASE 12 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 12 — Monthly PO View
+
+MONTH/YEAR SELECTOR:
+
+MONTHLY FILTERS:
+
+MONTHLY IN:
+
+MONTHLY OUT:
+
+MONTH OPENING BALANCE:
+
+MONTHLY CLOSING:
+
+MONTHLY TOTALS:
+
+CUSTOMER FILTER:
+
+STATUS FILTER:
+
+TEST RESULTS:
+
+DATABASE WRITES FROM MONTHLY VIEW:
+NONE
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 12 ENDS HERE.
+
+DO NOT START:
+
+JOB CARD ↔ PO CONNECTION
+
+EXPORT
+
+EXCEL IMPORT
+
+FINAL REGRESSION
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 13"

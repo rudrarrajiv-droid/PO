@@ -1,0 +1,71 @@
+Name,Category,Contractor,Designation,Basic Salary,01-PR,01-OT,02-PR,02-OT,03-PR,03-OT,04-PR,04-OT,05-PR,05-OT,06-PR,06-OT,07-PR,07-OT,08-PR,08-OT,09-PR,09-OT
+Jitender Balhara,Company,,MD,"75,000",1,,1,,1,,1,,1,,1,,1,,1,,1,
+Rajiv Pal,Company,,Accountanat,"37,500",1,,1,,1,,1,,1,,1,,1,,1,,1,
+Shubham Singh,Company,,Plant Head,"41,500",1,,1,,1,,1,,1,,1,,1,,1,,1,
+Raj Kumar,Company,,Supervisor,40000,1,,1,,1,,1,,1,,1,,1,,1,,1,
+Devesh Chouhan,Company,,Lifterman,"20,000",1,,1,,1,,1,,1,,1,,1,,1,,1,
+Dharmender Noniya,Company,,Operator,"21,400",1,3.5,1,8,1,7.5,1,3.5,1,7.5,1,7.5,1,3.5,1,3.5,1,8
+Vijay Shahni,Company,,Operator,"20,400",1,3.5,1,,1,3.5,1,3,1,7.5,1,1,1,3.5,1,3.5,1,
+Suman,Company,,Pantry,"13,000",,,1,,,,1,2.5,1,2,1,2.5,1,2,1,2.5,1,
+Surender,Company,,Operator,16500,1,3.5,1,8,1,3.5,1,7.5,1,3,1,7.5,1,3.5,1,3.5,1,7.5
+Kunwar Chand,Company,,Operator,"22,000",1,3.5,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Shahrukh,Company,,Operator,"23,000",,,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,,1,2.5,1,
+Sharafat,Company,,Operator,15000,1,3.5,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Sanjan,Company,,Helper,"13,500",1,3,1,8,1,2.5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Jubaida,Company,,Helper,13000,1,3,1,8,1,3,1,3,1,3,1,3,1,2,1,3,1,
+Nitish,Company,,Helper,13500,1,3.5,1,,,,1,3.5,1,3.5,1,3.5,1,4.5,1,3.5,1,
+Priti,Company,,Helper,"13,000",,,1,,,3,,,,,,,,,,,,
+Rohit,Company,,Helper,14500,1,3.5,1,,1,3.5,1,3.5,1,3.5,,,1,2.5,1,3.5,1,8
+Sandeep,Company,,Operator,16500,1,7.5,1,,1,,1,3.5,1,3.5,1,3.5,1,2.5,1,3.5,1,
+Sonu,Company,,Operator,"18,500",1,3.5,1,,1,7.5,1,7.5,1,3.5,1,7.5,1,3.5,1,3.5,1,8
+Dhiraj,Company,,Helper,"14,500",1,3,1,,,,1,7.5,1,6.5,1,3.5,1,4.5,1,7.5,1,
+Nand Kishore,Company,,Operator,"21,400",1,7.5,1,4,1,6.5,1,3.5,1,3.5,1,-4,1,3.5,1,3.5,1,
+Vishjeet,Company,,Operator,"21,000",1,1.5,1,,1,2.5,1,3.5,1,3.5,1,3.5,1,,1,7.5,1,
+Sukesh,Company,,Operator,19500,1,3.5,1,,1,,1,3.5,1,7.5,1,3.5,1,3.5,1,3.5,1,
+Dharmesh,Company,,Operator,16000,1,7.5,1,,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Mohit,Company,,Operator,"16,000",1,3.5,1,,1,3.5,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Ramu,Company,,Operator,19000,1,3.5,1,,1,3.5,1,3.5,1,3.5,1,2.5,1,2,1,3.5,1,
+Mukesh,Company,,Helper,"13,500",1,3.5,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,,1,3.5,1,
+Sachin,Company,,Helper,"13,500",1,7.5,1,,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Kartik,Company,,Helper,"13,500",1,3.5,1,,1,7.5,1,3.5,1,3.5,1,3.5,1,3.5,,,1,
+Dilip,Company,,Operator,16000,1,3.5,1,,,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Ravindra,Company,,Operator,"16,500",1,3.5,1,8,1,7.5,1,3.5,1,-3.5,1,7.5,1,3.5,1,3.5,1,8
+Meena,Company,,Helper,11500,1,3.5,1,8,1,3.5,1,3.5,1,-0.5,1,3.5,1,3.5,1,3.5,1,8
+Phekan Mandal,Company,,Sweeper,14500,1,3.5,1,,1,3.5,1,3.5,1,3.5,1,-2,1,-3,1,3.5,1,
+Raju,Company,,Helper,"14,500",,,1,,1,4,1,4,1,4,1,4,1,4,1,4,1,
+Amit Sahni,Company,,Operator,17000,1,3.5,1,8,1,3.5,1,7.5,1,3.5,1,7.5,1,3.5,1,3.5,1,8
+Ravita,Company,,Helper,"11,500",1,3.5,1,8,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,8
+Amarjeet,Company,,Helper,"13,500",1,3.5,1,,1,3.5,1,7.5,1,3.5,1,3.5,1,3.5,1,7.5,1,
+Poonam,Company,,Helper,"12,500",,,,,1,4,1,5,1,4,1,4,1,,1,4,1,8
+NADEEM,Company,,Helper,13500,,,,,,,,,,,1,3.5,1,3.5,1,3.5,,
+Narender,Wages,Vikash,Helper,"13,500",1,0.5,,,,,,,,,,,,,,,,
+Surender,Wages,Vikash,Helper,"13,500",1,0.5,,,,,,,,,,,,,,,,
+Yashpal,Wages,Vikash,Helper,"13,500",1,0.5,,,,,,,,,,,,,,,,
+ANIL,Wages,Vikash,Helper,"13,500",,,,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+DHARMENDRA,Wages,Vikash,Helper,"13,500",1,3.5,1,8,1,3.5,1,7.5,1,3.5,1,7.5,1,4.5,1,3.5,1,8
+RAKESH,Wages,Vikash,Helper,"13,500",,,,,1,3.5,,,1,3.5,1,3.5,1,3.5,1,3.5,1,8
+KALLU,Wages,Vikash,Helper,13500,,,,,1,3.5,,,1,3.5,1,7.5,1,3.5,1,3.5,1,8
+Dhirendra,Wages,Vikash,Helper,"13,500",,,,,,,1,3.5,1,3.5,1,3.5,1,3.5,1,7.5,1,
+Aakash,Wages,Vikash,Helper,"13,500",,,,,,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+PREM PRAKASH,Wages,Vikash,Helper,13500,1,3.5,1,8,1,7.5,1,7.5,1,3.5,1,7.5,1,3.5,1,7.5,1,8
+Ankur,Wages,Vikash,Helper,"13,500",,,,,,,1,3.5,1,3.5,1,3.5,1,3.5,1,-3,1,
+Ram Jeewan,Wages,Vikash,Helper,"13,500",,,,,,,1,3.5,1,3.5,,,,,,,,
+Arvind,Wages,Vikash,Helper,13500,,,,,,,1,3.5,1,3.5,,,,,,,,
+Ankit,Wages,Vikash,Helper,"13,500",,,,,,,1,3.5,1,3.5,1,2,1,3.5,1,3.5,1,
+NIRMAL,Wages,Vikash,Helper,13500,,,,,,,,,1,3.5,1,3.5,1,3.5,,,,
+SANDEEP,Wages,Vikash,Helper,13500,,,,,,,,,,,1,3.5,1,3.5,1,3.5,,
+MAYA,Wages,Dinesh,Helper,"13,000",1,3.5,1,8,1,3.5,1,4.5,1,3.5,1,3.5,1,3.5,1,3.5,1,8
+LEELAWATI,Wages,Dinesh,Helper,13000,1,3.5,1,8,1,3.5,1,4.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+LALCHAND,Wages,Dinesh,Helper,13500,,,1,,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Raghu,Wages,Dinesh,Helper,"13,500",1,1.5,,,,,,,,,,,,,,,,
+Raghav,Wages,Dinesh,Helper,"13,500",1,1.5,,,,,,,,,,,,,,,,
+Ranga,Wages,Dinesh,Helper,13500,1,1.5,,,,,,,,,,,,,,,,
+VISHAL,Wages,Dinesh,Helper,"13,500",,,,,1,3.5,1,1.5,1,3.5,1,3.5,,,1,3.5,1,
+ANJALI,Wages,Dinesh,Helper,"12,500",,,,,1,3.5,,,,,,,1,3.5,1,3.5,,
+VIMLESH,Wages,Dinesh,Helper,"13,500",,,,,,,,,,,,,,,,,,
+Rajkumar,Wages,Dinesh,Helper,13500,1,3.5,1,7.5,1,3.5,1,6,1,3,1,7,1,4.5,1,3,1,
+Aakash,Wages,Dinesh,Helper,"13,500",,,1,7.5,1,5,1,3.5,1,3.5,1,3.5,1,3.5,1,3.5,1,
+Durgesh,Wages,Dinesh,Helper,"13,500",1,3.5,1,,1,3.5,1,6,1,3,1,7,1,4.5,,,1,8
+Ram Kumar,Wages,Dinesh,Helper,"13,500",1,3.5,1,7.5,1,7.5,1,6,1,3,1,7,1,4.5,1,3,1,
+Rukhshar,Wages,Dinesh,Helper,"12,500",,,,,,,1,3.5,1,3.5,,,,,,,,
+Ladli,Wages,Dinesh,Helper,"12,500",,,,,,,1,3.5,,,,,,,,,,

@@ -1,0 +1,587 @@
+# PACKWELL ERP
+# PHASE 24 — MR BUSINESS LOGIC
+
+PHASE 1 TO PHASE 23 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 24.
+
+============================================================
+🚨 EXTREME DATA SAFETY — HIGHEST PRIORITY
+============================================================
+
+THIS PHASE IMPLEMENTS BUSINESS LOGIC FOR MR ONLY.
+
+DO NOT MODIFY RM LOGIC.
+
+DO NOT MODIFY:
+
+- PO
+- PO IN
+- PO OUT
+- PO HISTORY
+- Customer Summary
+- Dashboard PO logic
+- Job Card
+- Master Data
+- Reel Inventory
+- Finish Goods
+- Tracker
+- Freight
+- Salary & Cont.
+- DC
+- Login/Auth
+
+DO NOT DELETE EXISTING DATA.
+
+DO NOT RESET FIRESTORE.
+
+DO NOT MIGRATE EXISTING DATA.
+
+DO NOT MODIFY EXISTING MR RECORDS UNLESS THE USER EXPLICITLY EDITS
+THAT RECORD THROUGH THE EXISTING MR UI.
+
+DO NOT DEPLOY.
+
+============================================================
+PHASE 24 OBJECTIVE
+============================================================
+
+IMPLEMENT ONLY THE MR BUSINESS LOGIC THAT WAS EXPLICITLY CONFIRMED
+DURING PHASE 23.
+
+PHASE 23 IS THE ONLY SOURCE OF TRUTH FOR MR BUSINESS LOGIC.
+
+IMPORTANT:
+
+DO NOT invent any missing formula.
+
+DO NOT invent any workflow.
+
+DO NOT invent any status.
+
+DO NOT invent any approval rule.
+
+DO NOT invent any stock movement.
+
+DO NOT invent any cross-module relationship.
+
+If Phase 23 did NOT clearly define a particular MR rule:
+
+DO NOT IMPLEMENT IT.
+
+Keep that part unchanged and report it as:
+
+"MR LOGIC NOT DEFINED."
+
+============================================================
+STEP 1 — READ PHASE 23 FINDINGS
+============================================================
+
+Before coding, inspect the Phase 23 MR analysis.
+
+Extract only:
+
+- MR formulas
+- MR field dependencies
+- MR status rules
+- MR workflow
+- MR validations
+- MR unique/duplicate rules
+- MR edit rules
+- MR delete rules
+- MR stock impact, if explicitly defined
+- MR value/cost impact, if explicitly defined
+- MR cross-module relationships, if explicitly defined
+
+Use these findings exactly.
+
+Do not reinterpret them.
+
+============================================================
+STEP 2 — MR CALCULATIONS
+============================================================
+
+Implement ONLY the MR formulas confirmed in Phase 23.
+
+For every formula:
+
+INPUT FIELDS
+→ CALCULATION
+→ OUTPUT FIELD
+
+The calculated field must update when its dependent input changes.
+
+Do not manually duplicate calculated values where the existing
+architecture can derive them safely.
+
+IMPORTANT:
+
+Do not round, truncate, convert units, or alter decimal precision
+unless Phase 23 explicitly defined such behaviour.
+
+============================================================
+STEP 3 — MR FIELD DEPENDENCIES
+============================================================
+
+Implement the exact dependencies identified in Phase 23.
+
+Example structure:
+
+FIELD A changes
+→ FIELD B recalculates
+→ FIELD C updates
+
+Do not create dependencies that were not documented.
+
+============================================================
+STEP 4 — MR STATUS
+============================================================
+
+Implement MR status ONLY if Phase 23 explicitly defined the status
+logic.
+
+Use exactly the approved status names.
+
+Do not create additional statuses.
+
+Do not automatically change status based on assumptions.
+
+If status logic was not defined:
+
+DO NOT implement automatic status.
+
+============================================================
+STEP 5 — MR WORKFLOW
+============================================================
+
+Implement ONLY the workflow documented in Phase 23.
+
+Follow the approved sequence exactly.
+
+Do not add:
+
+- Extra approval steps
+- Extra confirmation steps
+- Automatic completion
+- Automatic cancellation
+- Automatic reversal
+
+unless explicitly defined in Phase 23.
+
+============================================================
+STEP 6 — MR VALIDATION
+============================================================
+
+Implement only validations confirmed in Phase 23.
+
+Validation must happen before saving.
+
+Invalid MR data must not be saved.
+
+Show clear field-level errors.
+
+Do not silently correct user-entered values.
+
+============================================================
+STEP 7 — MR DUPLICATE PROTECTION
+============================================================
+
+Use the unique identifier/rules confirmed in Phase 23.
+
+Prevent accidental duplicate MR creation.
+
+If duplicate detection is not defined in Phase 23:
+
+do NOT invent a new duplicate rule.
+
+Only retain the existing basic CRUD protection.
+
+============================================================
+STEP 8 — MR EDIT RULES
+============================================================
+
+Implement the edit restrictions confirmed in Phase 23.
+
+If Phase 23 says a particular MR state cannot be edited:
+
+block editing and clearly explain why.
+
+If no such restriction was defined:
+
+do not invent one.
+
+============================================================
+STEP 9 — MR DELETE RULES
+============================================================
+
+Implement deletion rules only if Phase 23 explicitly defined them.
+
+If deletion is allowed:
+
+keep the existing confirmation mechanism.
+
+If deletion/reversal rules are undefined:
+
+DO NOT add automatic reversal logic.
+
+============================================================
+STEP 10 — MR STOCK / INVENTORY IMPACT
+============================================================
+
+CRITICAL:
+
+Only implement MR stock/inventory movement if Phase 23 explicitly
+confirmed:
+
+- Which inventory/module is affected
+- Which quantity is affected
+- When movement occurs
+- How the quantity changes
+
+If any one of these is undefined:
+
+DO NOT implement stock movement.
+
+============================================================
+STEP 11 — MR VALUE / COST LOGIC
+============================================================
+
+Implement MR financial/value calculations ONLY if Phase 23 explicitly
+defined them.
+
+Do not invent:
+
+- Rate
+- Cost
+- Total Value
+- Outstanding
+- Balance
+- Tax
+- Accounting
+
+calculations.
+
+============================================================
+STEP 12 — CROSS-MODULE CONNECTIONS
+============================================================
+
+Implement MR connections to other modules ONLY where Phase 23 explicitly
+confirmed the relationship.
+
+Possible modules include:
+
+PO
+
+Customer
+
+Supplier
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+DC
+
+Salary & Cont.
+
+Do NOT connect MR to any module simply because the connection seems
+logically useful.
+
+============================================================
+STEP 13 — EXISTING MR DATA PROTECTION
+============================================================
+
+Existing MR records must remain unchanged.
+
+After implementing the logic:
+
+verify representative existing MR records.
+
+Check:
+
+- Field values
+- Calculated values
+- Status
+- References
+- Dates
+- Quantities
+- Values
+
+No historical record should change simply because the application was
+updated.
+
+============================================================
+STEP 14 — NEW MR TEST
+============================================================
+
+Create a controlled MR test record using valid values.
+
+Verify:
+
+1. Required fields validate correctly.
+2. Confirmed calculations execute correctly.
+3. Confirmed dependencies work.
+4. Confirmed status logic works.
+5. Confirmed workflow works.
+6. No unrelated module changes.
+
+============================================================
+STEP 15 — EDIT TEST
+============================================================
+
+Edit a test MR.
+
+Change one confirmed input field.
+
+Verify all dependent confirmed calculations update correctly.
+
+Do not modify unrelated fields.
+
+============================================================
+STEP 16 — INVALID DATA TEST
+============================================================
+
+Test each confirmed validation rule.
+
+Expected:
+
+Invalid MR data is rejected.
+
+Correct error is displayed.
+
+No invalid database record is created.
+
+============================================================
+STEP 17 — DUPLICATE TEST
+============================================================
+
+Use the duplicate rule confirmed in Phase 23.
+
+Attempt to create the same MR again.
+
+Expected:
+
+Duplicate is prevented if duplicate prevention was defined.
+
+No duplicate document is created.
+
+============================================================
+STEP 18 — DATABASE WRITE SAFETY
+============================================================
+
+Every database write must be limited to the MR operation currently
+being performed by the user.
+
+Do NOT write to:
+
+PO
+
+PO transactions
+
+Job Cards
+
+Inventory
+
+Finish Goods
+
+Dashboard
+
+or any unrelated collection
+
+unless that exact write was explicitly approved in Phase 23.
+
+============================================================
+STEP 19 — REGRESSION
+============================================================
+
+Verify:
+
+Dashboard
+
+PO Management
+
+PO History
+
+Customer Summary
+
+Monthly PO View
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+Salary & Cont.
+
+DC
+
+RM
+
+Settings
+
+Login
+
+Logout
+
+continue working.
+
+IMPORTANT:
+
+RM must remain structurally available but its business logic must NOT
+be implemented in Phase 24.
+
+============================================================
+STEP 20 — BUILD
+============================================================
+
+Run the existing:
+
+BUILD
+
+TYPE-CHECK
+
+LINT
+
+according to the project configuration.
+
+Fix ONLY issues caused by Phase 24.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 21 — DATA SAFETY VERIFICATION
+============================================================
+
+Confirm explicitly:
+
+Existing PO data changed:
+NO
+
+PO transactions changed:
+NO
+
+PO history changed:
+NO
+
+Job Card data changed:
+NO
+
+Master Data changed:
+NO
+
+Reel Inventory changed:
+NO
+
+Finish Goods changed:
+NO
+
+Tracker changed:
+NO
+
+Freight changed:
+NO
+
+Salary & Cont. changed:
+NO
+
+DC changed:
+NO
+
+RM business logic changed:
+NO
+
+Existing MR records unexpectedly changed:
+NO
+
+Data deleted:
+NO
+
+Data migrated:
+NO
+
+Deployment:
+NO
+
+============================================================
+PHASE 24 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 24 — MR Business Logic
+
+MR FORMULAS IMPLEMENTED:
+
+MR DEPENDENCIES IMPLEMENTED:
+
+MR VALIDATIONS:
+
+MR STATUS:
+
+MR WORKFLOW:
+
+MR DUPLICATE RULE:
+
+MR EDIT RULE:
+
+MR DELETE RULE:
+
+MR STOCK/INVENTORY IMPACT:
+
+MR VALUE/COST LOGIC:
+
+MR CROSS-MODULE CONNECTIONS:
+
+EXISTING MR DATA MODIFIED:
+NO / DETAILS
+
+TEST RESULTS:
+
+DATABASE CHANGES:
+
+RM BUSINESS LOGIC:
+NOT IMPLEMENTED
+
+BUILD:
+
+REGRESSION:
+
+DATA SAFETY:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 24 ENDS HERE.
+
+DO NOT IMPLEMENT RM BUSINESS LOGIC.
+
+DO NOT ADD NEW MR FEATURES.
+
+DO NOT ADD UNDEFINED MR RULES.
+
+DO NOT MODIFY OTHER MODULES.
+
+DO NOT DEPLOY.
+
+STOP AFTER THE PHASE 24 REPORT.
+
+WAIT FOR EXPLICIT APPROVAL.
+
+Only continue when I say:
+
+"CONTINUE PHASE 25"

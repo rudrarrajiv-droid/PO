@@ -1,0 +1,720 @@
+# PACKWELL ERP
+# PHASE 26 — MR / RM WORKFLOW, STATUS & VALIDATION CONTROL
+
+PHASE 1 TO PHASE 25 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 26.
+
+============================================================
+🚨 EXTREME DATA SAFETY — HIGHEST PRIORITY
+============================================================
+
+THIS PHASE IS ONLY FOR:
+
+- MR WORKFLOW
+- RM WORKFLOW
+- MR STATUS CONTROL
+- RM STATUS CONTROL
+- MR VALIDATION CONTROL
+- RM VALIDATION CONTROL
+- EDIT/LOCK CONTROL
+- COMPLETE/CANCEL CONTROL ONLY IF EXPLICITLY DEFINED IN PHASE 23
+
+DO NOT MODIFY ANY OTHER MODULE.
+
+DO NOT DELETE EXISTING DATA.
+
+DO NOT RESET DATABASE.
+
+DO NOT MIGRATE EXISTING DATA.
+
+DO NOT MODIFY:
+
+- PO
+- PO IN
+- PO OUT
+- PO HISTORY
+- CUSTOMER SUMMARY
+- DASHBOARD
+- JOB CARD
+- MASTER DATA
+- REEL INVENTORY
+- FINISH GOODS
+- TRACKER
+- FREIGHT
+- SALARY & CONT.
+- DC
+- LOGIN/AUTH
+
+DO NOT DEPLOY.
+
+============================================================
+🚨 SOURCE OF TRUTH
+============================================================
+
+PHASE 23 IS THE ONLY SOURCE OF TRUTH FOR MR/RM WORKFLOW RULES.
+
+USE ONLY THE WORKFLOW, STATUS, VALIDATION, EDIT, DELETE,
+COMPLETION AND CANCELLATION RULES THAT WERE ACTUALLY CONFIRMED
+IN PHASE 23.
+
+DO NOT INVENT ANY NEW BUSINESS RULE.
+
+DO NOT ASSUME A STATUS.
+
+DO NOT ASSUME A WORKFLOW.
+
+DO NOT ASSUME THAT COMPLETED MEANS LOCKED.
+
+DO NOT ASSUME THAT CANCELLED MEANS DELETED.
+
+DO NOT ASSUME THAT ANY ACTION SHOULD UPDATE ANOTHER MODULE.
+
+IF A RULE WAS NOT DEFINED IN PHASE 23:
+
+DO NOT IMPLEMENT IT.
+
+MARK IT:
+
+"RULE NOT DEFINED — NOT IMPLEMENTED."
+
+============================================================
+PHASE 26 OBJECTIVE
+============================================================
+
+Make the MR and RM modules follow their confirmed business workflow
+safely.
+
+The system must prevent invalid state transitions.
+
+Example structure only:
+
+DRAFT
+→ CONFIRMED
+→ COMPLETED
+
+BUT DO NOT USE THESE STATUS NAMES UNLESS PHASE 23 ACTUALLY CONFIRMED
+THEM.
+
+Use the exact approved terminology.
+
+============================================================
+STEP 1 — MR WORKFLOW
+============================================================
+
+Implement ONLY the MR workflow confirmed in Phase 23.
+
+For every confirmed MR state identify:
+
+CURRENT STATUS
+
+ALLOWED ACTIONS
+
+NEXT STATUS
+
+BLOCKED ACTIONS
+
+EDITABLE FIELDS
+
+LOCKED FIELDS
+
+If Phase 23 did not define one of these:
+
+DO NOT INVENT IT.
+
+============================================================
+STEP 2 — RM WORKFLOW
+============================================================
+
+Implement ONLY the RM workflow confirmed in Phase 23.
+
+For every confirmed RM state identify:
+
+CURRENT STATUS
+
+ALLOWED ACTIONS
+
+NEXT STATUS
+
+BLOCKED ACTIONS
+
+EDITABLE FIELDS
+
+LOCKED FIELDS
+
+If Phase 23 did not define one of these:
+
+DO NOT INVENT IT.
+
+============================================================
+STEP 3 — STATUS TRANSITIONS
+============================================================
+
+Implement controlled status transitions.
+
+A status must change ONLY through an approved action.
+
+Do not allow the user to manually type arbitrary status values.
+
+Do not allow:
+
+INVALID STATUS
+
+UNKNOWN STATUS
+
+UNDEFINED STATUS
+
+Do not allow jumping directly between statuses if Phase 23 did not
+permit that transition.
+
+============================================================
+STEP 4 — MR VALIDATION BEFORE TRANSITION
+============================================================
+
+Before any MR workflow action:
+
+validate all fields required for that specific action.
+
+Example:
+
+If completion requires certain fields:
+
+those fields must be valid before completion.
+
+If validation fails:
+
+BLOCK THE ACTION.
+
+Show the exact missing/invalid fields.
+
+Do NOT partially complete the MR.
+
+============================================================
+STEP 5 — RM VALIDATION BEFORE TRANSITION
+============================================================
+
+Apply the same principle to RM.
+
+Use ONLY the validation requirements defined in Phase 23.
+
+If required information is missing:
+
+BLOCK THE WORKFLOW ACTION.
+
+Do not silently fill missing values.
+
+============================================================
+STEP 6 — EDIT CONTROL
+============================================================
+
+Implement the exact edit rules from Phase 23.
+
+If a record is editable:
+
+allow editing of only the fields permitted by the workflow.
+
+If a record is locked:
+
+disable editing.
+
+Show a clear reason.
+
+Do not silently ignore the user's action.
+
+============================================================
+STEP 7 — COMPLETION CONTROL
+============================================================
+
+Implement completion ONLY if Phase 23 explicitly defined completion.
+
+Before completion:
+
+validate all required conditions.
+
+If valid:
+
+perform the approved transition.
+
+If invalid:
+
+do not change status.
+
+Do not partially update the record.
+
+============================================================
+STEP 8 — CANCELLATION CONTROL
+============================================================
+
+Implement cancellation ONLY if Phase 23 explicitly defined it.
+
+Before cancellation:
+
+show the existing application's confirmation UI.
+
+If cancellation requires a reason and Phase 23 confirms that requirement:
+
+make the reason mandatory.
+
+If no cancellation reason was defined:
+
+DO NOT invent one.
+
+============================================================
+STEP 9 — DELETION CONTROL
+============================================================
+
+Use the delete rules already confirmed in Phase 23.
+
+If deletion is allowed:
+
+use confirmation.
+
+If deletion is not allowed for a particular status:
+
+block deletion.
+
+Do not automatically convert deletion into cancellation.
+
+Do not automatically cancel instead of deleting.
+
+Do not invent reversal logic.
+
+============================================================
+STEP 10 — CALCULATED FIELD PROTECTION
+============================================================
+
+Any MR/RM field already identified as calculated in Phase 23 must not
+be manually overwritten where the business rule says it is automatic.
+
+If a calculated field is locked:
+
+show it as read-only.
+
+If a calculated field is editable according to the source:
+
+follow the source.
+
+Do not change formula behaviour.
+
+============================================================
+STEP 11 — USER ACTION PROTECTION
+============================================================
+
+Prevent accidental duplicate workflow actions.
+
+Examples:
+
+Double-click COMPLETE
+
+Double-click CANCEL
+
+Double-click SAVE
+
+Double-click UPDATE
+
+must not execute the operation twice.
+
+Disable the action while the request is processing.
+
+============================================================
+STEP 12 — CONFIRMATION UI
+============================================================
+
+For destructive or irreversible actions explicitly defined by the
+workflow, use the existing confirmation dialog.
+
+The confirmation must clearly state:
+
+WHAT WILL HAPPEN
+
+WHICH RECORD IS AFFECTED
+
+WHICH ACTION WILL BE PERFORMED
+
+Do not use vague confirmation text.
+
+============================================================
+STEP 13 — ERROR HANDLING
+============================================================
+
+If a workflow operation fails:
+
+DO NOT show success.
+
+DO NOT change the UI to the next status.
+
+DO NOT partially update the record.
+
+Show a clear error.
+
+Keep the record in its previous valid state.
+
+============================================================
+STEP 14 — CONCURRENT UPDATE PROTECTION
+============================================================
+
+If the application architecture supports safe concurrency handling:
+
+use it.
+
+The system must not allow two users/actions to accidentally overwrite
+each other's MR/RM status changes.
+
+If concurrency handling is not already supported:
+
+DO NOT introduce a large new architecture in this phase.
+
+Report the limitation instead.
+
+============================================================
+STEP 15 — MR TEST MATRIX
+============================================================
+
+Test every confirmed MR status transition from Phase 23.
+
+For each:
+
+VALID TRANSITION
+
+INVALID TRANSITION
+
+VALID DATA
+
+INVALID DATA
+
+EDIT ALLOWED
+
+EDIT BLOCKED
+
+DELETE ALLOWED
+
+DELETE BLOCKED
+
+COMPLETE ALLOWED
+
+COMPLETE BLOCKED
+
+CANCEL ALLOWED
+
+CANCEL BLOCKED
+
+ONLY TEST RULES THAT ACTUALLY EXIST IN PHASE 23.
+
+============================================================
+STEP 16 — RM TEST MATRIX
+============================================================
+
+Test every confirmed RM status transition from Phase 23.
+
+For each:
+
+VALID TRANSITION
+
+INVALID TRANSITION
+
+VALID DATA
+
+INVALID DATA
+
+EDIT ALLOWED
+
+EDIT BLOCKED
+
+DELETE ALLOWED
+
+DELETE BLOCKED
+
+COMPLETE ALLOWED
+
+COMPLETE BLOCKED
+
+CANCEL ALLOWED
+
+CANCEL BLOCKED
+
+ONLY TEST RULES THAT ACTUALLY EXIST IN PHASE 23.
+
+============================================================
+STEP 17 — EXISTING DATA PROTECTION
+============================================================
+
+Open representative existing MR records.
+
+Verify:
+
+Status unchanged.
+
+Fields unchanged.
+
+Calculated values unchanged.
+
+References unchanged.
+
+Dates unchanged.
+
+Quantities unchanged.
+
+Values unchanged.
+
+Then perform the same verification for RM.
+
+Do not bulk-update existing records.
+
+============================================================
+STEP 18 — DATABASE WRITE CONTROL
+============================================================
+
+Every write must be limited to the record/action currently being
+performed.
+
+DO NOT write to:
+
+PO
+
+PO transactions
+
+Job Cards
+
+Inventory
+
+Finish Goods
+
+Dashboard
+
+MR-related external modules
+
+RM-related external modules
+
+unless the exact relationship was explicitly approved in Phase 23.
+
+============================================================
+STEP 19 — REFRESH TEST
+============================================================
+
+After each valid workflow transition:
+
+refresh the browser.
+
+Verify the status remains correct.
+
+Verify the record remains correct.
+
+Attempt the same invalid transition again.
+
+It must remain blocked.
+
+============================================================
+STEP 20 — NAVIGATION TEST
+============================================================
+
+Navigate between:
+
+MR
+
+RM
+
+PO
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+Salary & Cont.
+
+DC
+
+Dashboard
+
+Settings
+
+Verify no route is broken.
+
+============================================================
+STEP 21 — CROSS-MODULE PROTECTION
+============================================================
+
+Perform MR/RM workflow actions.
+
+Then verify:
+
+PO data unchanged.
+
+PO IN unchanged.
+
+PO OUT unchanged.
+
+Job Cards unchanged.
+
+Reel Inventory unchanged.
+
+Finish Goods unchanged.
+
+Tracker unchanged.
+
+Freight unchanged.
+
+Salary & Cont. unchanged.
+
+DC unchanged.
+
+Dashboard business data unchanged.
+
+============================================================
+STEP 22 — BUILD
+============================================================
+
+Run:
+
+BUILD
+
+TYPE-CHECK
+
+LINT
+
+using the existing project configuration.
+
+Fix ONLY issues caused by Phase 26.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 23 — REGRESSION
+============================================================
+
+Verify:
+
+Dashboard
+
+PO Management
+
+PO History
+
+Customer Summary
+
+Monthly PO View
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight
+
+Salary & Cont.
+
+DC
+
+MR
+
+RM
+
+Settings
+
+Login
+
+Logout
+
+all continue working.
+
+============================================================
+PHASE 26 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 26 — MR/RM Workflow & Validation
+
+MR WORKFLOW:
+
+RM WORKFLOW:
+
+MR STATUS TRANSITIONS:
+
+RM STATUS TRANSITIONS:
+
+MR VALIDATIONS:
+
+RM VALIDATIONS:
+
+MR EDIT CONTROL:
+
+RM EDIT CONTROL:
+
+MR COMPLETE CONTROL:
+
+RM COMPLETE CONTROL:
+
+MR CANCEL CONTROL:
+
+RM CANCEL CONTROL:
+
+MR DELETE CONTROL:
+
+RM DELETE CONTROL:
+
+DUPLICATE ACTION PROTECTION:
+
+CONCURRENT UPDATE HANDLING:
+
+DATABASE CHANGES:
+
+CROSS-MODULE IMPACT:
+
+EXISTING DATA MODIFIED:
+NO / DETAILS
+
+TEST RESULTS:
+
+BUILD:
+
+REGRESSION:
+
+DATA SAFETY:
+
+UNDEFINED RULES NOT IMPLEMENTED:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 26 ENDS HERE.
+
+DO NOT IMPLEMENT:
+
+MR/RM REPORTS
+
+MR/RM DASHBOARD INTEGRATION
+
+MR/RM ADVANCED CROSS-MODULE INTEGRATION
+
+NEW BUSINESS RULES
+
+UNDEFINED CALCULATIONS
+
+UNDEFINED AUTOMATION
+
+DO NOT DEPLOY.
+
+STOP AFTER THE PHASE 26 REPORT.
+
+WAIT FOR EXPLICIT APPROVAL.
+
+Only continue when I say:
+
+"CONTINUE PHASE 27"

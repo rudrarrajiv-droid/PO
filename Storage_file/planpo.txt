@@ -1,0 +1,17 @@
+po management.............
+1. po management me jab bhi new po ki entry karu to create purchase order ki submit button par kya likha hai pata nahi chalta kyuki wo bahut dark hai
+2. kisi po me po date same ho sakti hai but delivery date un sabhi items ki alag alag ho sakti hai is liye har items ke samne po date ka option jarur dale
+3. po submit hone ke baad apna rm bole to paper raw material jarur show kare jaise item 01U512140ka 40000 boxes ka po hai but delivery agle 1 mahine me 5 baar me deni hai matlab 5 dates ka total wo karke system automatic reel inventory se us items ke size ki reel search karke de agar sabhi gsm ki size aur gsm ki reel hai to uska total weight ki 40000 box banana me kitna paper lagega wo master data se mil jayega aur reels reel inventory se milegi search karke de total weight taki rm na hone par hum material order kar sake  
+4. layer wise ye bataye ki paper type sk ya vk and size bole to reel size and bf and gsm sab kuch reel inventory me search karke ye bata de ki kaun sa material short hai ya complete hai with weight ke
+5. short material ke case me pahle wo exact match search kare reel ka phir  bhi match na ho to 1 inch plus tak consider kare 
+6. ab mjhe ye batao ki jo po maine dala hai uski reels kaise match hogi aur reels ko show karne ke liye data kaise aur kaha se  aayega
+7. dada basically mai chahta hu ki jab koi po mare paas aaye to mujhe po ki entry karte samay hi reels ki shortage ka pata chal jaaye aur mai customer ko time se maal dene ke liye tatpar rahu
+8. aur agar koi size short hai to row red color me ho jaaye us po ki with reason aur agar us item ki reels ka order lag gaya hai to green blue ya koi aur color show kare aur agar reel hai sabhi layers ki to green layer se swagat kare
+
+reel inventory updates ke liye..................
+1. mujhe reel size dalte hi us reel size me kaun kaun si item ki job chalti hai one click me wo mil jaaye search karne ke liye kuch matching ke smart filter lagege jaise paper type sk ya vk hai uske baad reel size phir bf phir gsm dalte hi matching se item ki jab bata de aur ye sab master data se search hoga but aap iska option kaha banaoge saath me us sheet me mai in searches me jo bhi option select karu to wo matching wise mujhe un reels ka total weight bhi de taaki ye bhi pata lag sake ki us job ko agar hum chalate hai to hamare paas kitna maal hai 
+2. dusra us sheet me reverse calculation bhi ho jaise hum agar kisi job ka naam dalte hai aur usme quantity bhi dete hai to us job ki sabhi layers me kitna maal lagega wo show kar de full paper specification ke saath 
+3. aur ek hai ki reel ke hisab se kaun si job me kitna maal ban sakta hai with other layers matchin aur us matching ka bhi kuch maal yani reels hai ki nahi ye bhi jankari chahiye 
+
+
+ aur ye sab step by step kai phases me kare koi sawal hai to pahle puche then plan bana kar de phir permission ke saath kaam kare har step ke pura hone ke baad stop and phir mai test karuga ok hoga to again permission for next step ki dunga and aise hi continue karege 

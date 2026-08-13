@@ -1,0 +1,856 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 16 — EXCEL IMPORT VALIDATION ONLY
+
+PHASE 1 TO PHASE 15 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 16.
+
+============================================================
+🚨 EXTREME DATA SAFETY
+============================================================
+
+THIS PHASE MUST STILL BE 100% NON-DESTRUCTIVE.
+
+NO PRODUCTION DATA MAY BE CREATED, UPDATED, MERGED OR DELETED IN THIS
+PHASE.
+
+DO NOT:
+
+- Create PO records
+- Update PO records
+- Delete PO records
+- Create IN transactions
+- Create OUT transactions
+- Modify PO History
+- Modify Dashboard
+- Modify Job Cards
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Login/Auth
+- Import anything into production Firestore
+- Deploy
+
+PHASE 15 CREATED THE EXCEL PREVIEW.
+
+PHASE 16 ONLY VALIDATES THAT PREVIEW AND PREPARES A SAFE IMPORT DECISION.
+
+============================================================
+PHASE 16 OBJECTIVE
+============================================================
+
+Take the already parsed Excel preview from Phase 15 and perform a
+DETAILED VALIDATION.
+
+The result must clearly classify every row as:
+
+1. READY TO IMPORT
+2. ERROR
+3. MISSING REQUIRED DATA
+4. POSSIBLE DUPLICATE
+5. ALREADY EXISTS
+6. NEEDS REVIEW
+
+DO NOT IMPORT ANYTHING.
+
+============================================================
+STEP 1 — VALIDATE THE 14 TARGET COLUMNS
+============================================================
+
+Every preview row must be checked against:
+
+1. PO NO.
+2. PO DT
+3. DELIVERY DATE
+4. CUSTOMER NAME
+5. CONSIGNEE
+6. ARTWORK NO.
+7. ITEM NAME
+8. SIZE
+9. RATE
+10. OPN QTY
+11. IN QTY
+12. OUT QTY
+13. CLOSING BAL
+14. VALUE
+
+Do not add new business fields.
+
+Do not silently remove any field.
+
+============================================================
+STEP 2 — REQUIRED FIELD VALIDATION
+============================================================
+
+At minimum validate the fields that are required by the existing
+Create PO workflow:
+
+PO NO.
+
+PO DT
+
+CUSTOMER NAME
+
+ITEM NAME
+
+RATE
+
+OPN QTY
+
+If the existing application has an approved requirement for any other
+field to be mandatory, preserve that existing rule.
+
+DO NOT invent new mandatory fields.
+
+============================================================
+STEP 3 — DATA TYPE VALIDATION
+============================================================
+
+Validate:
+
+PO DT → valid date
+
+DELIVERY DATE → valid date if present
+
+RATE → valid numeric value
+
+OPN QTY → valid numeric value
+
+IN QTY → valid numeric value
+
+OUT QTY → valid numeric value
+
+CLOSING BAL → valid numeric value
+
+VALUE → valid numeric value
+
+Text fields must remain text.
+
+Do NOT silently convert invalid values into:
+
+0
+
+blank
+
+NULL
+
+or another guessed value.
+
+============================================================
+STEP 4 — NEGATIVE QUANTITY VALIDATION
+============================================================
+
+Check:
+
+OPN QTY
+
+IN QTY
+
+OUT QTY
+
+CLOSING BAL
+
+according to the existing PO business rules.
+
+If a negative value is not valid:
+
+FLAG THE ROW.
+
+Do NOT automatically correct it.
+
+============================================================
+STEP 5 — BALANCE VALIDATION
+============================================================
+
+Verify the imported values against the approved PO logic:
+
+CLOSING BAL
+=
+OPN QTY + IN QTY - OUT QTY
+
+Example:
+
+OPN QTY = 1000
+
+IN QTY = 300
+
+OUT QTY = 200
+
+Expected Closing:
+
+1100
+
+If Excel says:
+
+1050
+
+flag:
+
+BALANCE MISMATCH
+
+Do NOT silently change Excel data.
+
+Do NOT silently change the formula.
+
+============================================================
+STEP 6 — VALUE VALIDATION
+============================================================
+
+Validate VALUE using the already approved PO business logic.
+
+DO NOT invent a new formula.
+
+If the approved logic is based on:
+
+CLOSING BAL × RATE
+
+then validate against that logic.
+
+If the existing approved logic differs:
+
+use that existing logic.
+
+If the source workbook contains a value that does not match the approved
+business calculation:
+
+FLAG THE ROW.
+
+Do NOT automatically overwrite the source value.
+
+============================================================
+STEP 7 — PO NUMBER VALIDATION
+============================================================
+
+PO NO. must not be blank.
+
+Check for:
+
+- Duplicate PO numbers inside the imported workbook
+- PO numbers already existing in the database
+- Possible conflicting PO records
+
+Classify separately:
+
+DUPLICATE IN EXCEL
+
+ALREADY EXISTS IN DATABASE
+
+POSSIBLE CONFLICT
+
+Do not merge anything.
+
+============================================================
+STEP 8 — DUPLICATE LOGIC
+============================================================
+
+For an existing PO number, compare relevant identifying fields:
+
+PO NO.
+
+CUSTOMER NAME
+
+ARTWORK NO.
+
+ITEM NAME
+
+PO DT
+
+If the existing database record appears to represent the same PO:
+
+classify:
+
+ALREADY EXISTS
+
+If the PO number is the same but important information differs:
+
+classify:
+
+CONFLICT — NEEDS REVIEW
+
+DO NOT overwrite the existing PO.
+
+DO NOT update it.
+
+DO NOT delete it.
+
+============================================================
+STEP 9 — CUSTOMER VALIDATION
+============================================================
+
+Check whether CUSTOMER NAME is:
+
+- Present
+- Valid text
+- Consistent with existing customer data where appropriate
+
+Do NOT automatically replace spelling.
+
+Do NOT silently map one customer to another.
+
+If a possible matching customer exists but the names differ:
+
+show:
+
+POSSIBLE CUSTOMER MATCH
+
+and leave it for review.
+
+============================================================
+STEP 10 — ITEM / ARTWORK VALIDATION
+============================================================
+
+Check:
+
+ARTWORK NO.
+
+ITEM NAME
+
+against existing Master Data where safely possible.
+
+IMPORTANT:
+
+Do NOT modify Master Data.
+
+Do NOT create Master Data records.
+
+If an item does not exist:
+
+flag:
+
+ITEM NOT FOUND IN MASTER DATA
+
+Do NOT block the entire workbook unless the existing business rule
+requires Master Data validation to be mandatory.
+
+============================================================
+STEP 11 — RATE VALIDATION
+============================================================
+
+Rate must be numeric.
+
+If the same PO/item combination already exists with a different Rate:
+
+FLAG:
+
+RATE MISMATCH
+
+Do not automatically choose either value.
+
+============================================================
+STEP 12 — DATE VALIDATION
+============================================================
+
+Check:
+
+PO DT
+
+DELIVERY DATE
+
+If Delivery Date is earlier than PO Date:
+
+FLAG:
+
+DELIVERY DATE BEFORE PO DATE
+
+Do not automatically correct the date.
+
+If date is missing where optional:
+
+mark:
+
+NOT PROVIDED
+
+Do not invent a date.
+
+============================================================
+STEP 13 — ROW STATUS
+============================================================
+
+Every imported row must receive exactly one primary validation status.
+
+Allowed statuses:
+
+READY TO IMPORT
+
+ERROR
+
+MISSING REQUIRED DATA
+
+POSSIBLE DUPLICATE
+
+ALREADY EXISTS
+
+CONFLICT — NEEDS REVIEW
+
+If multiple problems exist, the row must remain blocked and show ALL
+problems in the detailed error section.
+
+============================================================
+STEP 14 — VALIDATION SUMMARY
+============================================================
+
+Show:
+
+TOTAL ROWS
+
+READY TO IMPORT
+
+ERROR
+
+MISSING REQUIRED DATA
+
+POSSIBLE DUPLICATE
+
+ALREADY EXISTS
+
+CONFLICT / NEEDS REVIEW
+
+The numbers must be calculated from the actual workbook.
+
+============================================================
+STEP 15 — ERROR DETAILS
+============================================================
+
+Provide a detailed validation table:
+
+ROW
+
+SHEET
+
+PO NO.
+
+FIELD
+
+PROBLEM
+
+CURRENT VALUE
+
+EXPECTED / REQUIRED
+
+STATUS
+
+Example:
+
+Row: 25
+
+PO No.: PO-1025
+
+Field: CLOSING BAL
+
+Problem: Balance mismatch
+
+Current: 1050
+
+Expected: 1100
+
+Status: ERROR
+
+Do not hide validation errors.
+
+============================================================
+STEP 16 — VALIDATION FILTERS
+============================================================
+
+Provide:
+
+ALL
+
+READY TO IMPORT
+
+ERROR
+
+MISSING DATA
+
+POSSIBLE DUPLICATE
+
+ALREADY EXISTS
+
+NEEDS REVIEW
+
+These filters must operate only on the import preview.
+
+============================================================
+STEP 17 — VALIDATION SEARCH
+============================================================
+
+Allow searching validation results by:
+
+PO NO.
+
+CUSTOMER
+
+ARTWORK NO.
+
+ITEM NAME
+
+This is preview-only.
+
+No database writes.
+
+============================================================
+STEP 18 — SAFE IMPORT LIST
+============================================================
+
+Create a clearly identified temporary in-memory list:
+
+READY TO IMPORT
+
+This list may contain ONLY rows that pass all required validation.
+
+IMPORTANT:
+
+This list must NOT be written to Firestore.
+
+It exists only to prepare the next phase.
+
+============================================================
+STEP 19 — BLOCKED IMPORT LIST
+============================================================
+
+Rows with:
+
+ERROR
+
+MISSING REQUIRED DATA
+
+POSSIBLE DUPLICATE
+
+ALREADY EXISTS
+
+CONFLICT
+
+must NOT enter the READY TO IMPORT list.
+
+Do not allow them to accidentally reach production import.
+
+============================================================
+STEP 20 — NO AUTO-CORRECTION
+============================================================
+
+DO NOT automatically:
+
+- Change customer names
+- Change item names
+- Change PO numbers
+- Change dates
+- Change quantities
+- Change rates
+- Change closing balance
+- Change values
+- Merge duplicates
+
+If correction is required:
+
+FLAG IT.
+
+Human approval will happen in a later controlled phase.
+
+============================================================
+STEP 21 — NO DATABASE WRITE
+============================================================
+
+PHASE 16 MUST RESULT IN:
+
+DATABASE WRITES = 0
+
+The IDE must verify that the import-validation code cannot accidentally
+call the production create/update/delete methods.
+
+If necessary, temporarily disable the final database import action.
+
+============================================================
+STEP 22 — TEST CASES
+============================================================
+
+TEST 1:
+
+Valid PO row.
+
+Expected:
+
+READY TO IMPORT
+
+------------------------------------------------------------
+
+TEST 2:
+
+PO No. missing.
+
+Expected:
+
+MISSING REQUIRED DATA
+
+------------------------------------------------------------
+
+TEST 3:
+
+Invalid Rate.
+
+Expected:
+
+ERROR
+
+------------------------------------------------------------
+
+TEST 4:
+
+Invalid quantity.
+
+Expected:
+
+ERROR
+
+------------------------------------------------------------
+
+TEST 5:
+
+Closing Balance does not match:
+
+OPN + IN - OUT
+
+Expected:
+
+ERROR / BALANCE MISMATCH
+
+------------------------------------------------------------
+
+TEST 6:
+
+PO already exists with matching information.
+
+Expected:
+
+ALREADY EXISTS
+
+------------------------------------------------------------
+
+TEST 7:
+
+Same PO number exists but customer/item/date conflicts.
+
+Expected:
+
+CONFLICT — NEEDS REVIEW
+
+------------------------------------------------------------
+
+TEST 8:
+
+Same PO number appears twice in Excel.
+
+Expected:
+
+DUPLICATE IN EXCEL
+
+------------------------------------------------------------
+
+TEST 9:
+
+Unknown item/artwork.
+
+Expected:
+
+ITEM NOT FOUND IN MASTER DATA
+
+if Master Data validation is available.
+
+------------------------------------------------------------
+
+TEST 10:
+
+Open validation screen repeatedly.
+
+Expected:
+
+NO DATABASE WRITES.
+
+============================================================
+STEP 23 — SOURCE FILE PROTECTION
+============================================================
+
+The original Excel file must remain untouched.
+
+No:
+
+cell changes
+
+formula changes
+
+formatting changes
+
+sheet changes
+
+row changes
+
+column changes
+
+============================================================
+STEP 24 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY issues introduced by Phase 16.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 25 — REGRESSION
+============================================================
+
+Verify:
+
+PO Creation
+
+PO Search
+
+PO Filters
+
+PO IN
+
+PO OUT
+
+PO History
+
+Customer Summary
+
+Delivery/Status
+
+Monthly View
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+all continue working.
+
+============================================================
+DATA SAFETY CONFIRMATION
+============================================================
+
+Confirm explicitly:
+
+DATABASE WRITES:
+0
+
+PO RECORDS CREATED:
+0
+
+PO RECORDS UPDATED:
+0
+
+PO RECORDS DELETED:
+0
+
+IN TRANSACTIONS CREATED:
+0
+
+OUT TRANSACTIONS CREATED:
+0
+
+EXISTING PO DATA MODIFIED:
+NO
+
+EXISTING JOB CARD DATA MODIFIED:
+NO
+
+MASTER DATA MODIFIED:
+NO
+
+REEL INVENTORY MODIFIED:
+NO
+
+FINISH GOODS MODIFIED:
+NO
+
+DASHBOARD MODIFIED:
+NO
+
+EXCEL SOURCE MODIFIED:
+NO
+
+DEPLOYMENT:
+NO
+
+============================================================
+PHASE 16 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 16 — Import Validation
+
+SOURCE FILE:
+
+TOTAL ROWS:
+
+READY TO IMPORT:
+
+ERRORS:
+
+MISSING REQUIRED DATA:
+
+POSSIBLE DUPLICATES:
+
+ALREADY EXISTS:
+
+CONFLICTS / NEEDS REVIEW:
+
+BALANCE MISMATCHES:
+
+VALUE MISMATCHES:
+
+MASTER DATA MISMATCHES:
+
+DATABASE WRITES:
+0
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 16 ENDS HERE.
+
+DO NOT IMPORT ANY DATA.
+
+DO NOT START PRODUCTION DATABASE SAVE.
+
+DO NOT START FINAL IMPORT.
+
+DO NOT START FINAL REGRESSION.
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 17"

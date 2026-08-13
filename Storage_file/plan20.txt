@@ -1,0 +1,578 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 11 — DASHBOARD INTEGRATION ONLY
+
+PHASE 1 TO PHASE 10 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 11.
+
+============================================================
+🚨 CRITICAL DATA SAFETY
+============================================================
+
+THIS PHASE IS ONLY FOR READING EXISTING PO DATA AND DISPLAYING
+PO-RELATED INFORMATION INSIDE THE EXISTING DASHBOARD.
+
+DO NOT:
+
+- Delete any data
+- Modify any PO
+- Modify IN transactions
+- Modify OUT transactions
+- Modify PO history
+- Modify Customer Summary data
+- Modify Job Card data
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Login/Auth
+- Import Excel
+- Export data
+- Deploy
+
+DO NOT create duplicate PO data for the Dashboard.
+
+The Dashboard must READ from the existing PO database.
+
+If Dashboard integration requires modifying existing business data:
+
+STOP IMMEDIATELY.
+
+============================================================
+PHASE 11 OBJECTIVE
+============================================================
+
+Connect the existing PO Management data with the EXISTING Dashboard.
+
+IMPORTANT:
+
+DO NOT redesign the Dashboard.
+
+DO NOT replace existing Dashboard cards.
+
+DO NOT remove existing Dashboard sections.
+
+DO NOT change existing Dashboard business logic.
+
+ONLY ADD a compact PO section to the existing Dashboard.
+
+============================================================
+STEP 1 — INSPECT EXISTING DASHBOARD
+============================================================
+
+Before modifying the Dashboard:
+
+Inspect the current Dashboard implementation.
+
+Identify:
+
+- Existing KPI cards
+- Existing charts
+- Existing layout
+- Existing logs
+- Existing data-fetching methods
+- Existing reusable components
+
+Reuse the existing Dashboard design/components wherever possible.
+
+Do not create a second Dashboard.
+
+============================================================
+STEP 2 — PO KPI SECTION
+============================================================
+
+Add a compact PO summary section.
+
+The section should show:
+
+TOTAL ACTIVE POs
+
+TOTAL PO VALUE
+
+TOTAL OPENING QTY
+
+TOTAL IN QTY
+
+TOTAL OUT QTY
+
+TOTAL CLOSING BALANCE
+
+PENDING PO VALUE
+
+Use the existing Dashboard card design.
+
+Do NOT create oversized cards.
+
+Do NOT disturb existing Dashboard layout.
+
+============================================================
+STEP 3 — ACTIVE PO COUNT
+============================================================
+
+TOTAL ACTIVE POs must be calculated from the existing PO records.
+
+Do not count completed POs as active.
+
+Use the status logic already implemented in Phase 10.
+
+Do not create a new status system.
+
+============================================================
+STEP 4 — TOTAL PO VALUE
+============================================================
+
+Show the total PO value according to the already approved PO Value
+business logic.
+
+Do NOT invent a new formula.
+
+Do NOT manually store the Dashboard value.
+
+It must be derived from the PO data.
+
+============================================================
+STEP 5 — TOTAL OPENING QTY
+============================================================
+
+Show:
+
+TOTAL OPENING QTY
+
+calculated from existing PO records.
+
+No hard-coded values.
+
+============================================================
+STEP 6 — TOTAL IN QTY
+============================================================
+
+Show:
+
+TOTAL IN QTY
+
+using the existing PO transaction data.
+
+Do not create new IN transactions.
+
+Do not modify existing IN transactions.
+
+============================================================
+STEP 7 — TOTAL OUT QTY
+============================================================
+
+Show:
+
+TOTAL OUT QTY
+
+using the existing PO transaction data.
+
+Do not create new OUT transactions.
+
+Do not modify existing OUT transactions.
+
+============================================================
+STEP 8 — TOTAL CLOSING BALANCE
+============================================================
+
+Show:
+
+TOTAL CLOSING BALANCE
+
+using the existing PO balance logic.
+
+Do not modify PO balances.
+
+Do not create duplicate balance records.
+
+============================================================
+STEP 9 — PENDING PO VALUE
+============================================================
+
+Show:
+
+PENDING PO VALUE
+
+using the existing approved PO Value/business logic.
+
+Only POs that are still outstanding should contribute.
+
+Completed POs must not be incorrectly counted as pending.
+
+If the existing business logic is ambiguous:
+
+STOP and report it.
+
+Do not guess.
+
+============================================================
+STEP 10 — CUSTOMER-WISE PO INFORMATION
+============================================================
+
+Add a compact customer-wise PO section ONLY if it fits naturally into
+the existing Dashboard layout.
+
+It may show:
+
+CUSTOMER
+
+PENDING PO VALUE
+
+CLOSING BALANCE
+
+Keep it compact.
+
+Do NOT recreate the entire Phase 9 Customer Summary on the Dashboard.
+
+Do NOT create a second customer database.
+
+============================================================
+STEP 11 — PO STATUS OVERVIEW
+============================================================
+
+Add a small PO status overview if the existing Dashboard design
+supports it.
+
+Show counts for:
+
+PENDING
+
+PARTIALLY COMPLETED
+
+COMPLETED
+
+OVERDUE / DELAYED
+
+Use the status logic already created in Phase 10.
+
+Do not create new status rules.
+
+============================================================
+STEP 12 — DASHBOARD REFRESH
+============================================================
+
+PO Dashboard information must update when PO data changes.
+
+Examples:
+
+New PO created.
+
+IN transaction added.
+
+OUT transaction added.
+
+PO becomes completed.
+
+PO becomes overdue.
+
+The Dashboard must reflect the current database state.
+
+Do NOT create duplicate PO records just for Dashboard calculations.
+
+============================================================
+STEP 13 — DATA FETCHING
+============================================================
+
+Use the existing application's database/data-fetching architecture.
+
+Do not introduce an unnecessary new backend.
+
+Do not introduce an external analytics service.
+
+Do not create a duplicate PO collection.
+
+Avoid unnecessary repeated database reads.
+
+If existing Dashboard architecture has a shared data service:
+
+reuse it where appropriate.
+
+============================================================
+STEP 14 — DASHBOARD PERFORMANCE
+============================================================
+
+Dashboard must remain fast.
+
+Do not load the complete PO transaction history into the Dashboard if
+only aggregate totals are required.
+
+Use the safest efficient approach supported by the existing architecture.
+
+Do not rewrite the entire Dashboard data layer.
+
+============================================================
+STEP 15 — EXISTING DASHBOARD PROTECTION
+============================================================
+
+After adding PO information verify:
+
+Existing KPI cards remain unchanged.
+
+Existing charts remain unchanged.
+
+Existing logs remain unchanged.
+
+Existing navigation remains unchanged.
+
+Existing Dashboard calculations remain unchanged.
+
+Existing Dashboard styling remains unchanged except for the newly added
+PO section.
+
+============================================================
+STEP 16 — PO PAGE PROTECTION
+============================================================
+
+Verify that the following still work:
+
+PO Creation
+
+PO Search
+
+PO Filters
+
+PO IN
+
+PO OUT
+
+PO History
+
+Customer Summary
+
+Delivery/Status Logic
+
+No PO business logic should be changed in this phase.
+
+============================================================
+STEP 17 — TEST CASES
+============================================================
+
+TEST 1 — NEW PO
+
+Create/use a valid PO.
+
+Expected:
+
+Dashboard PO values reflect the PO.
+
+------------------------------------------------------------
+
+TEST 2 — IN
+
+Add a valid IN transaction.
+
+Expected:
+
+Dashboard TOTAL IN increases correctly.
+
+Dashboard CLOSING BALANCE updates correctly.
+
+------------------------------------------------------------
+
+TEST 3 — OUT
+
+Add a valid OUT transaction.
+
+Expected:
+
+Dashboard TOTAL OUT increases correctly.
+
+Dashboard CLOSING BALANCE updates correctly.
+
+------------------------------------------------------------
+
+TEST 4 — COMPLETION
+
+Complete a PO.
+
+Expected:
+
+Active PO count decreases appropriately.
+
+Completed count increases.
+
+Pending values update correctly.
+
+------------------------------------------------------------
+
+TEST 5 — OVERDUE
+
+Use a PO whose delivery date has passed and whose closing balance is
+greater than zero.
+
+Expected:
+
+Overdue count updates.
+
+Do not modify the PO just for this test.
+
+------------------------------------------------------------
+
+TEST 6 — CUSTOMER
+
+Verify a customer's PO information against the Phase 9 Customer Summary.
+
+Expected:
+
+Dashboard customer-level numbers match the PO Summary.
+
+============================================================
+STEP 18 — DATA SAFETY TEST
+============================================================
+
+Dashboard loading must NOT create or modify database records.
+
+Confirm:
+
+Dashboard opened: no writes.
+
+Dashboard refreshed: no writes.
+
+Dashboard filters/reads: no writes.
+
+No PO transaction created by Dashboard.
+
+============================================================
+STEP 19 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY issues introduced by Phase 11.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 20 — REGRESSION
+============================================================
+
+Verify:
+
+Dashboard
+
+PO Management
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+all continue working.
+
+============================================================
+DATA SAFETY CONFIRMATION
+============================================================
+
+Confirm:
+
+PO data modified by Dashboard: NO
+
+PO transactions modified: NO
+
+PO history modified: NO
+
+Job Card data modified: NO
+
+Master Data modified: NO
+
+Reel Inventory modified: NO
+
+Finish Goods modified: NO
+
+Tracker modified: NO
+
+Freight modified: NO
+
+Existing Dashboard data modified: NO
+
+Collections deleted: NO
+
+Documents deleted: NO
+
+Fake data created: NO
+
+Excel imported: NO
+
+Deployment: NO
+
+============================================================
+PHASE 11 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 11 — Dashboard Integration
+
+PO KPI CARDS:
+
+ACTIVE PO COUNT:
+
+TOTAL PO VALUE:
+
+TOTAL OPENING QTY:
+
+TOTAL IN:
+
+TOTAL OUT:
+
+TOTAL CLOSING BALANCE:
+
+PENDING PO VALUE:
+
+STATUS OVERVIEW:
+
+CUSTOMER SUMMARY:
+
+DASHBOARD WRITE OPERATIONS:
+NONE
+
+TEST RESULTS:
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 11 ENDS HERE.
+
+DO NOT START:
+
+MONTHLY PO VIEW
+
+JOB CARD ↔ PO CONNECTION
+
+EXPORT
+
+EXCEL IMPORT
+
+FINAL REGRESSION
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 12"

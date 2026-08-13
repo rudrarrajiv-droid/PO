@@ -1,0 +1,660 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 15 — EXCEL IMPORT PREVIEW ONLY
+
+PHASE 1 TO PHASE 14 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 15.
+
+============================================================
+🚨 EXTREME DATA SAFETY
+============================================================
+
+THIS PHASE MUST NOT IMPORT OR SAVE ANY EXCEL DATA INTO THE DATABASE.
+
+THIS IS PREVIEW ONLY.
+
+DO NOT:
+
+- Create PO records
+- Update PO records
+- Delete PO records
+- Create IN transactions
+- Create OUT transactions
+- Modify PO history
+- Modify Dashboard data
+- Modify Job Card data
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Login/Auth
+- Modify any existing Firestore document
+- Create any production database record
+- Deploy
+
+THE EXCEL FILE MUST NEVER DIRECTLY WRITE TO FIRESTORE IN THIS PHASE.
+
+If any code path can save imported data automatically:
+
+STOP IMMEDIATELY.
+
+============================================================
+PHASE 15 OBJECTIVE
+============================================================
+
+Create ONLY:
+
+EXCEL IMPORT
+
+→ FILE SELECTION
+
+→ FILE READING
+
+→ DATA PARSING
+
+→ IMPORT PREVIEW
+
+There must be NO final import/save button that writes to the database
+in this phase.
+
+The user must be able to select:
+
+PO JULY 2026.xlsx
+
+and see exactly what the system has understood from the workbook.
+
+============================================================
+STEP 1 — IMPORT BUTTON
+============================================================
+
+Inside PO Management add:
+
+IMPORT EXCEL
+
+Use the existing application design.
+
+Do NOT redesign the PO page.
+
+When clicked:
+
+Open a file selector.
+
+Accept:
+
+.xlsx
+
+Do NOT automatically upload/save the file to Firestore.
+
+============================================================
+STEP 2 — SOURCE WORKBOOK
+============================================================
+
+The primary business-reference workbook is:
+
+PO JULY 2026.xlsx
+
+Read the workbook structure.
+
+DO NOT modify the workbook.
+
+DO NOT overwrite it.
+
+DO NOT create a modified copy and save it as the source.
+
+============================================================
+STEP 3 — READ WORKBOOK
+============================================================
+
+Read the workbook locally/client-side or through the safest existing
+application architecture.
+
+The workbook must first be parsed before any database operation.
+
+IMPORTANT:
+
+DATABASE MUST NOT BE CALLED FOR IMPORT WRITES IN THIS PHASE.
+
+============================================================
+STEP 4 — DETECT SHEETS
+============================================================
+
+Show the detected worksheet names.
+
+Example:
+
+SUMMARY
+
+Customer sheets
+
+Other relevant PO sheets
+
+Do NOT assume the sheet names if the workbook contains different names.
+
+Show what was actually detected.
+
+============================================================
+STEP 5 — UNDERSTAND SOURCE STRUCTURE
+============================================================
+
+Read the workbook according to the actual structure identified during
+Phase 1.
+
+Do NOT blindly read every cell as a PO.
+
+Identify:
+
+PO number
+
+PO date
+
+Delivery date
+
+Customer
+
+Consignee
+
+Artwork number
+
+Item name
+
+Size
+
+Rate
+
+Opening quantity
+
+IN quantity
+
+OUT quantity
+
+Closing balance
+
+Value
+
+ONLY when the source workbook clearly provides them.
+
+============================================================
+STEP 6 — TARGET 14-COLUMN STRUCTURE
+============================================================
+
+Preview data must be mapped to EXACTLY:
+
+1. PO NO.
+2. PO DT
+3. DELIVERY DATE
+4. CUSTOMER NAME
+5. CONSIGNEE
+6. ARTWORK NO.
+7. ITEM NAME
+8. SIZE
+9. RATE
+10. OPN QTY
+11. IN QTY
+12. OUT QTY
+13. CLOSING BAL
+14. VALUE
+
+Do not add unrelated business columns.
+
+============================================================
+STEP 7 — DO NOT INVENT MISSING DATA
+============================================================
+
+This rule is extremely important.
+
+If a source field does not exist clearly:
+
+DO NOT guess.
+
+DO NOT derive it from unrelated text.
+
+DO NOT fabricate it.
+
+Mark it as:
+
+MISSING / NOT AVAILABLE
+
+or clearly flag the row for review.
+
+Example:
+
+If CONSIGNEE is not available:
+
+Do NOT copy CUSTOMER NAME into CONSIGNEE automatically.
+
+If DELIVERY DATE is not available:
+
+Do NOT use PO DATE as DELIVERY DATE.
+
+If ARTWORK NO. cannot be identified:
+
+Do NOT invent one.
+
+============================================================
+STEP 8 — FORMULA HANDLING
+============================================================
+
+Read existing Excel formulas where available.
+
+However:
+
+DO NOT blindly import Excel formula text as the business value.
+
+If a formula produces a valid value:
+
+show the calculated/result value.
+
+If the formula contains:
+
+#REF!
+
+#VALUE!
+
+#DIV/0!
+
+#NAME?
+
+#N/A
+
+or another invalid result:
+
+FLAG THE ROW.
+
+Do NOT silently convert an error into zero.
+
+Do NOT silently guess the correct value.
+
+============================================================
+STEP 9 — PREVIEW TABLE
+============================================================
+
+Show an IMPORT PREVIEW table.
+
+Use the exact 14 target columns:
+
+PO NO.
+
+PO DT
+
+DELIVERY DATE
+
+CUSTOMER NAME
+
+CONSIGNEE
+
+ARTWORK NO.
+
+ITEM NAME
+
+SIZE
+
+RATE
+
+OPN QTY
+
+IN QTY
+
+OUT QTY
+
+CLOSING BAL
+
+VALUE
+
+The preview must show the actual parsed values.
+
+============================================================
+STEP 10 — IMPORT SUMMARY
+============================================================
+
+Above the preview show:
+
+TOTAL ROWS DETECTED
+
+VALID ROWS
+
+ROWS WITH ERRORS
+
+ROWS WITH MISSING DATA
+
+DUPLICATE CANDIDATES
+
+Do NOT show fake counts.
+
+Calculate them from the actual selected workbook.
+
+============================================================
+STEP 11 — ERROR LIST
+============================================================
+
+For invalid rows, show:
+
+ROW NUMBER
+
+SHEET NAME
+
+FIELD
+
+PROBLEM
+
+Example:
+
+Sheet: DBI
+
+Row: 25
+
+Field: RATE
+
+Problem: Invalid numeric value
+
+Do not hide errors.
+
+============================================================
+STEP 12 — DUPLICATE DETECTION
+============================================================
+
+Detect possible duplicates against the EXISTING PO DATABASE.
+
+IMPORTANT:
+
+This is READ-ONLY.
+
+Do NOT modify the database.
+
+Use safe read/query operations only.
+
+Potential duplicate criteria should consider the actual PO identity
+structure established earlier.
+
+At minimum inspect:
+
+PO NO.
+
+and relevant identifying information.
+
+Do NOT automatically decide that two records are duplicates if the
+business identity is ambiguous.
+
+Mark them:
+
+POSSIBLE DUPLICATE
+
+for later review.
+
+============================================================
+STEP 13 — EXISTING DATABASE COMPARISON
+============================================================
+
+If an imported PO number already exists:
+
+show:
+
+EXISTS IN DATABASE
+
+Do NOT update it.
+
+Do NOT overwrite it.
+
+Do NOT merge it.
+
+Do NOT delete it.
+
+Do NOT create another copy.
+
+Only flag it for Phase 16 validation.
+
+============================================================
+STEP 14 — PREVIEW FILTERS
+============================================================
+
+Provide simple preview filters:
+
+ALL
+
+VALID
+
+ERRORS
+
+MISSING DATA
+
+POSSIBLE DUPLICATES
+
+This is only for reviewing the imported file.
+
+============================================================
+STEP 15 — PREVIEW SEARCH
+============================================================
+
+Allow searching the preview by:
+
+PO NO.
+
+CUSTOMER
+
+ARTWORK NO.
+
+ITEM NAME
+
+This search must operate on the parsed preview data.
+
+No database writes.
+
+============================================================
+STEP 16 — ORIGINAL FILE PROTECTION
+============================================================
+
+The selected XLSX file must remain untouched.
+
+Do not modify:
+
+- Cell values
+- Formulas
+- Formatting
+- Sheet names
+- Rows
+- Columns
+
+The import process is READ ONLY.
+
+============================================================
+STEP 17 — NO SAVE BUTTON
+============================================================
+
+IMPORTANT:
+
+DO NOT implement a working:
+
+IMPORT / SAVE TO DATABASE
+
+button in Phase 15.
+
+If a button is visually required for future flow, it must remain disabled
+and clearly indicate:
+
+"Available after validation"
+
+No database write may be possible from Phase 15.
+
+============================================================
+STEP 18 — TEST WITH SOURCE FILE
+============================================================
+
+Use:
+
+PO JULY 2026.xlsx
+
+for testing.
+
+Verify:
+
+Sheets are detected correctly.
+
+Rows are parsed correctly.
+
+14 target fields are mapped correctly.
+
+Missing fields are flagged.
+
+Formula errors are flagged.
+
+Possible duplicates are identified.
+
+No data is written to Firestore.
+
+============================================================
+STEP 19 — DATA SAFETY TEST
+============================================================
+
+Before and after selecting/importing the workbook verify:
+
+PO records unchanged.
+
+IN transactions unchanged.
+
+OUT transactions unchanged.
+
+PO history unchanged.
+
+Customer Summary unchanged.
+
+Dashboard unchanged.
+
+Job Card unchanged.
+
+Master Data unchanged.
+
+Reel Inventory unchanged.
+
+Finish Goods unchanged.
+
+Tracker unchanged.
+
+Freight unchanged.
+
+No new PO documents created.
+
+No new transactions created.
+
+============================================================
+STEP 20 — BUILD
+============================================================
+
+Run the existing build/type-check.
+
+Fix ONLY issues introduced by Phase 15.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 21 — REGRESSION
+============================================================
+
+Verify:
+
+PO Creation
+
+PO Search
+
+PO Filters
+
+PO IN
+
+PO OUT
+
+PO History
+
+Customer Summary
+
+Delivery/Status
+
+Monthly View
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+all continue working.
+
+============================================================
+PHASE 15 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 15 — Excel Import Preview
+
+SOURCE FILE TESTED:
+
+SHEETS DETECTED:
+
+TOTAL ROWS:
+
+VALID ROWS:
+
+ERROR ROWS:
+
+MISSING DATA ROWS:
+
+POSSIBLE DUPLICATES:
+
+14-COLUMN MAPPING:
+
+FORMULA ERRORS FOUND:
+
+DATABASE WRITES:
+NONE
+
+DATABASE RECORDS CREATED:
+NONE
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 15 ENDS HERE.
+
+DO NOT START:
+
+IMPORT VALIDATION
+
+DATABASE IMPORT
+
+DUPLICATE RESOLUTION
+
+PRODUCTION DATA SAVE
+
+FINAL REGRESSION
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 16"

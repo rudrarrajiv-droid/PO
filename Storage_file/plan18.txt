@@ -1,0 +1,621 @@
+# PACKWELL ERP
+# PO MANAGEMENT
+# PHASE 9 — CUSTOMER-WISE SUMMARY ONLY
+
+PHASE 1 TO PHASE 8 HAVE BEEN COMPLETED AND APPROVED.
+
+NOW EXECUTE ONLY PHASE 9.
+
+============================================================
+🚨 CRITICAL DATA SAFETY
+============================================================
+
+THIS PHASE IS FOR READ-ONLY CUSTOMER-WISE PO SUMMARY.
+
+DO NOT:
+
+- Delete any data
+- Modify any PO
+- Modify any IN transaction
+- Modify any OUT transaction
+- Create duplicate records
+- Create customer-specific collections
+- Modify Job Card
+- Modify Master Data
+- Modify Reel Inventory
+- Modify Finish Goods
+- Modify Tracker
+- Modify Freight
+- Modify Login/Auth
+- Modify existing Dashboard logic
+- Import Excel
+- Export data
+- Deploy
+
+The Summary must be generated from existing PO data.
+
+If summary implementation requires changing existing business data:
+
+STOP IMMEDIATELY.
+
+============================================================
+PHASE 9 OBJECTIVE
+============================================================
+
+Convert the CUSTOMER-WISE SUMMARY concept from the original Excel
+workflow into an automatic online PO Summary.
+
+The summary must update automatically from the existing PO database.
+
+The user must NOT manually maintain any summary.
+
+IMPORTANT:
+
+Do NOT create separate database collections/sheets for customers.
+
+Customer is a DATA FIELD, not a database structure.
+
+============================================================
+STEP 1 — CUSTOMER SUMMARY VIEW
+============================================================
+
+Create a Customer-wise Summary section inside PO Management.
+
+Use the existing PO Management design.
+
+Do NOT create unnecessary separate pages.
+
+The summary should be compact and easy to understand.
+
+============================================================
+STEP 2 — SUMMARY COLUMNS
+============================================================
+
+Display:
+
+1. CUSTOMER NAME
+2. TOTAL PO VALUE
+3. TOTAL OPN QTY
+4. TOTAL IN QTY
+5. TOTAL OUT QTY
+6. TOTAL CLOSING BAL
+7. PENDING VALUE
+
+Do NOT add unnecessary visible columns.
+
+============================================================
+STEP 3 — CUSTOMER GROUPING
+============================================================
+
+Group all existing PO records by:
+
+CUSTOMER NAME
+
+Example:
+
+DBI
+
+If DBI has 10 POs:
+
+All 10 POs must contribute to the DBI summary.
+
+Do NOT duplicate PO records.
+
+Do NOT create separate DBI documents merely for summary purposes.
+
+============================================================
+STEP 4 — TOTAL PO VALUE
+============================================================
+
+Calculate:
+
+TOTAL PO VALUE
+
+from the relevant PO records according to the approved PO Value logic.
+
+Do NOT manually store a summary value.
+
+Do NOT hard-code it.
+
+When a PO changes, the summary must automatically reflect the updated
+value.
+
+============================================================
+STEP 5 — TOTAL OPENING QUANTITY
+============================================================
+
+For each customer:
+
+TOTAL OPN QTY
+
+=
+
+SUM of OPN QTY of all that customer's POs.
+
+Do not manually enter this value.
+
+============================================================
+STEP 6 — TOTAL IN
+============================================================
+
+For each customer:
+
+TOTAL IN QTY
+
+=
+
+SUM of IN quantities of that customer's POs.
+
+Use the existing PO/transaction data.
+
+Do NOT create duplicate IN records.
+
+Do NOT modify IN transactions.
+
+============================================================
+STEP 7 — TOTAL OUT
+============================================================
+
+For each customer:
+
+TOTAL OUT QTY
+
+=
+
+SUM of OUT quantities of that customer's POs.
+
+Use the existing PO/transaction data.
+
+Do NOT modify OUT transactions.
+
+============================================================
+STEP 8 — TOTAL CLOSING BALANCE
+============================================================
+
+For each customer:
+
+TOTAL CLOSING BAL
+
+=
+
+SUM of the valid current closing balances of that customer's POs.
+
+The result must represent the actual current PO position.
+
+Do not allow manual editing.
+
+============================================================
+STEP 9 — PENDING VALUE
+============================================================
+
+Pending Value must represent the value associated with outstanding PO
+quantity according to the already approved PO business logic.
+
+Do NOT invent a new formula.
+
+Use the PO Value/business logic already established in previous phases.
+
+If there is ambiguity:
+
+STOP and report it.
+
+Do not silently guess.
+
+============================================================
+STEP 10 — AUTOMATIC UPDATE
+============================================================
+
+The customer summary must automatically reflect:
+
+New PO
+
+PO update
+
+IN transaction
+
+OUT transaction
+
+PO completion/status changes when already supported by existing logic.
+
+Example:
+
+Customer:
+
+DBI
+
+Current Closing Balance:
+
+5000
+
+If a valid OUT transaction reduces a DBI PO by 500:
+
+The DBI summary must automatically reflect the new balance.
+
+No manual refresh of an Excel summary.
+
+============================================================
+STEP 11 — CUSTOMER SEARCH
+============================================================
+
+Add a simple customer search.
+
+Example:
+
+Typing:
+
+DB
+
+should show matching customer names.
+
+Typing:
+
+MBS
+
+should show matching customers.
+
+Use partial matching.
+
+Do not require exact complete customer name.
+
+============================================================
+STEP 12 — CUSTOMER SELECTION
+============================================================
+
+When the user selects a customer from the summary:
+
+Show that customer's PO records using the existing PO table.
+
+The PO table must continue showing the existing 14 columns:
+
+PO NO.
+PO DT
+DELIVERY DATE
+CUSTOMER NAME
+CONSIGNEE
+ARTWORK NO.
+ITEM NAME
+SIZE
+RATE
+OPN QTY
+IN QTY
+OUT QTY
+CLOSING BAL
+VALUE
+
+Do NOT create a second different PO table structure.
+
+============================================================
+STEP 13 — CUSTOMER DETAIL
+============================================================
+
+Selecting a customer should provide a compact overview:
+
+Customer Name
+
+Total POs
+
+Total PO Value
+
+Total Opening Qty
+
+Total IN
+
+Total OUT
+
+Total Closing Balance
+
+Pending Value
+
+Below this:
+
+Customer's PO list
+
+Do not create a separate database record for this overview.
+
+============================================================
+STEP 14 — ALL CUSTOMERS
+============================================================
+
+Provide an easy way to return to:
+
+ALL CUSTOMERS
+
+When selected:
+
+Show the complete customer summary again.
+
+Do not reload the entire browser unnecessarily.
+
+============================================================
+STEP 15 — GRAND TOTAL
+============================================================
+
+At the bottom of the customer summary, show:
+
+TOTAL
+
+For:
+
+Total PO Value
+
+Total OPN Qty
+
+Total IN Qty
+
+Total OUT Qty
+
+Total Closing Balance
+
+Total Pending Value
+
+These totals must be calculated from the underlying PO data.
+
+Do not hard-code them.
+
+============================================================
+STEP 16 — EMPTY STATE
+============================================================
+
+If there are no PO records:
+
+Show:
+
+"No Purchase Orders Available"
+
+Do not create fake customers.
+
+============================================================
+STEP 17 — DATA CONSISTENCY TEST
+============================================================
+
+Choose a customer with multiple POs.
+
+Manually verify:
+
+Customer PO count
+
+Opening Qty
+
+IN Qty
+
+OUT Qty
+
+Closing Balance
+
+Value
+
+against the individual PO records.
+
+They must match.
+
+============================================================
+STEP 18 — TRANSACTION CONSISTENCY TEST
+============================================================
+
+Select a customer with existing IN/OUT transactions.
+
+Verify:
+
+Customer summary IN
+
+matches
+
+SUM of that customer's PO IN.
+
+Verify:
+
+Customer summary OUT
+
+matches
+
+SUM of that customer's PO OUT.
+
+Verify:
+
+Customer Closing Balance
+
+matches the current underlying PO balances.
+
+Do NOT modify any data to make numbers match.
+
+If a mismatch exists:
+
+REPORT IT.
+
+============================================================
+STEP 19 — READ-ONLY SAFETY
+============================================================
+
+Opening the Customer Summary must NOT:
+
+Create documents.
+
+Update documents.
+
+Update timestamps.
+
+Create transactions.
+
+Modify PO balances.
+
+Modify customer data.
+
+Modify Dashboard data.
+
+It must be a read/calculation operation only.
+
+============================================================
+STEP 20 — DO NOT ADD DASHBOARD INTEGRATION
+============================================================
+
+IMPORTANT:
+
+DO NOT connect this summary to the main Dashboard in Phase 9.
+
+Dashboard integration is a separate later phase.
+
+Only make the summary available inside PO Management.
+
+============================================================
+STEP 21 — DO NOT ADD EXPORT
+============================================================
+
+Do NOT add:
+
+Excel Export
+
+PDF Export
+
+Those belong to a later phase.
+
+============================================================
+STEP 22 — BUILD
+============================================================
+
+Run the existing project build/type-check.
+
+Fix ONLY issues introduced by Phase 9.
+
+Do not refactor unrelated code.
+
+============================================================
+STEP 23 — REGRESSION
+============================================================
+
+Verify:
+
+PO Creation
+
+PO Search
+
+PO Filters
+
+PO IN
+
+PO OUT
+
+PO History
+
+Dashboard
+
+Job Card
+
+Master Data
+
+Reel Inventory
+
+Finish Goods
+
+Tracker
+
+Freight Charges
+
+Settings
+
+Login
+
+Logout
+
+still work normally.
+
+============================================================
+DATA SAFETY CONFIRMATION
+============================================================
+
+Confirm:
+
+PO master data modified unexpectedly: NO
+
+IN transactions modified: NO
+
+OUT transactions modified: NO
+
+History modified: NO
+
+Existing Job Cards modified: NO
+
+Master Data modified: NO
+
+Reel Inventory modified: NO
+
+Finish Goods modified: NO
+
+Tracker modified: NO
+
+Freight modified: NO
+
+Dashboard modified: NO
+
+Collections deleted: NO
+
+Documents deleted: NO
+
+Fake data created: NO
+
+Excel imported: NO
+
+Deployment: NO
+
+============================================================
+PHASE 9 FINAL REPORT
+============================================================
+
+Report exactly:
+
+PHASE:
+Phase 9 — Customer-wise PO Summary
+
+FILES MODIFIED:
+
+COMPONENTS MODIFIED:
+
+SUMMARY COLUMNS:
+
+CUSTOMER SEARCH:
+
+CUSTOMER DETAIL VIEW:
+
+GRAND TOTAL:
+
+CALCULATION TESTS:
+
+DATA WRITES FROM SUMMARY:
+NONE
+
+DATA SAFETY:
+
+BUILD:
+
+REGRESSION:
+
+UNRELATED ISSUES:
+
+============================================================
+🛑 ABSOLUTE STOP
+============================================================
+
+PHASE 9 ENDS HERE.
+
+DO NOT START:
+
+DELIVERY / STATUS LOGIC
+
+DASHBOARD INTEGRATION
+
+MONTHLY VIEW
+
+JOB CARD INTEGRATION
+
+EXPORT
+
+EXCEL IMPORT
+
+FINAL REGRESSION
+
+DO NOT DEPLOY.
+
+WAIT FOR MY EXPLICIT APPROVAL.
+
+Only proceed when I say:
+
+"CONTINUE PHASE 10"
