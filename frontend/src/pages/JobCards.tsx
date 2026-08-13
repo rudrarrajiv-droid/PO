@@ -439,9 +439,10 @@ export default function JobCards() {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
+                          {(jc.status !== 'PENDING' || hasRole('ADMIN')) && (
                           <button 
                             onClick={() => {
-                              if (!isJobCardAllocationComplete(jc)) {
+                              if (!isJobCardAllocationComplete(jc) && !hasRole('ADMIN')) {
                                 alert("PDF BLOCKED. Reel allocation is incomplete.");
                                 return;
                               }
@@ -452,6 +453,7 @@ export default function JobCards() {
                           >
                             <Printer className="w-4 h-4" />
                           </button>
+                          )}
                           {hasRole('ADMIN') && (
                             <button 
                               onClick={async () => {
@@ -495,10 +497,15 @@ export default function JobCards() {
           initialData={editingJobCard}
           onValidationFailed={() => setShowValidationDialog(true)}
           onClose={() => { setIsFormOpen(false); setEditingJobCard(null); }} 
-          onSuccess={() => {
+          onSuccess={(createdJobCard?: any) => {
             setIsFormOpen(false);
             setEditingJobCard(null);
             refetchCards();
+            
+            // Phase 2: If we successfully allocated reels during creation, prompt to issue right away
+            if (createdJobCard && isJobCardAllocationComplete(createdJobCard) && createdJobCard.status === 'PENDING') {
+               setIssuingJobCard(createdJobCard);
+            }
           }} 
         />
       )}
@@ -567,7 +574,7 @@ export default function JobCards() {
   );
 }
 
-function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: { initialData?: any, onClose: () => void, onSuccess: () => void, onValidationFailed?: () => void }) {
+function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: { initialData?: any, onClose: () => void, onSuccess: (createdJobCard?: any) => void, onValidationFailed?: () => void }) {
   const { user, hasRole } = useAuth();
   const isEditMode = !!initialData;
   const { register, handleSubmit, watch, setValue, formState: { isSubmitting } } = useForm({
@@ -819,7 +826,7 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
         user?.name
       );
 
-      onSuccess();
+      onSuccess({ id: jobId, ...finalPayload });
     } catch (error: any) {
       alert(error.message || 'Failed to save job card');
     }

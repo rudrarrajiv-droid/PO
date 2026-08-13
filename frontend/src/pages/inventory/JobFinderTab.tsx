@@ -71,7 +71,7 @@ export default function JobFinderTab() {
       return true;
     });
 
-    const totalKg = matchedReels.reduce((sum: number, r: any) => sum + (Number(r.currentBalance) || 0), 0);
+    const totalKg = matchedReels.reduce((sum: number, r: any) => sum + Math.max(0, (Number(r.currentBalance) || 0) - (Number(r.activeReservedWeight) || 0)), 0);
     const totalReels = matchedReels.length;
 
     return { totalKg: Math.round(totalKg * 100) / 100, totalReels };
@@ -118,10 +118,11 @@ export default function JobFinderTab() {
           const bfMatch = !lBf || rBf === lBf;
           const ptMatch = !lPaperType || rPaperType === lPaperType;
 
-          return sizeMatch && gsmMatch && bfMatch && ptMatch && (Number(r.currentBalance) || 0) > 0;
+          const availableWeight = Math.max(0, (Number(r.currentBalance) || 0) - (Number(r.activeReservedWeight) || 0));
+          return sizeMatch && gsmMatch && bfMatch && ptMatch && availableWeight > 0;
         });
 
-        const availableKg = matchedReels.reduce((sum: number, r: any) => sum + (Number(r.currentBalance) || 0), 0);
+        const availableKg = matchedReels.reduce((sum: number, r: any) => sum + Math.max(0, (Number(r.currentBalance) || 0) - (Number(r.activeReservedWeight) || 0)), 0);
 
         // Calculate how many boxes can be made from this available stock for this layer
         const gsm = Number(layer.gsm) || 0;

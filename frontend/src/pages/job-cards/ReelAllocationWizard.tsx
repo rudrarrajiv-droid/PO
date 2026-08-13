@@ -704,7 +704,14 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
                       <tr key={r.id} className="hover:bg-blue-50 transition-colors">
                         <td className="px-4 py-3 font-bold text-gray-900">{r.reelNumber}</td>
                         <td className="px-4 py-3 font-medium text-gray-700">{r.paperType}</td>
-                        <td className="px-4 py-3 font-medium text-gray-700">{r.reelSize}" / {r.bf} / {r.gsm}</td>
+                        <td className="px-4 py-3 font-medium text-gray-700">
+                          {r.reelSize}" / {r.bf} / {r.gsm}
+                          {r.activeReservedWeight > 0 && (
+                            <span className="ml-2 text-[10px] text-blue-700 font-bold bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">
+                              ❄️ Used: {r.activeReservedWeight}kg
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 font-bold text-green-700">{Math.round(r.availableAllocationWeight * 100) / 100} Kg</td>
                         <td className="px-4 py-3 font-medium text-gray-600">₹{r.rate || 0}</td>
                         <td className="px-4 py-3">

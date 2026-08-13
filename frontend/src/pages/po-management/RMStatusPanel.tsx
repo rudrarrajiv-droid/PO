@@ -101,7 +101,7 @@ export default function RMStatusPanel({ productId, orderQty }: Props) {
         const ptMatch = !paperType || rPaperType === paperType;
         const sizeMatch = rSize === reelSize;
 
-        return gsmMatch && bfMatch && ptMatch && sizeMatch && (Number(r.currentBalance) || 0) > 0;
+        return gsmMatch && bfMatch && ptMatch && sizeMatch && Math.max(0, (Number(r.currentBalance) || 0) - (Number(r.activeReservedWeight) || 0)) > 0;
       });
 
       let matchedExact = matchedReels.length > 0;
@@ -120,12 +120,12 @@ export default function RMStatusPanel({ productId, orderQty }: Props) {
           const ptMatch = !paperType || rPaperType === paperType;
           const sizeMatch = rSize >= reelSize && rSize <= reelSize + 1;
 
-          return gsmMatch && bfMatch && ptMatch && sizeMatch && (Number(r.currentBalance) || 0) > 0;
+          return gsmMatch && bfMatch && ptMatch && sizeMatch && Math.max(0, (Number(r.currentBalance) || 0) - (Number(r.activeReservedWeight) || 0)) > 0;
         });
         matchedFallback = matchedReels.length > 0;
       }
 
-      const availableKg = matchedReels.reduce((sum: number, r: any) => sum + (Number(r.currentBalance) || 0), 0);
+      const availableKg = matchedReels.reduce((sum: number, r: any) => sum + Math.max(0, (Number(r.currentBalance) || 0) - (Number(r.activeReservedWeight) || 0)), 0);
       const shortKg = Math.max(0, requiredKg - availableKg);
 
       // Check if material is "ordered" — reels exist with isOrdered flag or status = 'ORDERED'

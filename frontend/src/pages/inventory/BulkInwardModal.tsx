@@ -184,7 +184,7 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
           quantity: Math.round(Number(row.weight)),
           remainingBalance: Math.round(Number(row.weight)),
           performedBy: user?.name || 'System',
-          date: new Date().toISOString(),
+          date: new Date(data.inwardDate).toISOString(),
           createdAt: timestamp,
           updatedAt: timestamp,
           createdBy: user?.name || 'System',

@@ -910,39 +910,45 @@ export const markFreightReceived = async (invoiceNo: string, user: string) => {
 
 export const deleteFinishGoodTransaction = async (transactionId: string, finishGoodId: string, type: 'IN' | 'OUT', category: string, quantity: number, user: string) => {
   try {
+    if (!finishGoodId) {
+      await deleteDoc(doc(db, 'finishGoodTransactions', transactionId));
+      await logActivity({ user, action: 'Delete Finish Good Transaction', entity: 'finishGoodTransactions', referenceId: transactionId, timestamp: serverTimestamp() });
+      return true;
+    }
+
     await runTransaction(db, async (transaction) => {
       const fgRef = doc(db, 'finishGoods', finishGoodId);
       const txRef = doc(db, 'finishGoodTransactions', transactionId);
 
       const fgSnap = await transaction.get(fgRef);
-      if (!fgSnap.exists()) throw new Error('Finish Good not found');
-      
-      const fgData = fgSnap.data();
-      const isRegular = category === 'REGULAR' || category === 'DISPATCH';
-      
-      let closingBalance = Number(fgData.closingBalance) || 0;
-      let nonMovingBalance = Number(fgData.nonMovingBalance) || 0;
-      let inQty = Number(fgData.inQty) || 0;
-      let outQty = Number(fgData.outQty) || 0;
+      if (fgSnap.exists()) {
+        const fgData = fgSnap.data();
+        const isRegular = category === 'REGULAR' || category === 'DISPATCH';
+        
+        let closingBalance = Number(fgData.closingBalance) || 0;
+        let nonMovingBalance = Number(fgData.nonMovingBalance) || 0;
+        let inQty = Number(fgData.inQty) || 0;
+        let outQty = Number(fgData.outQty) || 0;
 
-      if (type === 'IN') {
-        inQty -= quantity;
-        if (isRegular) closingBalance -= quantity;
-        else nonMovingBalance -= quantity;
-      } else if (type === 'OUT') {
-        outQty -= quantity;
-        if (isRegular) closingBalance += quantity;
-        else nonMovingBalance += quantity;
+        if (type === 'IN') {
+          inQty -= quantity;
+          if (isRegular) closingBalance -= quantity;
+          else nonMovingBalance -= quantity;
+        } else if (type === 'OUT') {
+          outQty -= quantity;
+          if (isRegular) closingBalance += quantity;
+          else nonMovingBalance += quantity;
+        }
+
+        transaction.update(fgRef, {
+          inQty,
+          outQty,
+          closingBalance,
+          nonMovingBalance,
+          updatedAt: serverTimestamp(),
+          updatedBy: user
+        });
       }
-
-      transaction.update(fgRef, {
-        inQty,
-        outQty,
-        closingBalance,
-        nonMovingBalance,
-        updatedAt: serverTimestamp(),
-        updatedBy: user
-      });
 
       transaction.delete(txRef);
     });

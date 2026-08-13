@@ -20,6 +20,7 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
   const [filterBF, setFilterBF] = useState('');
   const [filterGSM, setFilterGSM] = useState('');
   const [filterWeight, setFilterWeight] = useState('');
+  const [filterPaperType, setFilterPaperType] = useState('');
   
   // Selection State
   const [selectedReel, setSelectedReel] = useState<any | null>(null);
@@ -27,24 +28,29 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
   // Derived filtered reels
   const filteredReels = useMemo(() => {
     return reels.filter(r => {
-      // General Search (Reel No)
-      const searchMatch = (r.reelNumber?.toLowerCase() || '').includes(search.toLowerCase());
+      // General Search (Reel No or Paper Type)
+      const searchTerm = search.toLowerCase();
+      const searchMatch = 
+        (r.reelNumber?.toLowerCase() || '').includes(searchTerm) ||
+        (r.paperType?.toLowerCase() || '').includes(searchTerm);
       
       // Smart Filters
       const matchSize = filterSize ? String(r.reelSize) === filterSize : true;
       const matchBF = filterBF ? String(r.bf) === filterBF : true;
       const matchGSM = filterGSM ? String(r.gsm) === filterGSM : true;
       const matchWeight = filterWeight ? String(r.weight) === filterWeight : true;
+      const matchPaperType = filterPaperType ? (r.paperType || '').toLowerCase() === filterPaperType.toLowerCase() : true;
 
-      return searchMatch && matchSize && matchBF && matchGSM && matchWeight;
+      return searchMatch && matchSize && matchBF && matchGSM && matchWeight && matchPaperType;
     }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [reels, search, filterSize, filterBF, filterGSM, filterWeight]);
+  }, [reels, search, filterSize, filterBF, filterGSM, filterWeight, filterPaperType]);
 
   // Unique values for filter dropdowns
   const uniqueSizes = Array.from(new Set(reels.map(p => p.reelSize))).filter(Boolean).sort((a,b)=>Number(a)-Number(b));
   const uniqueBFs = Array.from(new Set(reels.map(p => p.bf))).filter(Boolean);
   const uniqueGSMs = Array.from(new Set(reels.map(p => p.gsm))).filter(Boolean).sort((a,b)=>Number(a)-Number(b));
   const uniqueWeights = Array.from(new Set(reels.map(p => p.weight))).filter(Boolean).sort((a,b)=>Number(b)-Number(a));
+  const uniquePaperTypes = Array.from(new Set(reels.map(p => p.paperType))).filter(Boolean);
 
   // Fetch transactions ONLY when a reel is selected
   const { data: transactions = [], isLoading: loadingTx, refetch } = useQuery({
@@ -109,6 +115,10 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
+                <select className={inputCls + " py-1.5 col-span-2"} value={filterPaperType} onChange={e => setFilterPaperType(e.target.value)}>
+                  <option value="">Paper Type</option>
+                  {uniquePaperTypes.map(v => <option key={v as string} value={v as string}>{v}</option>)}
+                </select>
                 <select className={inputCls + " py-1.5"} value={filterSize} onChange={e => setFilterSize(e.target.value)}>
                   <option value="">Size</option>
                   {uniqueSizes.map(v => <option key={v} value={v}>{v}"</option>)}
@@ -127,8 +137,8 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
                 </select>
               </div>
               
-              {(filterSize || filterBF || filterGSM || filterWeight || search) && (
-                <button onClick={() => { setFilterSize(''); setFilterBF(''); setFilterGSM(''); setFilterWeight(''); setSearch(''); }}
+              {(filterSize || filterBF || filterGSM || filterWeight || filterPaperType || search) && (
+                <button onClick={() => { setFilterSize(''); setFilterBF(''); setFilterGSM(''); setFilterWeight(''); setFilterPaperType(''); setSearch(''); }}
                   className="w-full flex items-center justify-center text-xs text-destructive hover:bg-destructive/10 py-1.5 rounded transition-colors">
                   <FilterX className="w-3.5 h-3.5 mr-1" /> Clear All Filters
                 </button>
