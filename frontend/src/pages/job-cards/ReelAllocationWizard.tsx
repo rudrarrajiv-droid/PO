@@ -194,10 +194,11 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
     return totalAlloc >= (req.requiredWeight - 0.1);
   });
 
-  // Phase 3: Detect if any allocated reel is oversize (>0 excess)
+  // Approval rule: chahe auto ho ya manual — agar sizeExcess > 1.0 inch hai tabhi approval chahiye.
+  // 1 inch tak (0, 0.5, 1.0) — no approval needed.
   const hasOversizeReel = useMemo(() => {
     return allocations.some(alloc =>
-      alloc.reels.some((r: any) => (r.sizeExcess ?? 0) > 0)
+      alloc.reels.some((r: any) => (r.sizeExcess ?? 0) > 1.0)
     );
   }, [allocations]);
 

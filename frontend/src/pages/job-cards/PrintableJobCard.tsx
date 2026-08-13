@@ -149,6 +149,7 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
             <tr className="bg-gray-50">
               <th className="border border-black p-1 text-center align-middle">Layer</th>
               <th className="border border-black p-1 text-center align-middle">Paper</th>
+              <th className="border border-black p-1 text-center align-middle">Size</th>
               <th className="border border-black p-1 text-center align-middle">BF</th>
               <th className="border border-black p-1 text-center align-middle">GSM</th>
               <th className="border border-black p-1 text-center align-middle">Required</th>
@@ -162,7 +163,40 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
               const hasLegacy = !!layer.allocatedReelNumber && !!layer.allocatedReelWeight;
               const hasArray = layer.allocatedReels && Array.isArray(layer.allocatedReels) && layer.allocatedReels.length > 0;
               const isAllocated = hasLegacy || hasArray;
-              
+
+              // For display: get actual specs from allocated reel (replacement may differ from original layer specs)
+              // If multiple reels with different specs, show each reel's own specs in Reel No. column
+              const origSize = product?.reelSize ?? '-';
+              const origBF = layer.bf;
+              const origGSM = layer.gsm;
+
+              // Compute per-reel display values for array allocations
+              const reelRows = hasArray ? layer.allocatedReels : [];
+
+              // For single-reel display in BF/GSM/Size columns:
+              // If all allocated reels have same BF/GSM/size as original → show original
+              // If any reel differs → show actual reel value (strikethrough original, bold actual)
+              const getReelSpecCell = (field: 'bf' | 'gsm' | 'reelSize', origVal: any) => {
+                if (!hasArray) {
+                  // Legacy: no extra info, show original
+                  return <span>{origVal}</span>;
+                }
+                const vals = reelRows.map((r: any) => r[field]);
+                const allSame = vals.every((v: any) => Number(v) === Number(origVal));
+                if (allSame || vals.length === 0) {
+                  return <span>{origVal}</span>;
+                }
+                // Replacement detected — show each reel's actual value
+                return (
+                  <div className="flex flex-col gap-0.5 items-center">
+                    <span className="line-through text-gray-400 text-[9px]">{origVal}</span>
+                    {vals.map((v: any, vi: number) => (
+                      <span key={vi} className="font-bold text-red-700 text-[11px]">{v}</span>
+                    ))}
+                  </div>
+                );
+              };
+
               return (
                 <tr key={idx}>
                   <td className="border border-black p-1 font-bold text-center align-middle">
@@ -176,8 +210,18 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
                     </div>
                   </td>
                   <td className="border border-black p-1 text-center align-middle">{layer.paperType}</td>
-                  <td className="border border-black p-1 text-center align-middle">{layer.bf}</td>
-                  <td className="border border-black p-1 font-semibold text-center align-middle">{layer.gsm}</td>
+                  {/* Size column — actual allocated reel size, strikethrough original if replaced */}
+                  <td className="border border-black p-1 text-center align-middle">
+                    {getReelSpecCell('reelSize', origSize)}
+                  </td>
+                  {/* BF column — actual allocated reel BF, strikethrough if replaced */}
+                  <td className="border border-black p-1 text-center align-middle">
+                    {getReelSpecCell('bf', origBF)}
+                  </td>
+                  {/* GSM column — actual allocated reel GSM, strikethrough if replaced */}
+                  <td className="border border-black p-1 font-semibold text-center align-middle">
+                    {getReelSpecCell('gsm', origGSM)}
+                  </td>
                   <td className="border border-black p-1 font-bold text-center align-middle">{roundWeight(layer.calculatedWeight || layer.weight || layer.requiredWeight)} Kg</td>
                   <td className="border border-black p-1 text-center align-middle whitespace-pre-line break-words">
                     {hasArray ? (
@@ -194,10 +238,10 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
                     {hasArray ? (
                       <div className="flex flex-col gap-1 items-center">
                         {layer.allocatedReels.map((r: any, i: number) => (
-                          <div key={i} className="flex items-center justify-center gap-1 border-b border-gray-200 last:border-0 pb-0.5 last:pb-0 w-full">
-                            <span className="font-bold">
-                              {r.reelNumber}
-                              {r.actualReelWeight ? ` (${roundWeight(r.actualReelWeight)} Kg)` : ''}
+                          <div key={i} className="flex flex-col items-center border-b border-gray-200 last:border-0 pb-0.5 last:pb-0 w-full">
+                            <span className="font-bold">{r.reelNumber}</span>
+                            <span className="text-[9px] text-gray-600 font-semibold">
+                              {r.reelSize ? `${r.reelSize}" ` : ''}{r.bf ? `BF${r.bf} ` : ''}{r.gsm ? `GSM${r.gsm}` : ''}
                             </span>
                           </div>
                         ))}
@@ -238,7 +282,7 @@ export default function PrintableJobCard({ jobCard }: { jobCard: any }) {
               );
             })}
             <tr className="bg-gray-100 font-bold">
-              <td colSpan={4} className="border border-black p-1 text-right align-middle">Total Paper Weight:</td>
+              <td colSpan={5} className="border border-black p-1 text-right align-middle">Total Paper Weight:</td>
               <td className="border border-black p-1 text-center align-middle">{roundWeight(jobCard.totalWeight)} Kg</td>
               <td className="border border-black p-1 text-center align-middle">
                 {(() => {
