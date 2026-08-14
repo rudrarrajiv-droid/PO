@@ -17,6 +17,25 @@ type SortField = 'poNo' | 'poDate' | 'deliveryDate' | 'customerName' | 'orderQty
 type SortDir = 'asc' | 'desc';
 type ViewMode = 'ALL' | 'SUMMARY' | 'DETAIL' | 'MONTHLY';
 
+// Helper: format YYYY-MM-DD or any date string to DD/MM/YY safely
+const formatDate = (dateStr: string | undefined | null): string => {
+  if (!dateStr) return '-';
+  // If already in YYYY-MM-DD format (from HTML date input)
+  const isoMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, yyyy, mm, dd] = isoMatch;
+    const yy = yyyy.slice(2);
+    return `${dd}/${mm}/${yy}`;
+  }
+  // Fallback: try parsing via Date object
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(2);
+  return `${dd}/${mm}/${yy}`;
+};
+
 // Phase 10: Dynamic Status Logic
 const getCalculatedStatus = (po: PurchaseOrder) => {
   if (po.status === 'CANCELLED') return 'CANCELLED';
@@ -751,8 +770,8 @@ export default function PurchaseOrders() {
                   return (
                     <tr key={po.id} className="hover:bg-muted/30 transition-colors group">
                       <td className="px-3 py-2 font-bold text-foreground">{po.poNo}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{new Date(po.poDate).toLocaleDateString('en-GB')}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{new Date(po.deliveryDate).toLocaleDateString('en-GB')}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{formatDate(po.poDate)}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{formatDate(po.deliveryDate)}</td>
                       <td className="px-3 py-2 font-semibold truncate max-w-[150px]" title={po.customerName}>{po.customerName}</td>
                       <td className="px-3 py-2 text-muted-foreground truncate max-w-[150px]" title={po.consignee}>{po.consignee || '-'}</td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{po.artworkNo || '-'}</td>
@@ -869,8 +888,8 @@ export default function PurchaseOrders() {
                     return (
                       <tr key={po.id} className="hover:bg-muted/30 transition-colors group">
                         <td className="px-3 py-2 font-bold text-foreground">{po.poNo}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{new Date(po.poDate).toLocaleDateString('en-GB')}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{new Date(po.deliveryDate).toLocaleDateString('en-GB')}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{formatDate(po.poDate)}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{formatDate(po.deliveryDate)}</td>
                         <td className="px-3 py-2 font-semibold truncate max-w-[150px]" title={po.customerName}>{po.customerName}</td>
                         <td className="px-3 py-2 font-mono text-xs text-muted-foreground max-w-[100px] truncate" title={po.artworkNo}>{po.artworkNo || '-'}</td>
                         <td className="px-3 py-2 font-medium truncate max-w-[150px]" title={po.productName}>{po.productName}</td>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Plus, Trash2, Loader2, PackageSearch } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { X, Plus, Trash2, Loader2, Search, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase/config';
@@ -7,6 +7,157 @@ import { queryDocuments, logActivity, type PurchaseOrder } from '../../lib/fireb
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 import RMStatusPanel from './RMStatusPanel';
+
+// ── Searchable Product Dropdown ──────────────────────────────────────────────
+interface ProductOption {
+  id: string;
+  name: string;
+  artworkNo?: string;
+}
+
+interface SearchableSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  products: ProductOption[];
+  hasError?: boolean;
+  triggerDataId?: string;
+}
+
+function SearchableSelect({ value, onChange, products, hasError, triggerDataId }: SearchableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [highlightIdx, setHighlightIdx] = useState(0);
+
+  const selected = products.find(p => p.id === value);
+
+  const filtered = search.trim()
+    ? products
+        .filter(p => {
+          const label = `${p.name} ${p.artworkNo || ''}`.toLowerCase();
+          return label.includes(search.trim().toLowerCase());
+        })
+        .sort((a, b) => {
+          const aName = a.name.toLowerCase();
+          const bName = b.name.toLowerCase();
+          const q = search.trim().toLowerCase();
+          const aStarts = aName.startsWith(q) ? 0 : 1;
+          const bStarts = bName.startsWith(q) ? 0 : 1;
+          return aStarts - bStarts || aName.localeCompare(bName);
+        })
+    : products.slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  useEffect(() => { setHighlightIdx(0); }, [search]);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => searchRef.current?.focus(), 50);
+    } else {
+      setSearch('');
+    }
+  }, [open]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  useEffect(() => {
+    if (open && listRef.current) {
+      const el = listRef.current.querySelector<HTMLElement>(`[data-idx="${highlightIdx}"]`);
+      el?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightIdx, open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); } return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filtered[highlightIdx]) { onChange(filtered[highlightIdx].id); setOpen(false); }
+    }
+    else if (e.key === 'Escape') { setOpen(false); }
+  };
+
+  const displayLabel = selected
+    ? `${selected.name.trim()}${selected.artworkNo?.trim() ? ` (${selected.artworkNo.trim()})` : ''}`
+    : '';
+
+  return (
+    <div ref={containerRef} className="relative w-full" onKeyDown={handleKeyDown}>
+      <button
+        type="button"
+        data-item-trigger={triggerDataId}
+        onClick={() => setOpen(o => !o)}
+        className={cn(
+          'w-full flex items-center justify-between px-2 py-1.5 text-sm rounded border bg-background transition-colors font-medium text-left',
+          hasError ? 'border-red-500' : 'border-input',
+          !displayLabel && 'text-muted-foreground'
+        )}
+      >
+        <span className="truncate flex-1 min-w-0">{displayLabel || 'Select Item...'}</span>
+        <ChevronDown className={cn('w-3.5 h-3.5 ml-1 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute z-[200] top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
+          style={{ maxHeight: 260 }}
+        >
+          <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-muted/30">
+            <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <input
+              ref={searchRef}
+              type="text"
+              className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+              placeholder="Type to search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+            )}
+          </div>
+
+          <div ref={listRef} className="overflow-y-auto" style={{ maxHeight: 210 }}>
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-muted-foreground">No items found</div>
+            ) : (
+              filtered.map((p, idx) => {
+                const label = `${p.name.trim()}${p.artworkNo?.trim() ? ` (${p.artworkNo.trim()})` : ''}`;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    data-idx={idx}
+                    onClick={() => { onChange(p.id); setOpen(false); }}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-sm transition-colors truncate',
+                      p.id === value
+                        ? 'bg-primary/15 text-primary font-semibold'
+                        : idx === highlightIdx
+                          ? 'bg-muted/60 text-foreground'
+                          : 'text-foreground hover:bg-muted/40'
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 type POItem = {
   id: string; // internal UI id
@@ -33,6 +184,9 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Refs for qty inputs — used for Enter-key auto-add-row
+  const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
   // Fetch Customers
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -45,8 +199,23 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
     queryFn: () => queryDocuments('products', []) as Promise<any[]>
   });
 
-  const handleAddItem = () => {
-    setItems([...items, { id: Math.random().toString(36).substring(7), productId: '', rate: '', orderQty: '', deliveryDate: '' }]);
+  // Returns the new item's id so callers can focus it
+  const handleAddItem = useCallback((): string => {
+    const newId = Math.random().toString(36).substring(7);
+    setItems(prev => [...prev, { id: newId, productId: '', rate: '', orderQty: '', deliveryDate: '' }]);
+    return newId;
+  }, []);
+
+  // Enter on QTY → add new row and focus its product dropdown
+  const handleQtyKeyDown = (e: React.KeyboardEvent, _itemId: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newId = handleAddItem();
+      setTimeout(() => {
+        const btn = document.querySelector<HTMLButtonElement>(`[data-item-trigger="${newId}"]`);
+        btn?.focus();
+      }, 60);
+    }
   };
 
   const handleRemoveItem = (id: string) => {
@@ -75,7 +244,7 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
 
     const selectedProductIds = new Set<string>();
 
-    items.forEach((item, index) => {
+    items.forEach((item) => {
       if (!item.productId) newErrors[`productId-${item.id}`] = "Required";
       else {
         if (selectedProductIds.has(item.productId)) {
@@ -304,7 +473,12 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
             {/* Items List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b pb-2">
-                <h3 className="text-sm font-bold text-foreground/80 uppercase tracking-wider">Line Items</h3>
+                <h3 className="text-sm font-bold text-foreground/80 uppercase tracking-wider">
+                  Line Items
+                  <span className="ml-2 text-[10px] font-normal text-muted-foreground normal-case">
+                    (Qty field me Enter → next row auto-add)
+                  </span>
+                </h3>
                 <button
                   type="button"
                   onClick={handleAddItem}
@@ -314,7 +488,7 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
                 </button>
               </div>
 
-              <div className="bg-muted/10 border rounded-xl overflow-hidden">
+              <div className="bg-muted/10 border rounded-xl" style={{ overflow: 'visible' }}>
                 <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead className="bg-secondary/50 text-muted-foreground uppercase font-bold text-[10px] tracking-wider">
                     <tr>
@@ -331,26 +505,14 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
                       <React.Fragment key={item.id}>
                        <tr className="hover:bg-muted/20 transition-colors">
                         <td className="px-3 py-2 text-center font-bold text-xs text-muted-foreground">{index + 1}</td>
-                        <td className="px-3 py-2">
-                          <select
-                            className={cn(
-                              "w-full px-2 py-1.5 text-sm rounded border bg-background text-foreground transition-colors font-medium",
-                              errors[`productId-${item.id}`] ? "border-red-500 focus:ring-red-200" : "border-input focus:ring-primary/20"
-                            )}
+                        <td className="px-3 py-2" style={{ overflow: 'visible', position: 'relative' }}>
+                          <SearchableSelect
                             value={item.productId}
-                            onChange={e => handleItemChange(item.id, 'productId', e.target.value)}
-                          >
-                            <option value="">Select Item...</option>
-                            {products.map(p => {
-                              const nameStr = p.name?.trim() || '';
-                              const artworkStr = p.artworkNo?.trim() ? `(${p.artworkNo.trim()})` : '';
-                              return (
-                                <option key={p.id} value={p.id}>
-                                  {nameStr} {artworkStr}
-                                </option>
-                              );
-                            })}
-                          </select>
+                            onChange={val => handleItemChange(item.id, 'productId', val)}
+                            products={products}
+                            hasError={!!errors[`productId-${item.id}`]}
+                            triggerDataId={item.id}
+                          />
                           {errors[`productId-${item.id}`] && <span className="text-red-500 text-[10px] font-bold block">{errors[`productId-${item.id}`]}</span>}
                         </td>
                         <td className="px-3 py-2">
@@ -370,12 +532,14 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
                            <input 
                             type="number" 
                             min="1"
+                            ref={el => { qtyRefs.current[item.id] = el; }}
                             className={cn(
                               "w-full px-2 py-1.5 text-sm rounded border bg-background text-foreground transition-colors font-bold text-right",
                               errors[`orderQty-${item.id}`] ? "border-red-500 focus:ring-red-200" : "border-input focus:ring-primary/20"
                             )}
                             value={item.orderQty}
                             onChange={e => handleItemChange(item.id, 'orderQty', e.target.value)}
+                            onKeyDown={e => handleQtyKeyDown(e, item.id)}
                           />
                         </td>
                         <td className="px-3 py-2">

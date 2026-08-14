@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PackageCheck, Search, ArrowDownToLine, ArrowUpFromLine, FileText, History, Calendar } from 'lucide-react';
+import { PackageCheck, Search, ArrowDownToLine, ArrowUpFromLine, FileText, History, Calendar, FileSpreadsheet } from 'lucide-react';
 import { queryDocuments } from '../lib/firebase/services';
 import { cn } from '../lib/utils';
 import ExportButtons from '../components/ExportButtons';
 import BulkInModal from './finish-goods/BulkInModal';
 import BulkOutModal from './finish-goods/BulkOutModal';
 import FinishGoodHistoryModal from './finish-goods/FinishGoodHistoryModal';
+import ExcelImportModal from './finish-goods/ExcelImportModal';
 
 export default function FinishGoods() {
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'EMPTY' | 'REPORT'>('ACTIVE');
@@ -17,6 +18,7 @@ export default function FinishGoods() {
   const [isBulkInOpen, setIsBulkInOpen] = useState(false);
   const [isBulkOutOpen, setIsBulkOutOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isExcelImportOpen, setIsExcelImportOpen] = useState(false);
 
   const { data: fgList = [], isLoading, refetch } = useQuery({
     queryKey: ['finishGoods'],
@@ -249,6 +251,14 @@ export default function FinishGoods() {
           </button>
           
           <button 
+            onClick={() => setIsExcelImportOpen(true)}
+            className="bg-violet-600 text-white px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-violet-700 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Excel Import
+          </button>
+
+          <button 
             onClick={() => setIsBulkOutOpen(true)}
             className="bg-red-600 text-white px-4 py-2 flex items-center text-sm font-medium rounded-md shadow hover:bg-red-700 transition-colors"
           >
@@ -379,7 +389,18 @@ export default function FinishGoods() {
           onClose={() => setIsHistoryOpen(false)}
         />
       )}
+
+      {isExcelImportOpen && (
+        <ExcelImportModal
+          onClose={() => setIsExcelImportOpen(false)}
+          onSuccess={() => {
+            setIsExcelImportOpen(false);
+            refetch();
+          }}
+        />
+      )}
       
     </div>
   );
 }
+
