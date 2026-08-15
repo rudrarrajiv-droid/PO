@@ -1,0 +1,20 @@
+create table if not exists public.reel_transactions (
+  firestore_document_id text primary key,
+  reel_id text,
+  reel_number text,
+  type text,
+  quantity numeric,
+  remaining_balance numeric,
+  job_card_id text,
+  performed_by text,
+  notes text,
+  transaction_date text,
+  is_archived boolean,
+  created_by text,
+  updated_by text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  raw_data jsonb not null,
+  imported_at timestamptz not null default now(),
+  synced_at timestamptz not null default now()
+);

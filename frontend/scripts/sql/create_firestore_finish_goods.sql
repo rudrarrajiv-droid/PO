@@ -1,0 +1,21 @@
+create table if not exists public.finish_goods (
+  firestore_document_id text primary key,
+  product_id text,
+  product_name text,
+  customer_id text,
+  customer_name text,
+  opening_qty numeric,
+  in_qty numeric,
+  out_qty numeric,
+  closing_balance numeric,
+  non_moving_balance numeric,
+  rate numeric,
+  is_archived boolean,
+  created_by text,
+  updated_by text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  raw_data jsonb not null,
+  imported_at timestamptz not null default now(),
+  synced_at timestamptz not null default now()
+);
