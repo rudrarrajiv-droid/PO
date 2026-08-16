@@ -1,10 +1,25 @@
 import { supabase } from './config';
 import { logActivity } from './activityLogService';
-import type { Employee } from '../firebase/salaryServices';
 
 // Supabase-backed replacement for the Firestore `employees` collection.
 // Table: public.employees (RLS enabled, SELECT + INSERT + UPDATE only).
-// Attendance stays on Firestore (lib/firebase/salaryServices.ts) - not touched here.
+//
+// Employee is defined here (previously lived on the now-removed Firebase
+// salaryServices.ts) - this is its canonical location.
+export interface Employee {
+  id?: string;
+  employeeCode?: number; // Numeric code for sorting
+  name: string;
+  category: 'COMPANY' | 'WAGES';
+  contractorName?: 'Dinesh' | 'Vikas';
+  designation: string;
+  basicSalary: number;
+  isActive: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+  createdBy?: string;
+  updatedBy?: string;
+}
 //
 // Field mapping (Postgres column -> Employee shape):
 //   firestore_document_id -> id

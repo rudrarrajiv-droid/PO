@@ -1,9 +1,18 @@
 import { supabase } from './config';
-import type { UserSession } from '../firebase/authSessionServices';
 
 // Supabase-backed replacement for the Firestore `user_sessions` collection
 // CRUD operations only. Table: public.user_sessions (RLS enabled, SELECT +
 // INSERT + UPDATE + DELETE - all four are genuinely used by this table).
+//
+// UserSession is defined here (previously lived on the now-removed Firebase
+// authSessionServices.ts) - this is its canonical location.
+export interface UserSession {
+  id: string; // Session ID (uuid)
+  userId: string;
+  deviceInfo: string;
+  loginTime: any; // Firestore timestamp or string
+  lastActive: any;
+}
 //
 // NOTE: Realtime forced-logout now uses Supabase `postgres_changes` on
 // public.user_sessions, so create/delete no longer needs any temporary

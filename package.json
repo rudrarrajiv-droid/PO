@@ -3,31 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && npm run dev",
+    "dev": "npm run dev:frontend",
     "dev:frontend": "cd frontend && npm run dev",
-    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install && npx prisma generate",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "postinstall": "cd backend && npm install && npx prisma generate"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "pdfkit": "^0.19.1",
-    "xlsx": "^0.18.5"
+    "build": "cd frontend && npm install && npm run build",
+    "install:all": "npm install && cd frontend && npm install"
   },
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.1.2",
-    "concurrently": "^10.0.4",
-    "prisma": "^6.19.3",
     "typescript": "^5.9.3"
   }
 }

@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuth } from '../contexts/AuthContext';
-import { getOutwardReelTransactionsByMonth, getReelsByIds } from '../lib/firebase/dcServices';
+import { getOutwardReelTransactionsByMonth, getReelsByIds } from '../lib/supabase/reelService';
 import { getDCRecordsByMonth, saveDCRecord, type DCRecord } from '../lib/supabase/dcRecordService';
 import { getAttendanceByMonth } from '../lib/supabase/attendanceService';
 

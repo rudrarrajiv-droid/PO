@@ -3,7 +3,7 @@ import { logActivity } from './activityLogService';
 
 // Supabase-backed replacement for the Firestore `dc_records` collection.
 // Table: public.dc_records (RLS enabled, SELECT + INSERT + UPDATE only).
-// reels/reelTransactions stay on Firestore (lib/firebase/dcServices.ts) - not touched here.
+// reels/reelTransactions are handled by lib/supabase/reelService.ts - not touched here.
 //
 // Field mapping (Postgres column -> DCRecord shape):
 //   record_date -> date

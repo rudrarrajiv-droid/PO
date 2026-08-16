@@ -1,0 +1,21 @@
+create table if not exists public.rm_records (
+  firestore_document_id text primary key,
+  rm_name text,
+  opn numeric,
+  rate numeric,
+  total_in numeric,
+  total_out numeric,
+  cl_bal numeric,
+  opn_stock_value numeric,
+  purchase_value_stock numeric,
+  consumption_stock numeric,
+  closing_stock_value numeric,
+  day_wise jsonb,
+  created_by text,
+  updated_by text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  raw_data jsonb not null,
+  imported_at timestamptz not null default now(),
+  synced_at timestamptz not null default now()
+);

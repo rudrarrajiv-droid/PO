@@ -1,10 +1,25 @@
 import { supabase } from './config';
 import { logActivity } from './activityLogService';
-import type { AttendanceRecord } from '../firebase/salaryServices';
 
 // Supabase-backed replacement for the Firestore `attendance` collection.
 // Table: public.attendance (RLS enabled, SELECT + INSERT + DELETE only - no
 // per-row UPDATE, since the app only ever replaces a whole day's records).
+//
+// AttendanceRecord is defined here (previously lived on the now-removed
+// Firebase salaryServices.ts) - this is its canonical location.
+export interface AttendanceRecord {
+  id?: string;
+  employeeId: string;
+  date: string; // YYYY-MM-DD
+  present: number; // 1, 0.5, 0
+  otHours: number;
+  refreshment: number; // e.g. 70
+  perDayAmount: number; // Calculated based on month days
+  otAmount: number; // Calculated based on month days and 8-hour shift
+  createdAt?: any;
+  updatedAt?: any;
+  updatedBy?: string;
+}
 //
 // Field mapping (Postgres column -> frontend shape):
 //   firestore_document_id -> id

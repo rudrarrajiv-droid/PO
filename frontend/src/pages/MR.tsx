@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Search, Plus, Edit2, Trash2, Loader2, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getMRRecords, createMRRecord, updateMRRecord, deleteMRRecord, type MRRecord } from '../lib/firebase/mrServices';
+import { getMRRecords, createMRRecord, updateMRRecord, deleteMRRecord, type MRRecord } from '../lib/supabase/mrService';
 
 export default function MR() {
   const { user } = useAuth();

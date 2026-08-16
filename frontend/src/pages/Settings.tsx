@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Settings as SettingsIcon, Download, Database, PackageSearch, AlertCircle, Upload, MonitorSmartphone, LogOut, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { type UserSession } from '../lib/firebase/authSessionServices';
-import { getActiveSessions, deleteAllOtherSessions } from '../lib/supabase/userSessionService';
+import { getActiveSessions, deleteAllOtherSessions, type UserSession } from '../lib/supabase/userSessionService';
 import { getProducts, createProduct, updateProduct } from '../lib/supabase/productService';
 import { getReels, createReel, updateReel } from '../lib/supabase/reelService';
 import * as xlsx from 'xlsx';

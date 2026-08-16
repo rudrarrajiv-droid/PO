@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Save, Calendar, Clock, Loader2, IndianRupee, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { type Employee, type AttendanceRecord } from '../../lib/firebase/salaryServices';
-import { getEmployees } from '../../lib/supabase/employeeService';
-import { getAttendanceByDate, saveDailyAttendance } from '../../lib/supabase/attendanceService';
+import { getEmployees, type Employee } from '../../lib/supabase/employeeService';
+import { getAttendanceByDate, saveDailyAttendance, type AttendanceRecord } from '../../lib/supabase/attendanceService';
 
 export default function DailyEntryTab() {
   const { user } = useAuth();

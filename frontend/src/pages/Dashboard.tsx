@@ -9,8 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
 import { getAttendanceByMonth } from '../lib/supabase/attendanceService';
 import { getJobCards, getPendingApprovalJobCards, updateJobCard } from '../lib/supabase/jobCardService';
-import { getFrozenReels, unfreezeReel } from '../lib/supabase/reelService';
-import { getOutwardReelTransactionsByMonth } from '../lib/firebase/dcServices';
+import { getFrozenReels, unfreezeReel, getOutwardReelTransactionsByMonth } from '../lib/supabase/reelService';
 import { getRecentActivityLogs } from '../lib/supabase/activityLogService';
 
 export default function Dashboard() {
