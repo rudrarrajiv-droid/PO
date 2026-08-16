@@ -5,7 +5,6 @@ import Dashboard from './pages/Dashboard';
 import JobCards from './pages/JobCards';
 import MasterData from './pages/MasterData';
 import Inventory from './pages/Inventory';
-import Production from './pages/Production';
 import ProductionTracker from './pages/ProductionTracker';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
