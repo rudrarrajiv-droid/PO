@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Users, Package, X, CircleDashed, ChevronDown, ChevronUp, Trash2, Edit, FilterX } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { cn } from '../lib/utils';
-import { queryDocuments, createDocument, updateDocument } from '../lib/firebase/services';
+import { cn, getCustomerDisplayLabel } from '../lib/utils';
+import { getCustomers, createCustomer, updateCustomer } from '../lib/supabase/customerService';
+import { getProducts, createProduct, updateProduct } from '../lib/supabase/productService';
 import type { Customer, Product, ProductLayer } from '../lib/types/models';
 import { useAuth } from '../contexts/AuthContext';
 import RoleGuard from '../components/RoleGuard';
@@ -30,11 +31,11 @@ export default function MasterData() {
   const qc = useQueryClient();
   const { data: customers = [], isLoading: loadingC } = useQuery({ 
     queryKey: ['customers'], 
-    queryFn: () => queryDocuments('customers', []) as Promise<Customer[]> 
+    queryFn: () => getCustomers() as unknown as Promise<Customer[]> 
   });
   const { data: products  = [], isLoading: loadingP } = useQuery({ 
     queryKey: ['products'],  
-    queryFn: () => queryDocuments('products', []) as Promise<Product[]>  
+    queryFn: () => getProducts() as unknown as Promise<Product[]>  
   });
 
   // Derived Filtering
@@ -145,7 +146,7 @@ export default function MasterData() {
                     className="px-3 py-2 w-full text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                   >
                     <option value="">-- All Customers --</option>
-                    {customers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {customers.map(c => <option key={c.id} value={c.name}>{getCustomerDisplayLabel(c, customers)}</option>)}
                   </select>
                 </div>
               )}
@@ -276,6 +277,7 @@ export default function MasterData() {
       {showCustomerModal && (
         <CustomerModal
           customer={editingCustomer}
+          customers={customers}
           onClose={() => { setShowCustomerModal(false); setEditingCustomer(null); }}
           onSuccess={() => { setShowCustomerModal(false); setEditingCustomer(null); qc.invalidateQueries({ queryKey: ['customers'] }); }}
         />
@@ -424,7 +426,7 @@ function ProductsTable({ data, isLoading, onEdit }: { data: Product[]; isLoading
 }
 
 // ─── Customer Modal ───────────────────────────────────────────────────────────
-function CustomerModal({ customer, onClose, onSuccess }: { customer: Customer | null; onClose: () => void; onSuccess: () => void }) {
+function CustomerModal({ customer, customers, onClose, onSuccess }: { customer: Customer | null; customers: Customer[]; onClose: () => void; onSuccess: () => void }) {
   const { user } = useAuth();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<{ name: string }>({
     defaultValues: customer ? { name: customer.name } : {}
@@ -432,10 +434,24 @@ function CustomerModal({ customer, onClose, onSuccess }: { customer: Customer | 
 
   const onSubmit = async (data: { name: string }) => {
     try {
+      // Adding a new customer: warn (but don't block) if the same name already exists,
+      // so we never silently create another accidental duplicate.
+      if (!customer?.id) {
+        const normalized = data.name.trim().toLowerCase();
+        const existing = customers.filter(c => (c.name || '').trim().toLowerCase() === normalized);
+        if (existing.length > 0) {
+          const proceed = confirm(
+            `A customer named "${data.name.trim()}" already exists (${existing.length} record${existing.length > 1 ? 's' : ''} found).\n\n` +
+            `Create another customer with this same name anyway?`
+          );
+          if (!proceed) return;
+        }
+      }
+
       if (customer?.id) {
-        await updateDocument('customers', customer.id, data, user?.name);
+        await updateCustomer(customer.id, data.name, user?.name);
       } else {
-        await createDocument('customers', data, user?.name);
+        await createCustomer(data.name, user?.name);
       }
       onSuccess();
     } catch (err: any) {
@@ -527,9 +543,9 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
       };
 
       if (product?.id) {
-        await updateDocument('products', product.id, enrichedData, user?.name);
+        await updateProduct(product.id, enrichedData, user?.name);
       } else {
-        await createDocument('products', enrichedData, user?.name);
+        await createProduct(enrichedData, user?.name);
       }
       onSuccess();
     } catch (err: any) {
@@ -572,7 +588,7 @@ function ProductModal({ product, customers, onClose, onSuccess }: { product: Pro
                   <label className={labelCls}>Customer <span className="text-destructive">*</span></label>
                   <select {...register('customerId', { required: true })} className={inputCls}>
                     <option value="">-- Select Customer --</option>
-                    {customers.map(c => <option key={c.id} value={c.id!}>{c.name}</option>)}
+                    {customers.map(c => <option key={c.id} value={c.id!}>{getCustomerDisplayLabel(c, customers)}</option>)}
                   </select>
                 </div>
               </div>

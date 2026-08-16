@@ -17,6 +17,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { db } from './config';
+import { logActivity as logActivityToSupabase } from '../supabase/activityLogService';
 
 // Generic service for Firestore CRUD operations with centralized error handling
 
@@ -212,9 +213,13 @@ export const queryDocuments = async (collectionName: string, constraints: QueryC
   }
 };
 
+// activityLogs has been migrated to Supabase (public.activity_logs).
+// Kept under the same name/signature here so every existing call site
+// (createDocument, updateDocument, executeJobCardTransaction, etc.) needs
+// no changes. Never throws - a logging failure must not break the caller.
 export const logActivity = async (activity: any) => {
   try {
-    await addDoc(collection(db, 'activityLogs'), activity);
+    await logActivityToSupabase(activity);
   } catch (error) {
     console.error(`Error logging activity:`, error);
   }

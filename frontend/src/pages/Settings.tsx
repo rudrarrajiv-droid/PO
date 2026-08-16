@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Settings as SettingsIcon, Download, Database, PackageSearch, AlertCircle, Upload, MonitorSmartphone, LogOut, Loader2 } from 'lucide-react';
 import { queryDocuments, createDocument, updateDocument } from '../lib/firebase/services';
 import { useAuth } from '../contexts/AuthContext';
-import { getActiveSessions, deleteAllOtherSessions, type UserSession } from '../lib/firebase/authSessionServices';
+import { type UserSession } from '../lib/firebase/authSessionServices';
+import { getActiveSessions, deleteAllOtherSessions } from '../lib/supabase/userSessionService';
 import * as xlsx from 'xlsx';
-import seedData from '../data/seedData.json';
 
 export default function Settings() {
   const { hasRole, user, sessionId } = useAuth();
@@ -46,40 +46,6 @@ export default function Settings() {
       loadSessions();
     } catch (err) {
       alert('Failed to log out other devices.');
-    }
-  };
-
-  const handleImportLegacyData = async () => {
-    if (!confirm('Are you sure you want to import legacy master data? This will add hundreds of records.')) return;
-    
-    setIsImporting(true);
-    setImportProgress(0);
-    try {
-      const customers = Array.from(new Set(seedData.map((d: any) => d.customerName)));
-      
-      // 1. Create customers
-      const customerMap = new Map();
-      for (const cName of customers) {
-        const id = cName.toLowerCase().replace(/\s+/g, '-');
-        await createDocument('customers', { name: cName }, 'System');
-        customerMap.set(cName, id);
-      }
-
-      // 2. Create products
-      for (let i = 0; i < seedData.length; i++) {
-        const doc = seedData[i];
-        await createDocument('products', {
-          ...doc,
-          customerId: customerMap.get(doc.customerName) || doc.customerId
-        }, 'System');
-        setImportProgress(Math.round(((i + 1) / seedData.length) * 100));
-      }
-
-      alert('Legacy Data Import Complete!');
-    } catch (err: any) {
-      alert(`Import failed: ${err.message}`);
-    } finally {
-      setIsImporting(false);
     }
   };
 
@@ -436,22 +402,20 @@ export default function Settings() {
               <Database className="w-5 h-5 mr-2" />
               Legacy Data Import (Admin Only)
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">Import master data directly from the legacy Excel dump.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              This one-time historical import already ran on 2026-08-01 and 2026-08-14. It has been permanently
+              disabled because running it again would create another duplicate batch of customers and products.
+            </p>
           </div>
           
           <div className="p-6">
             <button 
-              onClick={handleImportLegacyData}
-              disabled={isImporting}
-              className="px-6 py-2 bg-orange-600 text-white font-medium rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50"
+              disabled
+              title="Disabled: this legacy import already ran twice and creating it again would duplicate data further."
+              className="px-6 py-2 bg-orange-600 text-white font-medium rounded-md opacity-50 cursor-not-allowed"
             >
-              {isImporting ? `Importing... ${importProgress}%` : 'Import Legacy Master Data'}
+              Import Legacy Master Data (Disabled)
             </button>
-            {isImporting && (
-              <div className="mt-4 w-full bg-secondary rounded-full h-2">
-                <div className="bg-orange-600 h-2 rounded-full" style={{ width: `${importProgress}%` }}></div>
-              </div>
-            )}
           </div>
         </section>
 

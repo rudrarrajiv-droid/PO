@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, CircleDashed, CheckCircle, AlertTriangle, Plus, Search, Link as LinkIcon } from 'lucide-react';
-import { executeProductionCompletionTransaction, queryDocuments, createDocument, type FinishGoodInwardPayload } from '../../lib/firebase/services';
+import { executeProductionCompletionTransaction, type FinishGoodInwardPayload } from '../../lib/firebase/services';
+import { getProducts, createProduct } from '../../lib/supabase/productService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
@@ -20,7 +21,7 @@ export default function CompleteProductionModal({ jobCard, onClose, onSuccess }:
 
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
-    queryFn: () => queryDocuments('products', []) as Promise<any[]>
+    queryFn: () => getProducts() as unknown as Promise<any[]>
   });
 
   const totalRequired = Number(jobCard.orderQty) || 0;
@@ -106,14 +107,12 @@ export default function CompleteProductionModal({ jobCard, onClose, onSuccess }:
   const handleQuickAdd = async () => {
     try {
       setIsSubmitting(true);
-      const newId = await createDocument('products', {
+      const newId = await createProduct({
         itemName: jobCard.productName,
         customerName: jobCard.customerName,
         customerId: jobCard.customerId || '',
         type: 'CUSTOM', // Default type
-        createdAt: new Date().toISOString(),
-        createdBy: user?.name || 'System'
-      });
+      }, user?.name || 'System');
       
       const newProduct = {
         id: newId,

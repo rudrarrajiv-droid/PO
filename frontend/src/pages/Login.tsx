@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Box, Lock, Mail } from 'lucide-react';
 import { authenticate } from '../lib/auth/users';
-import { createSession } from '../lib/firebase/authSessionServices';
+import { createSession } from '../lib/supabase/userSessionService';
 
 export default function Login() {
   const [email, setEmail] = useState('');

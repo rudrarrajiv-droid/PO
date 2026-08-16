@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { X, Upload, AlertTriangle, FileSpreadsheet, CheckCircle2, Copy, Search, Filter, HelpCircle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { cn } from '../../lib/utils';
-import { type PurchaseOrder, queryDocuments, importPurchaseOrdersBatch } from '../../lib/firebase/services';
+import { type PurchaseOrder, importPurchaseOrdersBatch } from '../../lib/firebase/services';
+import { getProducts } from '../../lib/supabase/productService';
 import { useQuery } from '@tanstack/react-query';
 
 type PreviewRow = {
@@ -41,7 +42,7 @@ export default function ExcelImportPreviewModal({ onClose, existingPOs, onSucces
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const data = await queryDocuments('products', []) as any[];
+      const data = await getProducts() as any[];
       return data;
     },
   });

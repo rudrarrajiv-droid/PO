@@ -4,6 +4,7 @@ import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, A
 import { useForm } from 'react-hook-form';
 import { cn } from '../lib/utils';
 import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction, deleteJobCardSoft } from '../lib/firebase/services';
+import { getProducts } from '../lib/supabase/productService';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
@@ -592,7 +593,7 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const data = await queryDocuments('products', []) as any[];
+      const data = await getProducts() as any[];
       return data;
     },
   });

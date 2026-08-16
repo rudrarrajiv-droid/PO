@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments } from '../../lib/firebase/services';
+import { getProducts } from '../../lib/supabase/productService';
 import { Calculator, PackageSearch, Layers, Info, Search, ChevronDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import RMStatusPanel from '../po-management/RMStatusPanel';
@@ -25,7 +25,7 @@ export default function ReverseCalculatorTab() {
   
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
-    queryFn: () => queryDocuments('products', []) as Promise<any[]>,
+    queryFn: () => getProducts() as unknown as Promise<any[]>,
     staleTime: 60000,
   });
 

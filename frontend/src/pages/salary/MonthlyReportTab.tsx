@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, Users, IndianRupee, Loader2, X, FileDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { getEmployees, getAttendanceByDateRange, type Employee, type AttendanceRecord } from '../../lib/firebase/salaryServices';
+import { type Employee, type AttendanceRecord } from '../../lib/firebase/salaryServices';
+import { getEmployees } from '../../lib/supabase/employeeService';
+import { getAttendanceByDateRange } from '../../lib/supabase/attendanceService';
 
 export default function MonthlyReportTab() {
   const [fromDate, setFromDate] = useState<string>(new Date().toISOString().substring(0, 10));

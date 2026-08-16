@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { AppUser } from '../lib/auth/users';
 
-import { listenToSession, deleteSession, updateSessionActivity } from '../lib/firebase/authSessionServices';
+import { deleteSession, listenToSession, updateSessionActivity } from '../lib/supabase/userSessionService';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Firestore Session Listener
+  // Realtime Session Listener
   useEffect(() => {
     if (sessionId && user) {
       const unsubscribe = listenToSession(sessionId, () => {

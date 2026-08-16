@@ -5,7 +5,8 @@ import {
   AlertTriangle, Loader2, ArrowDownToLine, Truck, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { queryDocuments, executeFinishGoodInwardTransaction, executeFinishGoodOutwardTransaction } from '../../lib/firebase/services';
+import { executeFinishGoodInwardTransaction, executeFinishGoodOutwardTransaction } from '../../lib/firebase/services';
+import { getProducts } from '../../lib/supabase/productService';
 import type { FinishGoodInwardPayload, FinishGoodOutwardPayload, LogisticsPayload } from '../../lib/firebase/services';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -212,7 +213,7 @@ export default function ExcelImportModal({ onClose, onSuccess }: { onClose: () =
         const wb = XLSX.read(bstr, { type: 'binary', cellDates: false });
 
         // Fetch products from DB for matching
-        const products: any[] = await queryDocuments('products', []);
+        const products: any[] = await getProducts();
 
         // ── Parse FinishGoods Sheet ──
         const fgSheet = wb.Sheets['FinishGoods'] || wb.Sheets[wb.SheetNames[0]];

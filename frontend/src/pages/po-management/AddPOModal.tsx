@@ -3,9 +3,11 @@ import { X, Plus, Trash2, Loader2, Search, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase/config';
-import { queryDocuments, logActivity, type PurchaseOrder } from '../../lib/firebase/services';
+import { logActivity, type PurchaseOrder } from '../../lib/firebase/services';
+import { getProducts } from '../../lib/supabase/productService';
+import { getCustomers } from '../../lib/supabase/customerService';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../lib/utils';
+import { cn, getCustomerDisplayLabel } from '../../lib/utils';
 import RMStatusPanel from './RMStatusPanel';
 
 // ── Searchable Product Dropdown ──────────────────────────────────────────────
@@ -190,13 +192,13 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
   // Fetch Customers
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => queryDocuments('customers', []) as Promise<any[]>
+    queryFn: () => getCustomers() as unknown as Promise<any[]>
   });
 
   // Fetch Products
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => queryDocuments('products', []) as Promise<any[]>
+    queryFn: () => getProducts() as unknown as Promise<any[]>
   });
 
   // Returns the new item's id so callers can focus it
@@ -434,7 +436,7 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
                   >
                     <option value="">Select Customer...</option>
                     {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name?.trim()}</option>
+                      <option key={c.id} value={c.id}>{getCustomerDisplayLabel(c, customers)}</option>
                     ))}
                   </select>
                   {errors.customerId && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.customerId}</p>}

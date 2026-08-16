@@ -8,8 +8,9 @@ import PrintableJobCard from './job-cards/PrintableJobCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
-import { getAttendanceByMonth } from '../lib/firebase/salaryServices';
+import { getAttendanceByMonth } from '../lib/supabase/attendanceService';
 import { getOutwardReelTransactionsByMonth } from '../lib/firebase/dcServices';
+import { getRecentActivityLogs } from '../lib/supabase/activityLogService';
 import { collection, getDocs, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
 
@@ -34,15 +35,7 @@ export default function Dashboard() {
 
   const { data: activityLogs = [], isLoading: loadingLogs } = useQuery({
     queryKey: ['dashboard-logs'],
-    queryFn: async () => {
-      const snapshot = await getDocs(collection(db, 'activityLogs'));
-      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      return logs.sort((a, b) => {
-        const timeA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.timestamp || a.createdAt?.toDate?.() || 0).getTime();
-        const timeB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.timestamp || b.createdAt?.toDate?.() || 0).getTime();
-        return timeB - timeA;
-      }).slice(0, 50);
-    },
+    queryFn: () => getRecentActivityLogs(50),
     refetchInterval: 10000
   });
 

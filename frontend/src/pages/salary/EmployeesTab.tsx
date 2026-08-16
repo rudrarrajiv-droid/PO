@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Users, Building2, HardHat, Upload, Loader2, Trash2, Pencil } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../contexts/AuthContext';
-import { getEmployees, createEmployee, deleteEmployee, updateEmployee, type Employee } from '../../lib/firebase/salaryServices';
+import { getEmployees, createEmployee, deleteEmployee, updateEmployee } from '../../lib/supabase/employeeService';
+import type { Employee } from '../../lib/firebase/salaryServices';
 
 export default function EmployeesTab() {
   const { user } = useAuth();

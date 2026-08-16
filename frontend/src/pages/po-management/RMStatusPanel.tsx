@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { queryDocuments } from '../../lib/firebase/services';
+import { getProducts } from '../../lib/supabase/productService';
 import { PackageSearch, CheckCircle2, AlertTriangle, ShoppingCart, Package2 } from 'lucide-react';
 
 interface Props {
@@ -52,7 +53,7 @@ type LayerStatus = {
 export default function RMStatusPanel({ productId, orderQty }: Props) {
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => queryDocuments('products', []) as Promise<any[]>,
+    queryFn: () => getProducts() as unknown as Promise<any[]>,
     staleTime: 60000,
   });
 

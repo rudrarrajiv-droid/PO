@@ -4,6 +4,7 @@ import { ArrowDownToLine, X, CircleDashed, Plus, Trash2, AlertCircle, CheckCircl
 import { useAuth } from '../../contexts/AuthContext';
 import { executeFinishGoodInwardTransaction, type FinishGoodInwardPayload } from '../../lib/firebase/services';
 import { queryDocuments } from '../../lib/firebase/services';
+import { getProducts } from '../../lib/supabase/productService';
 
 interface FGRow {
   productId: string; // Will store the selected product's ID
@@ -118,7 +119,7 @@ export default function BulkInModal({ onClose, onSuccess }: { onClose: () => voi
   const [products, setProducts] = useState<any[]>([]);
   
   useEffect(() => {
-    queryDocuments('products', []).then(data => {
+    getProducts().then(data => {
       setProducts(data);
     });
   }, []);
