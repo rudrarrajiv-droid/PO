@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments } from '../../lib/firebase/services';
 import { getProducts } from '../../lib/supabase/productService';
+import { getReels } from '../../lib/supabase/reelService';
 import { PackageSearch, CheckCircle2, AlertTriangle, ShoppingCart, Package2 } from 'lucide-react';
 
 interface Props {
@@ -59,7 +59,7 @@ export default function RMStatusPanel({ productId, orderQty }: Props) {
 
   const { data: reels = [], isLoading: reelsLoading } = useQuery({
     queryKey: ['reels'],
-    queryFn: () => queryDocuments('reels', []) as Promise<any[]>,
+    queryFn: () => getReels() as Promise<any[]>,
     staleTime: 30000,
   });
 

@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, History, AlertTriangle, Search, Activity, FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { where } from 'firebase/firestore';
-import { queryDocuments, type PurchaseOrder } from '../../lib/firebase/services';
+import { getPOTransactionsByPOId, type POTransaction, type PurchaseOrder } from '../../lib/supabase/purchaseOrderService';
 
 interface POHistoryModalProps {
   po: PurchaseOrder;
@@ -11,9 +10,9 @@ interface POHistoryModalProps {
 
 export default function POHistoryModal({ po, onClose }: POHistoryModalProps) {
   // Fetch transactions for this PO
-  const { data: transactions = [], isLoading } = useQuery<any[]>({
+  const { data: transactions = [], isLoading } = useQuery<POTransaction[]>({
     queryKey: ['poTransactions', po.id],
-    queryFn: () => queryDocuments('poTransactions', [where('poId', '==', po.id)]) as Promise<any[]>
+    queryFn: () => getPOTransactionsByPOId(po.id!)
   });
 
   // Client-Side Filters

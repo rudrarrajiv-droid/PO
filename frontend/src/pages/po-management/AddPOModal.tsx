@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, Loader2, Search, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, query, where, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase/config';
-import { logActivity, type PurchaseOrder } from '../../lib/firebase/services';
 import { getProducts } from '../../lib/supabase/productService';
 import { getCustomers } from '../../lib/supabase/customerService';
+import { createPurchaseOrders, purchaseOrderNumberExists, type PurchaseOrder } from '../../lib/supabase/purchaseOrderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn, getCustomerDisplayLabel } from '../../lib/utils';
 import RMStatusPanel from './RMStatusPanel';
@@ -198,7 +196,10 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
   // Fetch Products
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => getProducts() as unknown as Promise<any[]>
+    queryFn: async () => {
+      const data = await getProducts() as any[];
+      return data.map((product: any) => ({ ...product, name: product.itemName }));
+    }
   });
 
   // Returns the new item's id so callers can focus it
@@ -284,10 +285,9 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
 
     try {
       // 1. Duplicate check for this PO No in the database
-      const q = query(collection(db, 'purchaseOrders'), where('poNo', '==', commonData.poNo.trim()));
-      const snap = await getDocs(q);
-      
-      if (!snap.empty) {
+      const poExists = await purchaseOrderNumberExists(commonData.poNo.trim());
+
+      if (poExists) {
         setErrors({ poNo: "This Purchase Order number already exists in the system." });
         setIsSubmitting(false);
         return;
@@ -300,9 +300,7 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
         return;
       }
 
-      // 2. Prepare batch write
-      const batch = writeBatch(db);
-      let successCount = 0;
+      const purchaseOrdersToCreate: Omit<PurchaseOrder, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>[] = [];
 
       for (const item of items) {
         const product = products.find(p => p.id === item.productId);
@@ -313,7 +311,7 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
         const inQty = 0;
         const outQty = 0;
 
-        const newPO: PurchaseOrder = {
+        purchaseOrdersToCreate.push({
           poNo: commonData.poNo.trim(),
           poDate: commonData.poDate,
           deliveryDate: item.deliveryDate,
@@ -321,7 +319,7 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
           customerName: customer.name || '',
           consignee: commonData.consignee.trim(),
           productId: product.id,
-          productName: product.name || '',
+          productName: product.itemName || product.name || '',
           artworkNo: product.artworkNo || '',
           size: `${product.length || ''}x${product.width || ''}x${product.height || ''} ${product.unit || ''}`.trim(),
           rate: rate,
@@ -329,37 +327,18 @@ export default function AddPOModal({ onClose, onSuccess }: { onClose: () => void
           inQty: inQty,
           outQty: outQty,
           status: 'OPEN',
-          isArchived: false
-        };
-
-        const docRef = doc(collection(db, 'purchaseOrders'));
-        batch.set(docRef, {
-          ...newPO,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          createdBy: user?.name || 'System',
-          updatedBy: user?.name || 'System',
+          history: [],
+          isArchived: false,
         });
-        successCount++;
       }
 
-      if (successCount === 0) {
+      if (purchaseOrdersToCreate.length === 0) {
          setErrors({ general: "No valid items to save." });
          setIsSubmitting(false);
          return;
       }
 
-      // Commit the batch
-      await batch.commit();
-      
-      // Log Activity
-      await logActivity({
-        user: user?.name || 'System',
-        action: `Created Bulk PO ${commonData.poNo.trim()} with ${successCount} items`,
-        entity: 'purchaseOrders',
-        referenceId: commonData.poNo.trim(),
-        timestamp: serverTimestamp()
-      });
+      await createPurchaseOrders(purchaseOrdersToCreate, user?.name || 'System');
       
       onSuccess(); 
 

@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PackageCheck, Search, ArrowDownToLine, ArrowUpFromLine, FileText, History, Calendar, FileSpreadsheet } from 'lucide-react';
-import { queryDocuments } from '../lib/firebase/services';
 import { cn } from '../lib/utils';
 import ExportButtons from '../components/ExportButtons';
 import BulkInModal from './finish-goods/BulkInModal';
 import BulkOutModal from './finish-goods/BulkOutModal';
 import FinishGoodHistoryModal from './finish-goods/FinishGoodHistoryModal';
 import ExcelImportModal from './finish-goods/ExcelImportModal';
+import { getFinishGoods, getFinishGoodTransactions } from '../lib/supabase/finishGoodService';
 
 export default function FinishGoods() {
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'EMPTY' | 'REPORT'>('ACTIVE');
@@ -22,12 +22,12 @@ export default function FinishGoods() {
 
   const { data: fgList = [], isLoading, refetch } = useQuery({
     queryKey: ['finishGoods'],
-    queryFn: () => queryDocuments('finishGoods', []) as Promise<any[]>
+    queryFn: () => getFinishGoods() as Promise<any[]>
   });
 
   const { data: transactions = [], isLoading: loadingTx } = useQuery({
     queryKey: ['finishGoodTransactions'],
-    queryFn: () => queryDocuments('finishGoodTransactions', []) as Promise<any[]>,
+    queryFn: () => getFinishGoodTransactions() as Promise<any[]>,
     enabled: activeTab === 'REPORT'
   });
 

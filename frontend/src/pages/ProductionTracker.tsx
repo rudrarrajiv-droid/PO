@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Clock, CheckCircle2, AlertTriangle, LayoutDashboard, MessageSquarePlus, Activity, CalendarClock } from 'lucide-react';
-import { queryDocuments } from '../lib/firebase/services';
+import { getJobCards } from '../lib/supabase/jobCardService';
 import { cn } from '../lib/utils';
 import CompleteProductionModal from './job-cards/CompleteProductionModal';
 import AddRemarkModal from './job-cards/AddRemarkModal';
@@ -21,8 +21,7 @@ export default function ProductionTracker() {
   const { data: jobCards = [], isLoading, refetch } = useQuery({
     queryKey: ['production-tracker'],
     queryFn: async () => {
-      // Fetch both IN_PROCESS and COMPLETED
-      const allCards = await queryDocuments('jobCards', []) as any[];
+      const allCards = await getJobCards({ statuses: ['IN_PROCESS', 'COMPLETED'] }) as any[];
       return allCards.filter(jc => jc.status === 'IN_PROCESS' || jc.status === 'COMPLETED');
     },
     refetchInterval: 60000 // Refetch every minute automatically

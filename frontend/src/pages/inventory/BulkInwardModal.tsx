@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { ArrowDownToLine, X, CircleDashed, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { executeBatchCreate } from '../../lib/firebase/services';
-import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase/config';
+import { createBulkInwardReels } from '../../lib/supabase/reelService';
 
 interface ReelRow {
   reelNo: string;
@@ -148,52 +146,13 @@ export default function BulkInwardModal({ reels, onClose, onSuccess }: { reels: 
 
     setIsSubmitting(true);
     try {
-      const batch = writeBatch(db);
-      const timestamp = serverTimestamp();
-      
-      const reelsCol = collection(db, 'reels');
-      const txCol = collection(db, 'reelTransactions');
-
-      validRows.forEach(row => {
-        const reelDoc = doc(reelsCol);
-        const reelData = {
-          reelNumber: row.reelNo.toUpperCase(),
-          supplierName: data.supplierName,
-          manufacturerName: data.manufacturerName,
-          weight: Math.round(Number(row.weight)),
-          currentBalance: Math.round(Number(row.weight)),
-          paperType: row.paperType,
-          reelSize: Number(row.size),
-          bf: row.bf,
-          gsm: Number(row.gsm),
-          rate: Number(row.rate) || 0,
-          inwardDate: new Date(data.inwardDate).toISOString(),
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          createdBy: user?.name || 'System',
-          updatedBy: user?.name || 'System',
-          isArchived: false,
-        };
-        batch.set(reelDoc, reelData);
-
-        const txDoc = doc(txCol);
-        batch.set(txDoc, {
-          reelId: reelDoc.id,
-          reelNumber: row.reelNo.toUpperCase(),
-          type: 'INWARD',
-          quantity: Math.round(Number(row.weight)),
-          remainingBalance: Math.round(Number(row.weight)),
-          performedBy: user?.name || 'System',
-          date: new Date(data.inwardDate).toISOString(),
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          createdBy: user?.name || 'System',
-          updatedBy: user?.name || 'System',
-          isArchived: false,
-        });
-      });
-
-      await batch.commit();
+      await createBulkInwardReels(
+        validRows,
+        data.inwardDate,
+        data.supplierName,
+        data.manufacturerName,
+        user?.name || 'System'
+      );
       onSuccess();
     } catch (err: any) {
       console.error(err);

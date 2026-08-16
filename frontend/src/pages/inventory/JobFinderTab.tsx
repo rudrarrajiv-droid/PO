@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments } from '../../lib/firebase/services';
 import { getProducts } from '../../lib/supabase/productService';
+import { getReels } from '../../lib/supabase/reelService';
 import { Search, CheckCircle2, AlertTriangle, Package2, Layers, Weight, Calculator } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -38,7 +38,7 @@ export default function JobFinderTab() {
 
   const { data: reels = [], isLoading: loadingReels } = useQuery({
     queryKey: ['reels'],
-    queryFn: () => queryDocuments('reels', []) as Promise<any[]>,
+    queryFn: () => getReels() as Promise<any[]>,
     staleTime: 30000,
   });
 

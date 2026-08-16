@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { type PurchaseOrder } from '../lib/firebase/services';
+import { type PurchaseOrder } from '../lib/supabase/purchaseOrderService';
 
 /**
  * Export Purchase Orders to an Excel file

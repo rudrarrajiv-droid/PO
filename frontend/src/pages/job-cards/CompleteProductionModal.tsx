@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { X, CircleDashed, CheckCircle, AlertTriangle, Plus, Search, Link as LinkIcon } from 'lucide-react';
-import { executeProductionCompletionTransaction, type FinishGoodInwardPayload } from '../../lib/firebase/services';
 import { getProducts, createProduct } from '../../lib/supabase/productService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
+import { executeProductionCompletionTransaction, type FinishGoodInwardPayload } from '../../lib/supabase/finishGoodService';
 
 export default function CompleteProductionModal({ jobCard, onClose, onSuccess }: { jobCard: any, onClose: () => void, onSuccess: () => void }) {
   const { user } = useAuth();

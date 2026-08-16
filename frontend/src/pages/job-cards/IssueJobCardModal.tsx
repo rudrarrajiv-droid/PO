@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CircleDashed, Play } from 'lucide-react';
-import { updateDocument, executeJobCardTransaction } from '../../lib/firebase/services';
+import { executeJobCardTransaction } from '../../lib/supabase/jobCardService';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 

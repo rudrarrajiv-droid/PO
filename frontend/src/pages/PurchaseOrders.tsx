@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, FileText, ShoppingCart, Activity, XCircle, ArrowUpDown, ArrowUp, ArrowDown, Users, List, ChevronLeft, Link, FileSpreadsheet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments, updateDocument, deletePurchaseOrder, type PurchaseOrder } from '../lib/firebase/services';
+import { deletePurchaseOrder, getAllPOTransactions, getPurchaseOrders, type PurchaseOrder } from '../lib/supabase/purchaseOrderService';
 import { exportPurchaseOrdersToExcel } from '../utils/exportUtils';
 import AddPOModal from './po-management/AddPOModal';
 import POInModal from './po-management/POInModal';
@@ -94,13 +94,13 @@ export default function PurchaseOrders() {
   // Fetch Data
   const { data: purchaseOrders = [], isLoading, refetch } = useQuery({
     queryKey: ['purchaseOrders'],
-    queryFn: () => queryDocuments('purchaseOrders', []) as Promise<PurchaseOrder[]>
+    queryFn: () => getPurchaseOrders()
   });
 
   // Fetch Transactions for Monthly View (Client-side aggregation Phase 12)
   const { data: poTransactions = [], isLoading: loadingTx } = useQuery({
     queryKey: ['allPoTransactions'],
-    queryFn: () => queryDocuments('poTransactions', []) as Promise<any[]>
+    queryFn: () => getAllPOTransactions()
   });
 
   // Unique Customers for Dropdown
@@ -290,7 +290,7 @@ export default function PurchaseOrders() {
       let monthlyOut = 0;
 
       txs.forEach(tx => {
-        const txDate = tx.timestamp?.toDate ? tx.timestamp.toDate() : new Date(tx.timestamp || tx.createdAt?.toDate?.() || tx.date);
+        const txDate = new Date(tx.createdAt || tx.date);
         if (txDate < monthStart) {
           if (tx.type === 'IN') inBefore += (tx.quantity || 0);
           if (tx.type === 'OUT') outBefore += (tx.quantity || 0);

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { ArrowDownToLine, X, CircleDashed, Plus, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { executeFinishGoodInwardTransaction, type FinishGoodInwardPayload } from '../../lib/firebase/services';
-import { queryDocuments } from '../../lib/firebase/services';
+import { getJobCards } from '../../lib/supabase/jobCardService';
 import { getProducts } from '../../lib/supabase/productService';
+import { executeFinishGoodInwardTransaction, type FinishGoodInwardPayload } from '../../lib/supabase/finishGoodService';
 
 interface FGRow {
   productId: string; // Will store the selected product's ID
@@ -38,7 +38,7 @@ function JobCardSelector({
   useEffect(() => {
     if (!productId) return;
     setLoading(true);
-    queryDocuments('jobCards', [])
+    getJobCards({ statuses: ['IN_PROCESS'] })
       .then((data: any[]) => {
         const openCards = data.filter(jc => 
           jc.productId === productId && 

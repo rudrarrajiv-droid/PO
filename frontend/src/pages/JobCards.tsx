@@ -3,11 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, CheckCircle2, CircleDashed, FileText, X, Edit, Printer, AlertTriangle, Layers, Play, Trash2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { cn } from '../lib/utils';
-import { queryDocuments, createDocument, updateDocument, executeJobCardTransaction, deleteJobCardSoft } from '../lib/firebase/services';
+import { getAllJobCards, getNextJobCardNumber, updateJobCard, executeJobCardTransaction, deleteJobCardSoft } from '../lib/supabase/jobCardService';
 import { getProducts } from '../lib/supabase/productService';
+import { getPurchaseOrders } from '../lib/supabase/purchaseOrderService';
 import { useAuth } from '../contexts/AuthContext';
-import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase/config';
 import { exportToExcel, exportToPDF } from '../lib/exportUtils';
 import PrintableJobCard from './job-cards/PrintableJobCard';
 import jsPDF from 'jspdf';
@@ -83,13 +82,7 @@ export default function JobCards() {
 
   const { data: jobCards = [], isLoading: loadingCards, refetch: refetchCards } = useQuery({
     queryKey: ['jobcards'],
-    queryFn: async () => {
-      // Fetch directly to bypass the 'isArchived == false' filter in queryDocuments
-      const q = query(collection(db, 'jobCards'));
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-      return data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    },
+    queryFn: () => getAllJobCards() as Promise<any[]>,
   });
 
   // Smart Relational Filtering + Status Ordering
@@ -546,9 +539,9 @@ export default function JobCards() {
             }}
             onSkip={async () => {
               try {
-                await updateDocument('jobCards', allocatingJobCard.id, {
+                await updateJobCard(allocatingJobCard.id, {
                   reelAllocationSkipped: true
-                });
+                }, user?.name || 'System');
                 setAllocatingJobCard(null);
                 refetchCards();
               } catch (err: any) {
@@ -601,7 +594,7 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
   const { data: purchaseOrders = [], isLoading: loadingPos } = useQuery({
     queryKey: ['purchaseOrders'],
     queryFn: async () => {
-      const data = await queryDocuments('purchaseOrders', []) as any[];
+      const data = await getPurchaseOrders() as any[];
       return data;
     },
   });
@@ -638,22 +631,7 @@ function JobCardModal({ initialData, onClose, onSuccess, onValidationFailed }: {
     // Fetch next job card number natively from Firestore
     const fetchNextNo = async () => {
       try {
-        // Fetch the absolute last job card number generated to increment from it
-        const q = query(collection(db, 'jobCards'), orderBy('jobCardNo', 'desc'), limit(1));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          setValue('jobCardNo', 'PI/JC/1001');
-        } else {
-          const lastDoc = snap.docs[0].data();
-          const lastNo = lastDoc.jobCardNo;
-          const parts = lastNo.split('/');
-          const num = parseInt(parts[parts.length - 1], 10);
-          if (!isNaN(num)) {
-            setValue('jobCardNo', `PI/JC/${num + 1}`);
-          } else {
-            setValue('jobCardNo', 'PI/JC/1001');
-          }
-        }
+        setValue('jobCardNo', await getNextJobCardNumber());
       } catch (err) {
         console.error(err);
         setValue('jobCardNo', 'PI/JC/1001');

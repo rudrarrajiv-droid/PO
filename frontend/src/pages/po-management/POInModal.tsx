@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, CircleDashed, Info } from 'lucide-react';
-import { type PurchaseOrder, executePOInTransaction } from '../../lib/firebase/services';
+import { executePOInTransaction, type PurchaseOrder } from '../../lib/supabase/purchaseOrderService';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 

@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { ArrowUpFromLine, X, CircleDashed, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { executeFinishGoodOutwardTransaction, type FinishGoodOutwardPayload, type LogisticsPayload } from '../../lib/firebase/services';
-import { queryDocuments } from '../../lib/firebase/services';
+import { executeFinishGoodOutwardTransaction, getFinishGoods, getFinishGoodTransactions, type FinishGoodOutwardPayload, type LogisticsPayload } from '../../lib/supabase/finishGoodService';
 
 interface FGRow {
   productId: string;
@@ -27,11 +26,9 @@ export default function BulkOutModal({ onClose, onSuccess }: { onClose: () => vo
   const [historyDocs, setHistoryDocs] = useState<any[]>([]);
   
   useEffect(() => {
-    queryDocuments('finishGoods', []).then(data => {
-      setFinishGoods(data);
-    });
-    queryDocuments('finishGoodTransactions', []).then(data => {
-      setHistoryDocs(data);
+    void Promise.all([getFinishGoods(), getFinishGoodTransactions()]).then(([fgData, txData]) => {
+      setFinishGoods(fgData);
+      setHistoryDocs(txData);
     });
   }, []);
 

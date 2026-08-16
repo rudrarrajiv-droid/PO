@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Upload, AlertTriangle, FileSpreadsheet, CheckCircle2, Copy, Search, Filter, HelpCircle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { cn } from '../../lib/utils';
-import { type PurchaseOrder, importPurchaseOrdersBatch } from '../../lib/firebase/services';
+import { importPurchaseOrdersBatch, type PurchaseOrder } from '../../lib/supabase/purchaseOrderService';
 import { getProducts } from '../../lib/supabase/productService';
 import { useQuery } from '@tanstack/react-query';
 

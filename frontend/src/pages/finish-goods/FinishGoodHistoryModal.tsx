@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Search, History, ArrowDownToLine, ArrowUpFromLine, Trash2 } from 'lucide-react';
-import { queryDocuments, deleteFinishGoodTransaction } from '../../lib/firebase/services';
 import type { FinishGoodTransaction } from '../../lib/types/models';
 import { format } from 'date-fns';
 import ExportButtons from '../../components/ExportButtons';
 import { useAuth } from '../../contexts/AuthContext';
+import { deleteFinishGoodTransaction, getFinishGoods, getFinishGoodTransactions } from '../../lib/supabase/finishGoodService';
 
 export default function FinishGoodHistoryModal({ onClose }: { onClose: () => void }) {
   const { user, hasRole } = useAuth();
@@ -14,7 +14,7 @@ export default function FinishGoodHistoryModal({ onClose }: { onClose: () => voi
   
   const { data: history = [], isLoading, refetch } = useQuery({
     queryKey: ['finishGoodTransactions'],
-    queryFn: () => queryDocuments('finishGoodTransactions', []) as Promise<FinishGoodTransaction[]>
+    queryFn: () => getFinishGoodTransactions() as Promise<FinishGoodTransaction[]>
   });
 
   const handleDelete = async (tx: FinishGoodTransaction) => {
@@ -48,7 +48,7 @@ export default function FinishGoodHistoryModal({ onClose }: { onClose: () => voi
   // Wait, in our transaction saving, we only saved finishGoodId. Let's fetch finishGoods to map.
   const { data: fgList = [] } = useQuery({
     queryKey: ['finishGoods'],
-    queryFn: () => queryDocuments('finishGoods', []) as Promise<any[]>
+    queryFn: () => getFinishGoods() as Promise<any[]>
   });
 
   const getProductName = (id: string) => {

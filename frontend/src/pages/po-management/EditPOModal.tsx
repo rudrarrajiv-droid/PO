@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2, FileEdit, AlertCircle } from 'lucide-react';
-import { updatePurchaseOrder } from '../../lib/firebase/services';
+import { updatePurchaseOrder, type PurchaseOrder } from '../../lib/supabase/purchaseOrderService';
 import { useAuth } from '../../contexts/AuthContext';
-import { type PurchaseOrder } from '../../lib/firebase/services';
 
 export default function EditPOModal({ 
   po, 

@@ -45,3 +45,38 @@ create index if not exists idx_purchase_orders_resolved_customer_id
 
 create index if not exists idx_purchase_orders_resolved_product_id
   on public.purchase_orders (resolved_product_id);
+
+alter table public.purchase_orders enable row level security;
+
+revoke all on table public.purchase_orders from anon, authenticated;
+grant select, insert, update, delete on table public.purchase_orders to anon, authenticated;
+revoke truncate, references, trigger on table public.purchase_orders from anon, authenticated;
+
+drop policy if exists purchase_orders_select on public.purchase_orders;
+create policy purchase_orders_select
+  on public.purchase_orders
+  for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists purchase_orders_insert on public.purchase_orders;
+create policy purchase_orders_insert
+  on public.purchase_orders
+  for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists purchase_orders_update on public.purchase_orders;
+create policy purchase_orders_update
+  on public.purchase_orders
+  for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists purchase_orders_delete on public.purchase_orders;
+create policy purchase_orders_delete
+  on public.purchase_orders
+  for delete
+  to anon, authenticated
+  using (true);

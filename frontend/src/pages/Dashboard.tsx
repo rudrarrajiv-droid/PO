@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layers, Clock, Activity, CheckCircle2, AlertCircle, Snowflake, Unlock, ShieldAlert, ShieldCheck, ShieldX, Printer, X } from 'lucide-react';
-import { queryDocuments, updateDocument } from '../lib/firebase/services';
 import { useAuth } from '../contexts/AuthContext';
 import DashboardListModal from './dashboard/DashboardListModal';
 import PrintableJobCard from './job-cards/PrintableJobCard';
@@ -9,13 +8,13 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
 import { getAttendanceByMonth } from '../lib/supabase/attendanceService';
+import { getJobCards, getPendingApprovalJobCards, updateJobCard } from '../lib/supabase/jobCardService';
+import { getFrozenReels, unfreezeReel } from '../lib/supabase/reelService';
 import { getOutwardReelTransactionsByMonth } from '../lib/firebase/dcServices';
 import { getRecentActivityLogs } from '../lib/supabase/activityLogService';
-import { collection, getDocs, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase/config';
 
 export default function Dashboard() {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const queryClient = useQueryClient();
   const [unfreezingId, setUnfreezingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -29,7 +28,7 @@ export default function Dashboard() {
 
   const { data: jobCards = [], isLoading: loadingJC } = useQuery({
     queryKey: ['dashboard-jobcards'],
-    queryFn: async () => await queryDocuments('jobCards', []) as any[],
+    queryFn: () => getJobCards() as Promise<any[]>,
     refetchInterval: 10000
   });
 
@@ -51,11 +50,7 @@ export default function Dashboard() {
 
   const { data: frozenReels = [], isLoading: loadingFrozen, refetch: refetchFrozen } = useQuery({
     queryKey: ['dashboard-frozen-reels'],
-    queryFn: async () => {
-      const q = query(collection(db, 'reels'), where('reservedForJC', '!=', null));
-      const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    },
+    queryFn: () => getFrozenReels() as Promise<any[]>,
     refetchInterval: 10000,
     enabled: hasRole('ADMIN')
   });
@@ -64,19 +59,18 @@ export default function Dashboard() {
   const { data: pendingApprovals = [], refetch: refetchApprovals } = useQuery({
     queryKey: ['dashboard-pending-approvals'],
     queryFn: async () => {
-      const q = query(collection(db, 'jobCards'), where('status', '==', 'PENDING APPROVAL'));
-      const snap = await getDocs(q);
       const now = Date.now();
-      return snap.docs
-        .map(d => ({ id: d.id, ...d.data() } as any))
+      const cards = await getPendingApprovalJobCards();
+      return cards
         .filter(jc => {
           // Auto-expire check: skip expired ones
           if (jc.approvalExpiresAt && new Date(jc.approvalExpiresAt).getTime() < now) {
             // Fire-and-forget auto-expiry
-            updateDoc(doc(db, 'jobCards', jc.id), {
+            void updateJobCard(jc.id, {
               status: 'CANCELLED',
               approvalStatus: 'EXPIRED',
-              updatedAt: serverTimestamp()
+            }, 'System', { log: false, touchUpdatedBy: false }).catch((error) => {
+              console.error('Failed to auto-expire approval:', error);
             });
             return false;
           }
@@ -90,10 +84,7 @@ export default function Dashboard() {
   const handleUnfreeze = async (reelId: string) => {
     try {
       setUnfreezingId(reelId);
-      await updateDoc(doc(db, 'reels', reelId), {
-        reservedForJC: null,
-        updatedAt: serverTimestamp()
-      });
+      await unfreezeReel(reelId, user?.name || 'System');
       refetchFrozen();
     } catch (err: any) {
       alert('Failed to unfreeze: ' + err.message);
@@ -107,12 +98,11 @@ export default function Dashboard() {
     try {
       setApprovingId(jcId + action);
       const newStatus = action === 'APPROVED' ? 'PENDING' : 'CANCELLED';
-      await updateDoc(doc(db, 'jobCards', jcId), {
+      await updateJobCard(jcId, {
         status: newStatus,
         approvalStatus: action,
         approvalReviewedAt: new Date().toISOString(),
-        updatedAt: serverTimestamp()
-      });
+      }, 'System', { log: false, touchUpdatedBy: false });
       refetchApprovals();
       queryClient.invalidateQueries({ queryKey: ['dashboard-jobcards'] });
     } catch (err: any) {

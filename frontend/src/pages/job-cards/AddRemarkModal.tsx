@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, MessageSquarePlus, Send } from 'lucide-react';
-import { updateDocument, executeJobCardTransaction } from '../../lib/firebase/services';
+import { executeJobCardTransaction } from '../../lib/supabase/jobCardService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AddRemarkModal({ jobCard, onClose, onSuccess }: { jobCard: any, onClose: () => void, onSuccess: () => void }) {

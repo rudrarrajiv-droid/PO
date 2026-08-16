@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Truck, Search, CircleDollarSign } from 'lucide-react';
-import { queryDocuments, markFreightReceived } from '../lib/firebase/services';
 import type { FinishGoodTransaction } from '../lib/types/models';
 import ExportButtons from '../components/ExportButtons';
 import { format } from 'date-fns';
@@ -9,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getFinishGoods, getFinishGoodTransactions, markFreightReceived } from '../lib/supabase/finishGoodService';
 
 export default function FreightCharge() {
   const [search, setSearch] = useState('');
@@ -21,12 +21,12 @@ export default function FreightCharge() {
 
   const { data: transactions = [], isLoading: txLoading } = useQuery({
     queryKey: ['finishGoodTransactions'],
-    queryFn: () => queryDocuments('finishGoodTransactions', []) as Promise<FinishGoodTransaction[]>
+    queryFn: () => getFinishGoodTransactions() as Promise<FinishGoodTransaction[]>
   });
 
   const { data: finishGoods = [], isLoading: fgLoading } = useQuery({
     queryKey: ['finishGoods'],
-    queryFn: () => queryDocuments('finishGoods', []) as Promise<any[]>
+    queryFn: () => getFinishGoods() as Promise<any[]>
   });
 
   const isLoading = txLoading || fgLoading;

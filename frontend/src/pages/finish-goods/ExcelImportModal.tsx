@@ -5,9 +5,8 @@ import {
   AlertTriangle, Loader2, ArrowDownToLine, Truck, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { executeFinishGoodInwardTransaction, executeFinishGoodOutwardTransaction } from '../../lib/firebase/services';
 import { getProducts } from '../../lib/supabase/productService';
-import type { FinishGoodInwardPayload, FinishGoodOutwardPayload, LogisticsPayload } from '../../lib/firebase/services';
+import { executeFinishGoodInwardTransaction, executeFinishGoodOutwardTransaction, type FinishGoodInwardPayload, type FinishGoodOutwardPayload, type LogisticsPayload } from '../../lib/supabase/finishGoodService';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

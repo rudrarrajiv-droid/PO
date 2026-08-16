@@ -204,8 +204,14 @@ async function run(): Promise<void> {
 
   const pgModule = await import("pg");
   const { Client } = pgModule.default ?? pgModule;
+  const sanitizedDatabaseUrl = process.env.DATABASE_URL
+    ?.replace(/[?&]sslmode=require/g, "")
+    ?.replace(/[?&]uselibpqcompat=true/g, "")
+    ?.replace(/\?&/, "?")
+    ?.replace(/[?&]$/, "");
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: sanitizedDatabaseUrl,
+    ssl: { rejectUnauthorized: false },
   });
 
   const createTableSql = await loadCreateTableSql();

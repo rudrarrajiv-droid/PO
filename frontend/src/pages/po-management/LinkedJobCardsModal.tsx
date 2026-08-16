@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { X, Search, FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments } from '../../lib/firebase/services';
+import { getJobCards } from '../../lib/supabase/jobCardService';
 import { cn } from '../../lib/utils';
-import { where } from 'firebase/firestore';
 
 export default function LinkedJobCardsModal({ po, onClose }: { po: any, onClose: () => void }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,10 +10,7 @@ export default function LinkedJobCardsModal({ po, onClose }: { po: any, onClose:
   const { data: jobCards = [], isLoading } = useQuery({
     queryKey: ['jobcards', 'po', po.id],
     queryFn: async () => {
-      // Query Job Cards linked to this PO
-      const data = await queryDocuments('jobCards', [
-        where('poId', '==', po.id)
-      ]) as any[];
+      const data = await getJobCards({ poId: po.id }) as any[];
       return data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     },
   });

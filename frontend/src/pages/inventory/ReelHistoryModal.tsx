@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, History, FilterX, ArrowDownToLine, ArrowUpFromLine, Receipt, Trash2 } from 'lucide-react';
-import { queryDocuments, deleteReelTransaction } from '../../lib/firebase/services';
+import { getReelTransactionsByReelId, deleteReelTransaction } from '../../lib/supabase/reelService';
 import { useAuth } from '../../contexts/AuthContext';
-import { where } from 'firebase/firestore';
 
 interface ReelHistoryModalProps {
   reels: any[];
@@ -55,9 +54,7 @@ export default function ReelHistoryModal({ reels, onClose }: ReelHistoryModalPro
   // Fetch transactions ONLY when a reel is selected
   const { data: transactions = [], isLoading: loadingTx, refetch } = useQuery({
     queryKey: ['reelTransactions', selectedReel?.id],
-    queryFn: () => queryDocuments('reelTransactions', [
-      where('reelId', '==', selectedReel.id)
-    ]) as Promise<any[]>,
+    queryFn: () => getReelTransactionsByReelId(selectedReel.id) as Promise<any[]>,
     enabled: !!selectedReel
   });
 

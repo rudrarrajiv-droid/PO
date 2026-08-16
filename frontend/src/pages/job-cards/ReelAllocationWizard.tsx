@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { queryDocuments } from '../../lib/firebase/services';
+import { getReels } from '../../lib/supabase/reelService';
 import { Zap, CircleDashed, CheckCircle2, AlertTriangle, Search, X, Plus, Trash2, ShieldAlert } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { isJobCardAllocationComplete } from '../JobCards';
@@ -43,7 +43,7 @@ export default function ReelAllocationWizard({ jobCard, onBack, onConfirm, isAdm
   const { data: rawReels = [], isLoading: loadingReels } = useQuery({
     queryKey: ['reels-available'],
     queryFn: async () => {
-      const data = await queryDocuments('reels', []) as any[];
+      const data = await getReels() as any[];
       return data.filter(r => r.currentBalance > 0 && r.status !== 'INACTIVE');
     },
   });

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowUpFromLine, X, CircleDashed, Search, FilterX } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { executeOutwardTransaction } from '../../lib/firebase/services';
-import type { OutwardPayload } from '../../lib/firebase/services';
+import { executeOutwardTransaction } from '../../lib/supabase/reelService';
+import type { OutwardPayload } from '../../lib/supabase/reelService';
 
 interface OutwardModalProps {
   reels: any[];

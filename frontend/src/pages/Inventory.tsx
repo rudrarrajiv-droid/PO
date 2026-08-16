@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Package, ArrowDownToLine, ArrowUpFromLine, History, Calendar } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { queryDocuments } from '../lib/firebase/services';
+import { getReels, getReelTransactions } from '../lib/supabase/reelService';
 import BulkInwardModal from './inventory/BulkInwardModal';
 import OutwardModal from './inventory/OutwardModal';
 import ReelHistoryModal from './inventory/ReelHistoryModal';
@@ -23,12 +23,12 @@ export default function Inventory() {
 
   const { data: reels = [], isLoading: loadingReels, refetch } = useQuery({
     queryKey: ['reels'],
-    queryFn: () => queryDocuments('reels', []) as Promise<any[]>
+    queryFn: () => getReels() as Promise<any[]>
   });
 
   const { data: transactions = [], isLoading: loadingTx } = useQuery({
     queryKey: ['reelTransactions'],
-    queryFn: () => queryDocuments('reelTransactions', []) as Promise<any[]>,
+    queryFn: () => getReelTransactions() as Promise<any[]>,
     enabled: activeTab === 'ISSUED_REPORT' || activeTab === 'PURCHASE_REPORT' || activeTab === 'MONTHLY_SUMMARY' || metricFilter !== 'CLOSING'
   });
 

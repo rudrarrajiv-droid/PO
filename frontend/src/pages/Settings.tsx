@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Settings as SettingsIcon, Download, Database, PackageSearch, AlertCircle, Upload, MonitorSmartphone, LogOut, Loader2 } from 'lucide-react';
-import { queryDocuments, createDocument, updateDocument } from '../lib/firebase/services';
 import { useAuth } from '../contexts/AuthContext';
 import { type UserSession } from '../lib/firebase/authSessionServices';
 import { getActiveSessions, deleteAllOtherSessions } from '../lib/supabase/userSessionService';
+import { getProducts, createProduct, updateProduct } from '../lib/supabase/productService';
+import { getReels, createReel, updateReel } from '../lib/supabase/reelService';
 import * as xlsx from 'xlsx';
+
+type BackupTarget = 'products' | 'reels';
 
 export default function Settings() {
   const { hasRole, user, sessionId } = useAuth();
   const [isExporting, setIsExporting] = useState<string | null>(null);
-  const [importTarget, setImportTarget] = useState('products');
+  const [importTarget, setImportTarget] = useState<BackupTarget>('products');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
@@ -49,10 +52,12 @@ export default function Settings() {
     }
   };
 
-  const handleExport = async (collectionName: string, filenamePrefix: string) => {
+  const handleExport = async (collectionName: BackupTarget, filenamePrefix: string) => {
     try {
       setIsExporting(collectionName);
-      let data = await queryDocuments(collectionName, []);
+      let data: any[] = collectionName === 'products'
+        ? await getProducts()
+        : await getReels();
       
       if (!data || data.length === 0) {
         alert(`No data found in ${collectionName}.`);
@@ -180,26 +185,37 @@ export default function Settings() {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData: any[] = xlsx.utils.sheet_to_json(firstSheet);
 
+      // Existing (non-archived) IDs for the target collection, used to decide
+      // create vs. update below - Supabase's update() does not throw when no
+      // row matches, unlike the previous Firestore updateDoc() behavior.
+      const existingIds = new Set(
+        (importTarget === 'products' ? await getProducts() : await getReels()).map((r: any) => r.id)
+      );
+
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
         const unflattened = unflattenObject(row);
         
-        // Remove any undefined or empty strings if necessary, or just rely on Firebase to store them
+        // Remove any undefined or empty strings if necessary, or just rely on Supabase to store them
         const docId = unflattened.id;
         
-        if (docId) {
+        if (docId && existingIds.has(docId)) {
           // Exists, update it
           // Avoid overwriting the ID itself inside the document
           const { id, ...updateData } = unflattened;
-          try {
-            await updateDocument(importTarget, docId, updateData, 'System/CSV-Import');
-          } catch (err: any) {
-             // If update fails because doc doesn't exist, create it
-             await createDocument(importTarget, updateData, 'System/CSV-Import');
+          if (importTarget === 'products') {
+            await updateProduct(docId, updateData, 'System/CSV-Import');
+          } else {
+            await updateReel(docId, updateData, 'System/CSV-Import');
           }
         } else {
-          // No ID provided, create new
-          await createDocument(importTarget, unflattened, 'System/CSV-Import');
+          // No ID provided (or ID not found), create new
+          const { id, ...createData } = unflattened;
+          if (importTarget === 'products') {
+            await createProduct(createData, 'System/CSV-Import');
+          } else {
+            await createReel(createData, 'System/CSV-Import');
+          }
         }
         
         setImportProgress(Math.round(((i + 1) / jsonData.length) * 100));
@@ -365,7 +381,7 @@ export default function Settings() {
             <div className="flex flex-col sm:flex-row gap-4">
               <select 
                 value={importTarget}
-                onChange={(e) => setImportTarget(e.target.value)}
+                onChange={(e) => setImportTarget(e.target.value as BackupTarget)}
                 className="flex-1 px-3 py-2 border border-input bg-background rounded-md"
               >
                 <option value="products">Master Data (Products)</option>
